@@ -20,7 +20,7 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// ၁။ Database Tables - (Step 1 & Settings Table ထည့်သွင်းထားသည်)
+// ၁။ Database Tables - (Nickname Column နှင့် အခြားလိုအပ်ချက်များ ထည့်သွင်းခြင်း)
 const initDb = async () => {
     try {
         // Contacts Table
@@ -33,12 +33,15 @@ const initDb = async () => {
                 platform TEXT,
                 status TEXT DEFAULT 'active',
                 notes TEXT,
+                nickname TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
 
+        // Column များ ရှိမရှိ စစ်ဆေးပြီး အသစ်တိုးခြင်း
         await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';`);
         await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS notes TEXT;`);
+        await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS nickname TEXT;`);
 
         // Messages Table
         await pool.query(`
@@ -62,7 +65,7 @@ const initDb = async () => {
             )
         `);
         
-        console.log("✅ Database structure is updated with Settings & Management features.");
+        console.log("✅ Database structure is updated with Nickname & Management features.");
     } catch (err) {
         console.error("❌ DB Init Error:", err.message);
     }
@@ -128,7 +131,15 @@ app.post('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Management APIs ---
+// --- Management APIs (Updated for Nickname) ---
+app.post('/api/contacts/nickname', async (req, res) => {
+    const { chatId, nickname } = req.body;
+    try {
+        await pool.query('UPDATE contacts SET nickname = $1 WHERE chat_id = $2', [nickname, chatId]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/contacts/status', async (req, res) => {
     const { chatId, status } = req.body;
     try {
@@ -186,8 +197,12 @@ app.post('/webhook/telegram', async (req, res) => {
                 [sender, text, 'Telegram', chatId, 'user']
             );
 
+            // Nickname ရှိမရှိစစ်ရန် (ရှိလျှင် nickname လွှတ်မည်)
+            const contactInfo = await pool.query('SELECT nickname FROM contacts WHERE chat_id = $1', [chatId]);
+            const displayName = (contactInfo.rows[0] && contactInfo.rows[0].nickname) ? contactInfo.rows[0].nickname : sender;
+
             io.emit('new_message', {
-                sender: sender,
+                sender: displayName,
                 text: text,
                 chatId: chatId,
                 profile_pic: profilePic,
