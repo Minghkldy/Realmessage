@@ -30,6 +30,8 @@
 </head>
 <body class="h-full flex overflow-hidden">
 
+    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
+
     <div class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black">
         <div class="p-6 text-xl font-bold border-b border-border-gray flex items-center gap-2">
             <i class="fas fa-robot text-accent-blue"></i> OmniBot
@@ -38,7 +40,7 @@
         <nav class="p-4 border-b border-border-gray space-y-1">
             <div class="p-3 rounded-lg bg-dark-gray flex items-center justify-between text-sm cursor-pointer">
                 <span class="flex items-center gap-3"><i class="fas fa-th-large text-gray-500"></i> All Messages</span>
-                <span id="msg-count" class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full">1</span>
+                <span id="msg-count" class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full">0</span>
             </div>
             <div class="p-3 rounded-lg hover:bg-dark-gray flex items-center gap-3 text-sm text-gray-400 cursor-pointer transition">
                 <i class="fab fa-telegram text-sky-500"></i> Telegram
@@ -50,17 +52,8 @@
 
         <div id="contact-list" class="flex-1 overflow-y-auto px-2 py-4">
             <p class="px-4 text-[10px] uppercase tracking-widest text-gray-600 font-bold mb-4">Contacts</p>
-            
-            <div class="p-4 rounded-xl active-contact flex items-center gap-4 cursor-pointer mb-1">
-                <div id="user-avatar" class="w-10 h-10 rounded-full bg-accent-blue flex items-center justify-center font-bold text-sm">U</div>
-                <div class="flex-1 min-w-0">
-                    <div class="flex justify-between items-center">
-                        <h4 id="active-user-name" class="text-sm font-semibold truncate">User Name</h4>
-                        <span class="text-[10px] text-green-500 font-medium">Online</span>
-                    </div>
-                    <p id="last-msg-preview" class="text-xs text-gray-500 truncate">စောင့်ဆိုင်းနေသည်...</p>
+            <div id="contacts-container">
                 </div>
-            </div>
         </div>
 
         <div class="p-4 border-t border-border-gray text-[10px] text-gray-600 text-center uppercase tracking-widest">
@@ -71,10 +64,10 @@
     <div class="flex-1 flex flex-col bg-pure-black">
         <div class="h-16 border-b border-border-gray flex items-center justify-between px-6">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs">U</div>
+                <div id="header-avatar" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs">?</div>
                 <div>
-                    <h3 id="chat-header-name" class="text-sm font-bold">User Name</h3>
-                    <p class="text-[10px] text-green-500 uppercase tracking-tighter">Telegram Active</p>
+                    <h3 id="chat-header-name" class="text-sm font-bold">Waiting for message...</h3>
+                    <p id="chat-status" class="text-[10px] text-gray-500 uppercase tracking-tighter">System Ready</p>
                 </div>
             </div>
             <div class="flex gap-5 text-gray-500 text-sm">
@@ -99,20 +92,20 @@
 
     <script>
         const socket = io();
-        let currentChatId = ""; // ပြန်စာပို့ဖို့ သိမ်းထားမယ့် Chat ID
+        const chatWindow = document.getElementById('chat-window');
+        const notifSound = document.getElementById('notif-sound');
+        let currentChatId = "";
 
-        // ၁။ Telegram ကစာရောက်လာရင် Dashboard မှာပြမယ်
-        socket.on('new_message', (data) => {
-            const chatWindow = document.getElementById('chat-window');
-            currentChatId = data.chatId; // Chat ID ကို သိမ်းဆည်း
-            
-            // Header နဲ့ Sidebar ကို Update လုပ်မယ်
-            document.getElementById('active-user-name').innerText = data.sender;
-            document.getElementById('chat-header-name').innerText = data.sender;
-            document.getElementById('last-msg-preview').innerText = data.text;
-            document.getElementById('user-avatar').innerText = data.sender.charAt(0);
-
-            const msgHtml = `
+        // --- ၁။ Message ပြသသည့် Function (စာဝင်ရော ထွက်ရော သုံးရန်) ---
+        function appendMessage(data, isReply = false) {
+            const msgHtml = isReply ? `
+                <div class="self-end max-w-[70%]">
+                    <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium leading-relaxed">
+                        ${data.text}
+                    </div>
+                    <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
+                </div>
+            ` : `
                 <div class="flex items-start gap-3 max-w-[70%]">
                     <div class="w-8 h-8 rounded-full bg-gray-900 flex-shrink-0 flex items-center justify-center border border-border-gray">
                         <i class="fab fa-telegram text-sky-500 text-xs"></i>
@@ -121,47 +114,69 @@
                         <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender}</p>
                         ${data.text}
                     </div>
-                </div>`;
-            
+                </div>
+            `;
             chatWindow.innerHTML += msgHtml;
             chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' });
+        }
+
+        // --- ၂။ Database ကစာဟောင်းများကို ဆွဲထုတ်ခြင်း ---
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/messages');
+                const messages = await response.json();
+                document.getElementById('msg-count').innerText = messages.length;
+                
+                if (messages.length > 0) {
+                    const lastMsg = messages[messages.length - 1];
+                    updateUI(lastMsg);
+                    messages.forEach(msg => {
+                        appendMessage({ sender: msg.sender, text: msg.text, chatId: msg.chat_id }, false);
+                    });
+                }
+            } catch (err) {
+                console.log("History Load Error:", err);
+            }
+        }
+
+        function updateUI(data) {
+            currentChatId = data.chatId || data.chat_id;
+            document.getElementById('chat-header-name').innerText = data.sender;
+            document.getElementById('header-avatar').innerText = data.sender.charAt(0);
+            document.getElementById('chat-status').innerText = "Telegram Active";
+            document.getElementById('chat-status').classList.replace('text-gray-500', 'text-green-500');
+        }
+
+        // --- ၃။ စာအသစ်ဝင်လာခြင်း (Telegram) ---
+        socket.on('new_message', (data) => {
+            // အသံဖွင့်ခြင်း
+            notifSound.play().catch(e => console.log("Audio play blocked by browser"));
+            
+            updateUI(data);
+            appendMessage(data, false);
         });
 
-        // ၂။ စာပြန်ပို့တဲ့ Function
+        // --- ၄။ စာပြန်ပို့ခြင်း ---
         function sendMessage() {
             const input = document.getElementById('user-input');
-            const chatWindow = document.getElementById('chat-window');
-            
             if(input.value.trim() !== "" && currentChatId !== "") {
-                // Server (Socket.io) ဆီ စာလှမ်းပို့မယ်
                 socket.emit('send_reply', {
                     chatId: currentChatId,
                     text: input.value
                 });
-
-                // UI မှာ ကိုယ်ပို့လိုက်တဲ့စာကို ပြမယ်
-                const msgHtml = `
-                    <div class="self-end max-w-[70%]">
-                        <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium leading-relaxed">
-                            ${input.value}
-                        </div>
-                        <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent Just Now</p>
-                    </div>`;
-                
-                chatWindow.innerHTML += msgHtml;
+                appendMessage({ text: input.value }, true);
                 input.value = "";
-                chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' });
             } else if (currentChatId === "") {
-                alert("စာပြန်ရန် Chat တစ်ခုကို အရင်ရွေးချယ်ပါ သို့မဟုတ် စာအသစ်ဝင်လာသည်အထိ စောင့်ပါ။");
+                alert("စာပြန်ရန် Chat တစ်ခုကို အရင်စောင့်ပါ သို့မဟုတ် ရွေးချယ်ပါ။");
             }
         }
 
-        // Enter ခေါက်ရင် စာပို့ပေးဖို့
         function handleKeyPress(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
+            if (e.key === 'Enter') sendMessage();
         }
+
+        // Dashboard ပွင့်လာတာနဲ့ စာဟောင်းတွေ ဆွဲတင်မယ်
+        window.onload = loadHistory;
     </script>
 </body>
 </html>
