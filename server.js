@@ -19,102 +19,104 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Database Table - Column တွေကို အသစ်ပြန်စစ်ပြီး လိုအပ်တာ ထပ်ထည့်ပေးမယ့် function
-const initDb = async () => {
-    try {
-        // ၁။ Table မရှိရင် အရင်ဆောက်မယ်
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS messages (
-                id SERIAL PRIMARY KEY,
-                sender TEXT,
-                text TEXT,
-                platform TEXT,
-                chat_id TEXT,
-                sender_type TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        
-        // ၂။ sender_type ဆိုတဲ့ column မရှိရင် အတင်းထည့်ခိုင်းမယ် (Refresh ပြဿနာ ဖြေရှင်းရန်)
-        await pool.query(`
-            ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_type TEXT;
-        `);
+const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-        console.log("Database table and columns are ready.");
-    } catch (err) {
-        console.error("DB Init Error:", err.message);
+// ၁။ Telegram User ရဲ့ Profile ပုံကို လှမ်းယူတဲ့ Function
+async function getTelegramProfilePic(userId) {
+    try {
+        const res = await axios.get(`https://api.telegram.org/bot${TG_TOKEN}/getUserProfilePhotos?user_id=${userId}`);
+        if (res.data.result.total_count > 0) {
+            const fileId = res.data.result.photos[0][0].file_id;
+            const fileRes = await axios.get(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fileId}`);
+            return `https://api.telegram.org/file/bot${TG_TOKEN}/${fileRes.data.result.file_path}`;
+        }
+        return `https://ui-avatars.com/api/?name=User&background=random`; // ပုံမရှိရင် အလိုအလျောက် avatar ထုတ်ပေးမယ်
+    } catch (e) { 
+        return `https://ui-avatars.com/api/?name=User&background=random`; 
     }
-};
-initDb();
+}
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// စာအားလုံးကို ပြန်ထုတ်ပေးမယ့် API (index.html က ဒါကို ခေါ်သုံးတာပါ)
+// ၂။ API: စာဟောင်းတွေကို ပြန်ခေါ်တဲ့အပိုင်း
 app.get('/api/messages', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM messages ORDER BY created_at ASC');
         res.json(result.rows);
     } catch (err) {
-        console.error("Fetch API Error:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
-const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+// ၃။ API: Contact စာရင်း (ManyChat လို ဘယ်ဘက်မှာပြဖို့)
+app.get('/api/contacts', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM contacts ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
-// Telegram ကစာဝင်လာရင် 'user' အဖြစ်သိမ်းမယ်
+// ၄။ Telegram ကနေ စာဝင်လာတဲ့အခါ
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (update.message) {
         const chatId = update.message.chat.id.toString();
         const text = update.message.text || "";
-        const sender = update.message.from.first_name || "Unknown User";
+        const sender = update.message.from.first_name || "Unknown";
+        const username = update.message.from.username || "";
 
         try {
+            // (က) User အချက်အလက်ကို Contacts Table မှာ အရင်သိမ်းမယ်
+            const profilePic = await getTelegramProfilePic(chatId);
+            await pool.query(`
+                INSERT INTO contacts (chat_id, first_name, username, profile_pic, platform)
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (chat_id) DO UPDATE SET 
+                    first_name = EXCLUDED.first_name, 
+                    profile_pic = EXCLUDED.profile_pic,
+                    username = EXCLUDED.username
+            `, [chatId, sender, username, profilePic, 'Telegram']);
+
+            // (ခ) စာကို Messages Table မှာ သိမ်းမယ်
             await pool.query(
                 'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
                 [sender, text, 'Telegram', chatId, 'user']
             );
 
+            // (ဂ) Dashboard ဆီ Real-time လှမ်းပို့မယ်
             io.emit('new_message', {
                 sender: sender,
                 text: text,
                 chatId: chatId,
+                profile_pic: profilePic,
                 sender_type: 'user'
             });
-        } catch (err) { 
-            console.error("Telegram Webhook Save Error:", err.message); 
-        }
+        } catch (err) { console.error("Update Error:", err.message); }
     }
     res.sendStatus(200);
 });
 
-// Dashboard ကနေစာပြန်ပို့ရင် 'bot' အဖြစ် Database ထဲသိမ်းမယ်
+// ၅။ Dashboard ကနေ စာပြန်ပို့တဲ့အခါ
 io.on('connection', (socket) => {
-    console.log("New dashboard connection established");
-
     socket.on('send_reply', async (data) => {
         try {
-            // ၁။ Telegram API ဆီ အရင်ပို့မယ်
             await axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
                 chat_id: data.chatId,
                 text: data.text
             });
 
-            // ၂။ သိမ်းတဲ့နေရာမှာ sender_type ကို 'bot' လို့ သေချာထည့်မယ်
             await pool.query(
                 'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
-                ['Dashboard', data.text, 'Telegram', data.chatId, 'bot']
+                ['OmniBot', data.text, 'Telegram', data.chatId, 'bot']
             );
-            
-            console.log(`Reply to ${data.chatId} saved successfully.`);
-        } catch (e) { 
-            console.error("Dashboard Reply Save Error:", e.message); 
-        }
+            console.log("Reply saved to DB");
+        } catch (e) { console.error("Reply Error:", e.message); }
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on ${PORT}`));
