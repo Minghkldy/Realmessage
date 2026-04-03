@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const http = require('http');
 const { Server } = require("socket.io");
-const { Pool } = require('pg'); // PostgreSQL အတွက်
+const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
@@ -14,13 +14,12 @@ const io = new Server(server);
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname)));
 
-// Database Connection
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
-// Database Table တည်ဆောက်ခြင်း
+// Database Table တည်ဆောက်ခြင်း (sender_type တိုးထားပါတယ်)
 const initDb = async () => {
     try {
         await pool.query(`
@@ -30,10 +29,11 @@ const initDb = async () => {
                 text TEXT,
                 platform TEXT,
                 chat_id TEXT,
+                sender_type TEXT, -- 'user' သို့မဟုတ် 'bot'
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        console.log("Database connected and table ready.");
+        console.log("Database table synchronized.");
     } catch (err) {
         console.error("DB Init Error:", err.message);
     }
@@ -44,10 +44,10 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// စာဟောင်းများကို Database ကနေ ပြန်ထုတ်ပေးတဲ့ API
+// စာဟောင်းများအားလုံး ပြန်ထုတ်ပေးသည့် API
 app.get('/api/messages', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM messages ORDER BY created_at ASC LIMIT 100');
+        const result = await pool.query('SELECT * FROM messages ORDER BY created_at ASC');
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -56,7 +56,7 @@ app.get('/api/messages', async (req, res) => {
 
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-// Telegram Webhook
+// --- Telegram ကစာဝင်လာရင် သိမ်းတဲ့အပိုင်း ---
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (update.message) {
@@ -65,46 +65,41 @@ app.post('/webhook/telegram', async (req, res) => {
         const sender = update.message.from.first_name || "Unknown";
 
         try {
-            // ၁။ Database ထဲမှာ စာကို အမြဲတမ်းသိမ်းမယ်
+            // Database မှာ 'user' အဖြစ် သိမ်းမယ်
             await pool.query(
-                'INSERT INTO messages (sender, text, platform, chat_id) VALUES ($1, $2, $3, $4)',
-                [sender, text, 'Telegram', chatId]
+                'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
+                [sender, text, 'Telegram', chatId, 'user']
             );
 
-            // ၂။ Dashboard ဆီ Real-time ပို့မယ်
             io.emit('new_message', {
-                platform: 'Telegram',
                 sender: sender,
                 text: text,
-                chatId: chatId
+                chatId: chatId,
+                sender_type: 'user'
             });
-
-            // Auto Reply
-            if (text.toLowerCase() === '/start' || text.toLowerCase() === 'hi') {
-                await axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
-                    chat_id: chatId,
-                    text: "မင်္ဂလာပါ! Realmessage Bot မှ ကြိုဆိုပါတယ်။"
-                });
-            }
-        } catch (err) {
-            console.error("Error processing message:", err.message);
-        }
+        } catch (err) { console.error("Entry Error:", err.message); }
     }
     res.sendStatus(200);
 });
 
+// --- Dashboard ကနေ စာပြန်ပို့ရင် သိမ်းတဲ့အပိုင်း ---
 io.on('connection', (socket) => {
     socket.on('send_reply', async (data) => {
         try {
+            // ၁။ Telegram ဆီ ပို့မယ်
             await axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
                 chat_id: data.chatId,
                 text: data.text
             });
-            
-            // ကိုယ်ပြန်လိုက်တဲ့စာကိုလည်း Database ထဲ သိမ်းချင်ရင် ဒီမှာ query ထပ်ထည့်နိုင်ပါတယ်
-        } catch (e) { console.log("Error sending:", e.message); }
+
+            // ၂။ ကိုယ်ပို့လိုက်တဲ့စာကို Database မှာ 'bot' အဖြစ် သိမ်းမယ်
+            await pool.query(
+                'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
+                ['Dashboard', data.text, 'Telegram', data.chatId, 'bot']
+            );
+        } catch (e) { console.log("Reply Save Error:", e.message); }
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server started on ${PORT}`));
