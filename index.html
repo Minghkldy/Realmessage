@@ -71,10 +71,22 @@
                     <p id="chat-status" class="text-[10px] text-gray-500 uppercase tracking-tighter">System Ready</p>
                 </div>
             </div>
-            <div class="flex gap-5 text-gray-500 text-sm">
+            <div class="flex gap-5 text-gray-500 text-sm items-center">
+                <button onclick="toggleBlock()" class="hover:text-red-500 transition" title="Block User">
+                    <i class="fas fa-ban"></i>
+                </button>
+                <button onclick="deleteContact()" class="hover:text-red-600 transition" title="Delete Conversation">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
                 <i class="fas fa-search hover:text-white cursor-pointer transition"></i>
                 <i class="fas fa-ellipsis-v hover:text-white cursor-pointer transition"></i>
             </div>
+        </div>
+
+        <div id="note-container" class="hidden px-8 py-2 border-b border-white/5 bg-white/5 flex gap-2 items-center">
+            <i class="fas fa-sticky-note text-[10px] text-gray-500"></i>
+            <input type="text" id="contact-note" onblur="saveNote()" placeholder="Add a private note about this user..." 
+                   class="bg-transparent text-[11px] outline-none flex-1 text-gray-400">
         </div>
 
         <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col">
@@ -99,7 +111,7 @@
         let currentChatId = "";
         let allMessages = [];
 
-        // ၁။ Contact List ကို API မှခေါ်ယူပြသခြင်း
+        // ၁။ Contact List
         async function loadContacts() {
             try {
                 const res = await fetch('/api/contacts');
@@ -149,11 +161,44 @@
             document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
             document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase tracking-tighter font-bold";
             
-            loadContacts(); // Sidebar active state ပြောင်းရန်
+            // Note Update
+            document.getElementById('note-container').classList.remove('hidden');
+            document.getElementById('contact-note').value = contact.notes || "";
+
+            loadContacts();
             renderMessages();
         }
 
-        // ၃။ Message များကို UI တွင်ပြသခြင်း
+        // --- ပြင်ဆင်လိုက်သည့် Logic အသစ်များ ---
+        async function toggleBlock() {
+            if (!currentChatId) return;
+            if (!confirm("ဒီ User ကို Block လုပ်မှာ သေချာပါသလား?")) return;
+            await fetch('/api/contacts/status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chatId: currentChatId, status: 'blocked' })
+            });
+            alert("User blocked successfully.");
+            location.reload();
+        }
+
+        async function deleteContact() {
+            if (!currentChatId || !confirm("ဒီ Conversation တစ်ခုလုံးကို ဖျက်ပစ်မှာ သေချာပါသလား?")) return;
+            await fetch(`/api/contacts/${currentChatId}`, { method: 'DELETE' });
+            location.reload();
+        }
+
+        async function saveNote() {
+            if (!currentChatId) return;
+            const noteValue = document.getElementById('contact-note').value;
+            await fetch('/api/contacts/note', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chatId: currentChatId, note: noteValue })
+            });
+        }
+        // ------------------------------------
+
         function renderMessages() {
             chatWindow.innerHTML = "";
             const filtered = allMessages.filter(m => m.chat_id === currentChatId);
@@ -185,7 +230,6 @@
             chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' });
         }
 
-        // ၄။ စာဟောင်းများခေါ်ယူခြင်း
         async function loadHistory() {
             try {
                 const response = await fetch('/api/messages');
@@ -195,18 +239,16 @@
             } catch (err) { console.log("History Load Error:", err); }
         }
 
-        // ၅။ စာအသစ်ဝင်လာခြင်း
         socket.on('new_message', (data) => {
             notifSound.play().catch(e => {});
             allMessages.push(data);
             document.getElementById('msg-count').innerText = allMessages.length;
-            loadContacts(); // လူစာရင်း update လုပ်မယ်
+            loadContacts();
             if (currentChatId === data.chatId || currentChatId === data.chat_id) {
                 appendMessage(data, false);
             }
         });
 
-        // ၆။ စာပြန်ပို့ခြင်း
         function sendMessage() {
             const input = document.getElementById('user-input');
             if(input.value.trim() !== "" && currentChatId !== "") {
