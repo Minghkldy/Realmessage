@@ -20,9 +20,10 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// ၁။ Database Tables - (Step 1: status နဲ့ notes column များ ထည့်သွင်းထားသည်)
+// ၁။ Database Tables - (Step 1 & Settings Table ထည့်သွင်းထားသည်)
 const initDb = async () => {
     try {
+        // Contacts Table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS contacts (
                 chat_id TEXT PRIMARY KEY,
@@ -36,10 +37,10 @@ const initDb = async () => {
             )
         `);
 
-        // လက်ရှိ table ထဲကို column အသစ်များ manual ထည့်ခြင်း (Error မတက်အောင်)
         await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';`);
         await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS notes TEXT;`);
 
+        // Messages Table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS messages (
                 id SERIAL PRIMARY KEY,
@@ -51,11 +52,17 @@ const initDb = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        
-        // sender_type column မရှိသေးလျှင် ထည့်ရန်
         await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_type TEXT;`);
+
+        // Settings Table (API Keys များသိမ်းရန်)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        `);
         
-        console.log("✅ Database structure is updated with Management features.");
+        console.log("✅ Database structure is updated with Settings & Management features.");
     } catch (err) {
         console.error("❌ DB Init Error:", err.message);
     }
@@ -79,32 +86,49 @@ async function getTelegramProfilePic(userId) {
     }
 }
 
+// --- Page Routes ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// API လမ်းကြောင်းများ
+app.get('/settings', (req, res) => {
+    res.sendFile(path.join(__dirname, 'settings.html'));
+});
+
+// --- API လမ်းကြောင်းများ ---
 app.get('/api/messages', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM messages ORDER BY created_at ASC');
         res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/contacts', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM contacts ORDER BY created_at DESC');
         res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Step 2: Management APIs (Block, Note, Delete) ---
+// --- Settings APIs ---
+app.get('/api/settings', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM settings');
+        const settings = {};
+        result.rows.forEach(row => settings[row.key] = row.value);
+        res.json(settings);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
-// User ကို Block/Unblock လုပ်ရန်
+app.post('/api/settings', async (req, res) => {
+    const { key, value } = req.body;
+    try {
+        await pool.query('INSERT INTO settings (key, value) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', [key, value]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- Management APIs ---
 app.post('/api/contacts/status', async (req, res) => {
     const { chatId, status } = req.body;
     try {
@@ -113,7 +137,6 @@ app.post('/api/contacts/status', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// User အတွက် Note သိမ်းရန်
 app.post('/api/contacts/note', async (req, res) => {
     const { chatId, note } = req.body;
     try {
@@ -122,7 +145,6 @@ app.post('/api/contacts/note', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Chat တစ်ခုလုံးကို ဖျက်ပစ်ရန်
 app.delete('/api/contacts/:chatId', async (req, res) => {
     const { chatId } = req.params;
     try {
@@ -132,16 +154,13 @@ app.delete('/api/contacts/:chatId', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- ၃။ Webhook with Block Logic ---
+// --- Webhook with Block Logic ---
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (update.message) {
         const chatId = update.message.chat.id.toString();
-        
-        // စာမသိမ်းခင် Block ထားခြင်း ရှိ/မရှိ စစ်ဆေးခြင်း
         const checkStatus = await pool.query('SELECT status FROM contacts WHERE chat_id = $1', [chatId]);
         if (checkStatus.rows.length > 0 && checkStatus.rows[0].status === 'blocked') {
-            console.log(`Message from blocked user ${chatId} ignored.`);
             return res.sendStatus(200);
         }
 
@@ -153,7 +172,6 @@ app.post('/webhook/telegram', async (req, res) => {
 
         try {
             const profilePic = await getTelegramProfilePic(chatId);
-            
             await pool.query(`
                 INSERT INTO contacts (chat_id, first_name, username, profile_pic, platform)
                 VALUES ($1, $2, $3, $4, $5)
@@ -180,7 +198,7 @@ app.post('/webhook/telegram', async (req, res) => {
     res.sendStatus(200);
 });
 
-// ၄။ Dashboard Reply Logic
+// Dashboard Reply Logic
 io.on('connection', (socket) => {
     socket.on('send_reply', async (data) => {
         try {
@@ -188,12 +206,10 @@ io.on('connection', (socket) => {
                 chat_id: data.chatId,
                 text: data.text
             });
-
             await pool.query(
                 'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
                 ['OmniBot', data.text, 'Telegram', data.chatId, 'bot']
             );
-            console.log("Reply saved to DB");
         } catch (e) { console.error("Dashboard Reply Error:", e.message); }
     });
 });
