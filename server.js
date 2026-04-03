@@ -14,14 +14,54 @@ const io = new Server(server);
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname)));
 
+// Database Connection
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
+// ၁။ Database Tables များကို အလိုအလျောက် ဆောက်ပေးမည့် Function
+const initDb = async () => {
+    try {
+        // Contacts Table (User Profile များသိမ်းရန်)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS contacts (
+                chat_id TEXT PRIMARY KEY,
+                first_name TEXT,
+                username TEXT,
+                profile_pic TEXT,
+                platform TEXT,
+                status TEXT DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Messages Table (စာအဝင်အထွက်များသိမ်းရန်)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS messages (
+                id SERIAL PRIMARY KEY,
+                sender TEXT,
+                text TEXT,
+                platform TEXT,
+                chat_id TEXT,
+                sender_type TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // sender_type column မရှိသေးလျှင် ထည့်ရန်
+        await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_type TEXT;`);
+        
+        console.log("✅ Database structure is ready.");
+    } catch (err) {
+        console.error("❌ DB Init Error:", err.message);
+    }
+};
+initDb();
+
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-// ၁။ Telegram User ရဲ့ Profile ပုံကို လှမ်းယူတဲ့ Function
+// ၂။ Telegram User ရဲ့ Profile ပုံကို လှမ်းယူတဲ့ Function
 async function getTelegramProfilePic(userId) {
     try {
         const res = await axios.get(`https://api.telegram.org/bot${TG_TOKEN}/getUserProfilePhotos?user_id=${userId}`);
@@ -30,7 +70,7 @@ async function getTelegramProfilePic(userId) {
             const fileRes = await axios.get(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fileId}`);
             return `https://api.telegram.org/file/bot${TG_TOKEN}/${fileRes.data.result.file_path}`;
         }
-        return `https://ui-avatars.com/api/?name=User&background=random`; // ပုံမရှိရင် အလိုအလျောက် avatar ထုတ်ပေးမယ်
+        return `https://ui-avatars.com/api/?name=User&background=random`;
     } catch (e) { 
         return `https://ui-avatars.com/api/?name=User&background=random`; 
     }
@@ -40,7 +80,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// ၂။ API: စာဟောင်းတွေကို ပြန်ခေါ်တဲ့အပိုင်း
+// စာဟောင်းများကို ပြန်ခေါ်သည့် API
 app.get('/api/messages', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM messages ORDER BY created_at ASC');
@@ -50,7 +90,7 @@ app.get('/api/messages', async (req, res) => {
     }
 });
 
-// ၃။ API: Contact စာရင်း (ManyChat လို ဘယ်ဘက်မှာပြဖို့)
+// Contact စာရင်းကို ပြန်ခေါ်သည့် API
 app.get('/api/contacts', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM contacts ORDER BY created_at DESC');
@@ -60,7 +100,7 @@ app.get('/api/contacts', async (req, res) => {
     }
 });
 
-// ၄။ Telegram ကနေ စာဝင်လာတဲ့အခါ
+// ၃။ Telegram ကနေ စာဝင်လာတဲ့အခါ
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (update.message) {
@@ -95,12 +135,12 @@ app.post('/webhook/telegram', async (req, res) => {
                 profile_pic: profilePic,
                 sender_type: 'user'
             });
-        } catch (err) { console.error("Update Error:", err.message); }
+        } catch (err) { console.error("Webhook Save Error:", err.message); }
     }
     res.sendStatus(200);
 });
 
-// ၅။ Dashboard ကနေ စာပြန်ပို့တဲ့အခါ
+// ၄။ Dashboard ကနေ စာပြန်ပို့တဲ့အခါ
 io.on('connection', (socket) => {
     socket.on('send_reply', async (data) => {
         try {
@@ -114,9 +154,9 @@ io.on('connection', (socket) => {
                 ['OmniBot', data.text, 'Telegram', data.chatId, 'bot']
             );
             console.log("Reply saved to DB");
-        } catch (e) { console.error("Reply Error:", e.message); }
+        } catch (e) { console.error("Dashboard Reply Error:", e.message); }
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
