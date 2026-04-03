@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniBot - Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'pure-black': '#000000',
+                        'dark-gray': '#0a0a0a',
+                        'border-gray': '#1f1f1f',
+                        'accent-blue': '#3B82F6',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #000000; color: #ffffff; }
+    </style>
+</head>
+<body class="h-full flex items-center justify-center p-6">
+
+    <div class="w-full max-w-2xl space-y-8">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="/" class="w-10 h-10 rounded-full border border-border-gray flex items-center justify-center hover:bg-dark-gray transition">
+                    <i class="fas fa-arrow-left text-gray-400"></i>
+                </a>
+                <h1 class="text-2xl font-bold">Bot Settings</h1>
+            </div>
+            <div class="text-[10px] text-gray-500 uppercase tracking-widest bg-dark-gray px-3 py-1 rounded-full border border-border-gray">
+                v1.2 Stable
+            </div>
+        </div>
+
+        <div class="grid gap-6">
+            
+            <div class="bg-dark-gray border border-border-gray rounded-2xl p-8 space-y-6">
+                <div class="flex items-center gap-3 border-b border-border-gray pb-4">
+                    <i class="fab fa-telegram text-2xl text-sky-500"></i>
+                    <div>
+                        <h2 class="font-bold">Telegram Connection</h2>
+                        <p class="text-[11px] text-gray-500">Manage your Telegram Bot API Integration</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Telegram Bot Token</label>
+                        <div class="relative mt-2">
+                            <input type="password" id="tg-token" 
+                                   class="w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-accent-blue transition"
+                                   placeholder="123456789:ABCdefGHIjklMNOpqrSTU...">
+                            <i onclick="toggleVisibility('tg-token')" class="fas fa-eye absolute right-4 top-4 text-gray-600 cursor-pointer hover:text-white"></i>
+                        </div>
+                        <p class="text-[10px] text-gray-600 mt-2 italic">* You can get this from @BotFather</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-dark-gray border border-border-gray rounded-2xl p-8 opacity-40 grayscale">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fab fa-viber text-2xl text-purple-500"></i>
+                        <h2 class="font-bold">Viber Business API</h2>
+                    </div>
+                    <span class="text-[9px] bg-pure-black px-2 py-1 rounded border border-border-gray uppercase">Coming Soon</span>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="saveSettings()" id="save-btn" class="flex-1 bg-accent-blue hover:bg-blue-600 text-white font-bold py-4 rounded-xl transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
+                    <i class="fas fa-save"></i> Save All Changes
+                </button>
+            </div>
+
+        </div>
+
+        <p class="text-center text-[11px] text-gray-600 uppercase tracking-tighter">
+            Changes will take effect after server restart
+        </p>
+    </div>
+
+    <script>
+        // စာမျက်နှာစဖွင့်တာနဲ့ Database ကနေ လက်ရှိ Token ကို ယူမယ်
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                if (data.telegram_token) {
+                    document.getElementById('tg-token').value = data.telegram_token;
+                }
+            } catch (err) {
+                console.error("Failed to load settings:", err);
+            }
+        }
+
+        // Token ကို ဖျောက်/ပြ လုပ်ဖို့
+        function toggleVisibility(id) {
+            const el = document.getElementById(id);
+            el.type = el.type === 'password' ? 'text' : 'password';
+        }
+
+        // Settings သိမ်းဖို့
+        async function saveSettings() {
+            const btn = document.getElementById('save-btn');
+            const token = document.getElementById('tg-token').value;
+
+            if(!token) return alert("Please enter a token!");
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'telegram_token', value: token })
+                });
+
+                if (res.ok) {
+                    alert("✅ Settings saved successfully!");
+                }
+            } catch (err) {
+                alert("❌ Failed to save settings");
+            } finally {
+                btn.innerHTML = '<i class="fas fa-save"></i> Save All Changes';
+                btn.disabled = false;
+            }
+        }
+
+        window.onload = loadSettings;
+    </script>
+</body>
+</html>
