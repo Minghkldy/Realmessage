@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniBot - Total Black Dashboard</title>
+    <title>OmniBot - ManyChat Style Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="/socket.io/socket.io.js"></script>
@@ -28,81 +28,89 @@
         .active-contact { border-left: 3px solid #3B82F6; background-color: #0f0f0f; }
     </style>
 </head>
-<body class="h-full flex overflow-hidden">
+<body class="h-full flex overflow-hidden bg-pure-black">
 
     <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
-    <div class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black">
-        <div class="p-6 text-xl font-bold border-b border-border-gray flex items-center gap-2">
-            <i class="fas fa-robot text-accent-blue"></i> OmniBot
-        </div>
-
-        <nav class="p-4 border-b border-border-gray space-y-1">
-            <div class="p-3 rounded-lg bg-dark-gray flex items-center justify-between text-sm cursor-pointer">
-                <span class="flex items-center gap-3"><i class="fas fa-th-large text-gray-500"></i> All Messages</span>
-                <span id="msg-count" class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full">0</span>
-            </div>
-            <div class="p-3 rounded-lg hover:bg-dark-gray flex items-center gap-3 text-sm text-gray-400 cursor-pointer transition">
-                <i class="fab fa-telegram text-sky-500"></i> Telegram
-            </div>
-            <div class="p-3 rounded-lg hover:bg-dark-gray flex items-center gap-3 text-sm text-gray-400 cursor-pointer transition">
-                <i class="fab fa-viber text-purple-500"></i> Viber
-            </div>
+    <div class="w-20 flex-shrink-0 flex flex-col items-center border-r border-border-gray py-6 space-y-8 bg-dark-gray">
+        <div class="text-2xl font-bold text-accent-blue"><i class="fas fa-robot"></i></div>
+        <nav class="flex flex-col gap-8 text-gray-500 text-xl">
+            <i class="fas fa-th-large text-accent-blue cursor-pointer" title="All Messages"></i>
+            <i class="fab fa-facebook-messenger hover:text-blue-500 cursor-pointer transition" title="Messenger"></i>
+            <i class="fab fa-instagram hover:text-pink-500 cursor-pointer transition" title="Instagram"></i>
+            <i class="fab fa-telegram hover:text-sky-500 cursor-pointer transition" title="Telegram"></i>
+            <i class="fab fa-viber hover:text-purple-500 cursor-pointer transition" title="Viber"></i>
+            <i class="fab fa-whatsapp hover:text-green-500 cursor-pointer transition" title="WhatsApp"></i>
         </nav>
+        <div class="mt-auto flex flex-col gap-6 text-gray-500">
+            <a href="/settings"><i class="fas fa-cog hover:text-white transition"></i></a>
+        </div>
+    </div>
 
-        <div id="contact-list" class="flex-1 overflow-y-auto px-2 py-4">
-            <p class="px-4 text-[10px] uppercase tracking-widest text-gray-600 font-bold mb-4">Contacts List</p>
+    <div class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray">
+        <div class="p-6 border-b border-border-gray flex justify-between items-center">
+            <h2 class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
+            <span id="msg-count" class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white">0</span>
+        </div>
+        <div id="contact-list" class="flex-1 overflow-y-auto p-2">
             <div id="contacts-container" class="space-y-1">
                 </div>
-        </div>
-
-        <div class="p-2 border-t border-border-gray">
-            <a href="/settings" class="flex items-center gap-3 p-3 text-gray-500 hover:text-white hover:bg-dark-gray rounded-xl transition text-sm">
-                <i class="fas fa-cog"></i> Settings & APIs
-            </a>
-            <div class="mt-2 text-[10px] text-gray-600 text-center uppercase tracking-widest">
-                Connected to Render & GitHub
-            </div>
         </div>
     </div>
 
     <div class="flex-1 flex flex-col bg-pure-black">
-        <div class="h-16 border-b border-border-gray flex items-center justify-between px-6">
+        <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between">
             <div class="flex items-center gap-3">
                 <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden" src="">
                 <div id="header-avatar-text" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs">?</div>
                 <div>
-                    <h3 id="chat-header-name" class="text-sm font-bold">Waiting for message...</h3>
-                    <p id="chat-status" class="text-[10px] text-gray-500 uppercase tracking-tighter">System Ready</p>
+                    <h3 id="chat-header-name" class="text-sm font-bold">Select a chat</h3>
+                    <p id="chat-status" class="text-[10px] text-gray-600 uppercase tracking-tighter">System Ready</p>
                 </div>
             </div>
-            <div class="flex gap-5 text-gray-500 text-sm items-center">
-                <button onclick="toggleBlock()" class="hover:text-red-500 transition" title="Block User">
-                    <i class="fas fa-ban"></i>
-                </button>
-                <button onclick="deleteContact()" class="hover:text-red-600 transition" title="Delete Conversation">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-                <i class="fas fa-search hover:text-white cursor-pointer transition"></i>
-                <i class="fas fa-ellipsis-v hover:text-white cursor-pointer transition"></i>
-            </div>
-        </div>
-
-        <div id="note-container" class="hidden px-8 py-2 border-b border-white/5 bg-white/5 flex gap-2 items-center">
-            <i class="fas fa-sticky-note text-[10px] text-gray-500"></i>
-            <input type="text" id="contact-note" onblur="saveNote()" placeholder="Add a private note about this user..." 
-                   class="bg-transparent text-[11px] outline-none flex-1 text-gray-400">
         </div>
 
         <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col">
             </div>
 
-        <div class="p-6 bg-pure-black border-t border-border-gray">
+        <div class="p-6 border-t border-border-gray bg-pure-black">
             <div class="flex items-center gap-4 bg-dark-gray border border-border-gray rounded-2xl px-5 py-3 focus-within:border-accent-blue transition">
                 <i class="fas fa-paperclip text-gray-500 cursor-pointer hover:text-white"></i>
-                <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="မက်ဆေ့ချ် ရေးရန်..." class="bg-transparent flex-1 outline-none text-sm text-white">
-                <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition active:scale-95">
+                <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Reply here..." class="bg-transparent flex-1 outline-none text-sm text-white">
+                <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition">
                     <i class="fas fa-paper-plane text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="w-80 border-l border-border-gray bg-dark-gray flex flex-col p-6 space-y-8 overflow-y-auto">
+        <div class="text-center space-y-4 pt-4">
+            <div id="side-avatar-container" class="relative inline-block">
+                <div id="side-avatar" class="w-24 h-24 bg-accent-blue rounded-full mx-auto flex items-center justify-center text-3xl font-bold border-4 border-pure-black">?</div>
+                <img id="side-avatar-img" class="w-24 h-24 rounded-full mx-auto border-4 border-pure-black hidden object-cover" src="">
+            </div>
+            <div>
+                <input type="text" id="edit-nickname" onblur="updateNickname()" class="bg-transparent text-center font-bold text-lg outline-none focus:border-b border-accent-blue w-full hover:bg-white/5 p-1 rounded transition" placeholder="Edit Nickname">
+                <p id="side-platform" class="text-[10px] text-gray-500 uppercase tracking-widest mt-2">Platform: -</p>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="space-y-3">
+                <label class="text-[10px] text-gray-500 uppercase font-bold tracking-widest flex items-center gap-2">
+                    <i class="fas fa-sticky-note text-accent-blue"></i> Internal Notes
+                </label>
+                <textarea id="contact-note" onblur="saveNote()" class="w-full h-32 bg-pure-black border border-border-gray rounded-xl p-4 text-xs outline-none focus:border-accent-blue resize-none text-gray-300 transition" placeholder="Add private details about this customer..."></textarea>
+            </div>
+
+            <div class="pt-6 border-t border-border-gray space-y-3">
+                <p class="text-[10px] text-gray-600 uppercase font-bold tracking-widest px-1">Actions</p>
+                <button onclick="toggleBlock()" class="w-full py-3 bg-red-900/10 text-red-500 rounded-xl text-[11px] font-bold hover:bg-red-900/30 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-ban"></i> BLOCK CUSTOMER
+                </button>
+                <button onclick="deleteContact()" class="w-full py-3 border border-border-gray text-gray-500 rounded-xl text-[11px] font-bold hover:bg-white/5 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-trash-alt"></i> DELETE CONVERSATION
                 </button>
             </div>
         </div>
@@ -116,7 +124,6 @@
         let currentChatId = "";
         let allMessages = [];
 
-        // ၁။ Contact List
         async function loadContacts() {
             try {
                 const res = await fetch('/api/contacts');
@@ -130,12 +137,12 @@
                     
                     const avatar = c.profile_pic ? 
                         `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` :
-                        `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold">${c.first_name.charAt(0)}</div>`;
+                        `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold">${(c.nickname || c.first_name).charAt(0)}</div>`;
                     
                     item.innerHTML = `
                         ${avatar}
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm font-bold truncate">${c.first_name}</p>
+                            <p class="text-sm font-bold truncate">${c.nickname || c.first_name}</p>
                             <p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p>
                         </div>
                     `;
@@ -144,37 +151,57 @@
             } catch (err) { console.error("Load Contacts Error:", err); }
         }
 
-        // ၂။ Contact တစ်ယောက်ကို ရွေးချယ်ခြင်း
         function selectContact(contact) {
             currentChatId = contact.chat_id;
             
-            // Header Update
-            document.getElementById('chat-header-name').innerText = contact.first_name;
+            // Header & Profile Panel Update
+            const displayName = contact.nickname || contact.first_name;
+            document.getElementById('chat-header-name').innerText = displayName;
+            document.getElementById('edit-nickname').value = displayName;
+            document.getElementById('contact-note').value = contact.notes || "";
+            document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
+
+            // Avatar Logic for Header
             const hAvatarImg = document.getElementById('header-avatar-img');
             const hAvatarTxt = document.getElementById('header-avatar-text');
-            
+            const sAvatarImg = document.getElementById('side-avatar-img');
+            const sAvatarTxt = document.getElementById('side-avatar');
+
             if(contact.profile_pic) {
                 hAvatarImg.src = contact.profile_pic;
                 hAvatarImg.classList.remove('hidden');
                 hAvatarTxt.classList.add('hidden');
+                sAvatarImg.src = contact.profile_pic;
+                sAvatarImg.classList.remove('hidden');
+                sAvatarTxt.classList.add('hidden');
             } else {
-                hAvatarTxt.innerText = contact.first_name.charAt(0);
+                const initial = displayName.charAt(0);
+                hAvatarTxt.innerText = initial;
                 hAvatarTxt.classList.remove('hidden');
                 hAvatarImg.classList.add('hidden');
+                sAvatarTxt.innerText = initial;
+                sAvatarTxt.classList.remove('hidden');
+                sAvatarImg.classList.add('hidden');
             }
             
             document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
             document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase tracking-tighter font-bold";
             
-            // Note Update
-            document.getElementById('note-container').classList.remove('hidden');
-            document.getElementById('contact-note').value = contact.notes || "";
-
             loadContacts();
             renderMessages();
         }
 
-        // --- ပြင်ဆင်လိုက်သည့် Logic အသစ်များ ---
+        async function updateNickname() {
+            if (!currentChatId) return;
+            const newName = document.getElementById('edit-nickname').value;
+            await fetch('/api/contacts/nickname', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chatId: currentChatId, nickname: newName })
+            });
+            loadContacts();
+        }
+
         async function toggleBlock() {
             if (!currentChatId) return;
             if (!confirm("ဒီ User ကို Block လုပ်မှာ သေချာပါသလား?")) return;
@@ -183,7 +210,6 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ chatId: currentChatId, status: 'blocked' })
             });
-            alert("User blocked successfully.");
             location.reload();
         }
 
@@ -202,7 +228,6 @@
                 body: JSON.stringify({ chatId: currentChatId, note: noteValue })
             });
         }
-        // ------------------------------------
 
         function renderMessages() {
             chatWindow.innerHTML = "";
@@ -215,7 +240,7 @@
         function appendMessage(data, isBot = false) {
             const msgHtml = isBot ? `
                 <div class="self-end max-w-[70%]">
-                    <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium leading-relaxed">
+                    <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">
                         ${data.text}
                     </div>
                     <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
@@ -259,13 +284,12 @@
             if(input.value.trim() !== "" && currentChatId !== "") {
                 const text = input.value;
                 socket.emit('send_reply', { chatId: currentChatId, text: text });
-                
                 const newMsg = { text: text, sender_type: 'bot', chat_id: currentChatId };
                 allMessages.push(newMsg);
                 appendMessage(newMsg, true);
                 input.value = "";
             } else if (!currentChatId) {
-                alert("စာပြန်ရန် Contact တစ်ခုကို အရင်ရွေးချယ်ပါဗျ။");
+                alert("Please select a contact first.");
             }
         }
 
