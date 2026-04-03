@@ -51,8 +51,9 @@
         </nav>
 
         <div id="contact-list" class="flex-1 overflow-y-auto px-2 py-4">
-            <p class="px-4 text-[10px] uppercase tracking-widest text-gray-600 font-bold mb-4">Contacts</p>
-            <div id="contacts-container"></div>
+            <p class="px-4 text-[10px] uppercase tracking-widest text-gray-600 font-bold mb-4">Contacts List</p>
+            <div id="contacts-container" class="space-y-1">
+                </div>
         </div>
 
         <div class="p-4 border-t border-border-gray text-[10px] text-gray-600 text-center uppercase tracking-widest">
@@ -63,7 +64,8 @@
     <div class="flex-1 flex flex-col bg-pure-black">
         <div class="h-16 border-b border-border-gray flex items-center justify-between px-6">
             <div class="flex items-center gap-3">
-                <div id="header-avatar" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs">?</div>
+                <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden" src="">
+                <div id="header-avatar-text" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs">?</div>
                 <div>
                     <h3 id="chat-header-name" class="text-sm font-bold">Waiting for message...</h3>
                     <p id="chat-status" class="text-[10px] text-gray-500 uppercase tracking-tighter">System Ready</p>
@@ -75,12 +77,13 @@
             </div>
         </div>
 
-        <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col"></div>
+        <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col">
+            </div>
 
         <div class="p-6 bg-pure-black border-t border-border-gray">
             <div class="flex items-center gap-4 bg-dark-gray border border-border-gray rounded-2xl px-5 py-3 focus-within:border-accent-blue transition">
                 <i class="fas fa-paperclip text-gray-500 cursor-pointer hover:text-white"></i>
-                <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="မက်ဆေ့ချ် ရေးရန်..." class="bg-transparent flex-1 outline-none text-sm">
+                <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="မက်ဆေ့ချ် ရေးရန်..." class="bg-transparent flex-1 outline-none text-sm text-white">
                 <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition active:scale-95">
                     <i class="fas fa-paper-plane text-lg"></i>
                 </button>
@@ -92,13 +95,74 @@
         const socket = io();
         const chatWindow = document.getElementById('chat-window');
         const notifSound = document.getElementById('notif-sound');
+        const contactsContainer = document.getElementById('contacts-container');
         let currentChatId = "";
+        let allMessages = [];
 
-        // --- ၁။ Message ပြသသည့် Function (isReply ပေါ်မူတည်ပြီး ဘယ်/ညာ ခွဲပြရန်) ---
-        function appendMessage(data, isReply = false) {
-            // Database ကလာရင် sender_type ကိုကြည့်မယ်၊ Real-time ဆိုရင် isReply ကိုကြည့်မယ်
-            const isBot = (data.sender_type === 'bot' || isReply === true);
+        // ၁။ Contact List ကို API မှခေါ်ယူပြသခြင်း
+        async function loadContacts() {
+            try {
+                const res = await fetch('/api/contacts');
+                const contacts = await res.json();
+                contactsContainer.innerHTML = '';
+                
+                contacts.forEach(c => {
+                    const item = document.createElement('div');
+                    item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
+                    item.onclick = () => selectContact(c);
+                    
+                    const avatar = c.profile_pic ? 
+                        `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` :
+                        `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold">${c.first_name.charAt(0)}</div>`;
+                    
+                    item.innerHTML = `
+                        ${avatar}
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-bold truncate">${c.first_name}</p>
+                            <p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p>
+                        </div>
+                    `;
+                    contactsContainer.appendChild(item);
+                });
+            } catch (err) { console.error("Load Contacts Error:", err); }
+        }
+
+        // ၂။ Contact တစ်ယောက်ကို ရွေးချယ်ခြင်း
+        function selectContact(contact) {
+            currentChatId = contact.chat_id;
             
+            // Header Update
+            document.getElementById('chat-header-name').innerText = contact.first_name;
+            const hAvatarImg = document.getElementById('header-avatar-img');
+            const hAvatarTxt = document.getElementById('header-avatar-text');
+            
+            if(contact.profile_pic) {
+                hAvatarImg.src = contact.profile_pic;
+                hAvatarImg.classList.remove('hidden');
+                hAvatarTxt.classList.add('hidden');
+            } else {
+                hAvatarTxt.innerText = contact.first_name.charAt(0);
+                hAvatarTxt.classList.remove('hidden');
+                hAvatarImg.classList.add('hidden');
+            }
+            
+            document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
+            document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase tracking-tighter font-bold";
+            
+            loadContacts(); // Sidebar active state ပြောင်းရန်
+            renderMessages();
+        }
+
+        // ၃။ Message များကို UI တွင်ပြသခြင်း
+        function renderMessages() {
+            chatWindow.innerHTML = "";
+            const filtered = allMessages.filter(m => m.chat_id === currentChatId);
+            filtered.forEach(msg => {
+                appendMessage(msg, msg.sender_type === 'bot');
+            });
+        }
+
+        function appendMessage(data, isBot = false) {
             const msgHtml = isBot ? `
                 <div class="self-end max-w-[70%]">
                     <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium leading-relaxed">
@@ -108,8 +172,8 @@
                 </div>
             ` : `
                 <div class="flex items-start gap-3 max-w-[70%]">
-                    <div class="w-8 h-8 rounded-full bg-gray-900 flex-shrink-0 flex items-center justify-center border border-border-gray">
-                        <i class="fab fa-telegram text-sky-500 text-xs"></i>
+                    <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-border-gray bg-gray-900 flex items-center justify-center">
+                        ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover">` : `<i class="fab fa-telegram text-sky-500 text-xs"></i>`}
                     </div>
                     <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
                         <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>
@@ -121,68 +185,49 @@
             chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' });
         }
 
-        // --- ၂။ Database ကစာဟောင်းများကို ဆွဲထုတ်ခြင်း ---
+        // ၄။ စာဟောင်းများခေါ်ယူခြင်း
         async function loadHistory() {
             try {
                 const response = await fetch('/api/messages');
-                const messages = await response.json();
-                document.getElementById('msg-count').innerText = messages.length;
-                
-                chatWindow.innerHTML = ""; // Refresh တိုင်း အဟောင်းတွေအရင်ရှင်းမယ်
-
-                if (messages.length > 0) {
-                    messages.forEach(msg => {
-                        // sender_type က 'bot' ဖြစ်ရင် ညာဘက်မှာပြမယ် (isReply = true)
-                        appendMessage(msg, msg.sender_type === 'bot');
-                    });
-                    
-                    // Header UI ကို နောက်ဆုံးစာပို့ထားသူရဲ့ အချက်အလက်နဲ့ update လုပ်မယ်
-                    const lastUserMsg = [...messages].reverse().find(m => m.sender_type !== 'bot');
-                    if (lastUserMsg) {
-                        updateUI(lastUserMsg);
-                    }
-                }
-            } catch (err) {
-                console.log("History Load Error:", err);
-            }
+                allMessages = await response.json();
+                document.getElementById('msg-count').innerText = allMessages.length;
+                if(currentChatId) renderMessages();
+            } catch (err) { console.log("History Load Error:", err); }
         }
 
-        function updateUI(data) {
-            currentChatId = data.chatId || data.chat_id;
-            document.getElementById('chat-header-name').innerText = data.sender || "User";
-            document.getElementById('header-avatar').innerText = (data.sender || "U").charAt(0);
-            document.getElementById('chat-status').innerText = "Telegram Active";
-            document.getElementById('chat-status').classList.replace('text-gray-500', 'text-green-500');
-        }
-
-        // --- ၃။ စာအသစ်ဝင်လာခြင်း (Telegram) ---
+        // ၅။ စာအသစ်ဝင်လာခြင်း
         socket.on('new_message', (data) => {
             notifSound.play().catch(e => {});
-            updateUI(data);
-            appendMessage(data, false); // အဝင်စာမို့လို့ false
+            allMessages.push(data);
+            document.getElementById('msg-count').innerText = allMessages.length;
+            loadContacts(); // လူစာရင်း update လုပ်မယ်
+            if (currentChatId === data.chatId || currentChatId === data.chat_id) {
+                appendMessage(data, false);
+            }
         });
 
-        // --- ၄။ စာပြန်ပို့ခြင်း ---
+        // ၆။ စာပြန်ပို့ခြင်း
         function sendMessage() {
             const input = document.getElementById('user-input');
             if(input.value.trim() !== "" && currentChatId !== "") {
                 const text = input.value;
-                socket.emit('send_reply', {
-                    chatId: currentChatId,
-                    text: text
-                });
-                appendMessage({ text: text }, true); // ကိုယ်ပို့တဲ့စာမို့လို့ true (ညာဘက်မှာပြမယ်)
+                socket.emit('send_reply', { chatId: currentChatId, text: text });
+                
+                const newMsg = { text: text, sender_type: 'bot', chat_id: currentChatId };
+                allMessages.push(newMsg);
+                appendMessage(newMsg, true);
                 input.value = "";
-            } else if (currentChatId === "") {
-                alert("စာပြန်ရန် Chat တစ်ခုကို အရင်စောင့်ပါ သို့မဟုတ် ရွေးချယ်ပါ။");
+            } else if (!currentChatId) {
+                alert("စာပြန်ရန် Contact တစ်ခုကို အရင်ရွေးချယ်ပါဗျ။");
             }
         }
 
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') sendMessage();
-        }
+        function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
 
-        window.onload = loadHistory;
+        window.onload = () => {
+            loadContacts();
+            loadHistory();
+        };
     </script>
 </body>
 </html>
