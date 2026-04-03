@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniBot - Omnichannel Chatbot Dashboard</title>
+    <title>OmniBot - Total Black Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script>
@@ -11,145 +11,133 @@
             theme: {
                 extend: {
                     colors: {
-                        'dark-bg': '#000000',
-                        'dark-sidebar': '#111111',
-                        'dark-item': '#1E1E1E',
-                        'dark-active': '#292929',
-                        'dark-border': '#333333',
-                        'accent': '#3B82F6', // Blue
-                        'telegram': '#34AADC', // Telegram Cyan
-                        'viber': '#7360F2', // Viber Purple
+                        'pure-black': '#000000',
+                        'dark-gray': '#0a0a0a',
+                        'border-gray': '#1f1f1f',
+                        'accent-blue': '#3B82F6',
                     }
                 }
             }
         }
     </script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: theme('colors.dark-bg'); color: #FFFFFF; }
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-thumb { background: #333333; border-radius: 5px; }
+        body { background-color: #000000; color: #ffffff; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .active-contact { border-left: 3px solid #3B82F6; background-color: #0f0f0f; }
     </style>
 </head>
 <body class="h-full flex overflow-hidden">
 
-    <div class="dark-sidebar w-80 flex-shrink-0 flex flex-col border-r dark-border">
-        <div class="p-6 text-xl font-bold border-b dark-border flex items-center gap-2">
-            <i class="fas fa-robot text-accent"></i> OmniBot
+    <div class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black">
+        <div class="p-6 text-xl font-bold border-b border-border-gray flex items-center gap-2">
+            <i class="fas fa-robot text-accent-blue"></i> OmniBot
         </div>
 
-        <nav class="p-4 border-b dark-border space-y-2">
-            <div id="nav-all" onclick="selectChannel('all')" class="p-3 rounded-lg dark-active cursor-pointer flex items-center justify-between text-white font-medium">
-                <span class="flex items-center gap-3"><i class="fas fa-inbox text-gray-400"></i> All Messages</span>
-                <span class="bg-accent text-xs px-2 py-1 rounded-full font-bold">5</span>
+        <nav class="p-4 border-b border-border-gray space-y-1">
+            <div class="p-3 rounded-lg bg-dark-gray flex items-center justify-between text-sm cursor-pointer">
+                <span class="flex items-center gap-3"><i class="fas fa-th-large text-gray-500"></i> All Messages</span>
+                <span class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full">5</span>
             </div>
-            <div id="nav-telegram" onclick="selectChannel('telegram')" class="p-3 rounded-lg hover:bg-dark-item cursor-pointer flex items-center gap-3 text-gray-300">
-                <i class="fab fa-telegram text-telegram"></i> Telegram
+            <div class="p-3 rounded-lg hover:bg-dark-gray flex items-center gap-3 text-sm text-gray-400 cursor-pointer transition">
+                <i class="fab fa-telegram text-sky-500"></i> Telegram
             </div>
-            <div id="nav-viber" onclick="selectChannel('viber')" class="p-3 rounded-lg hover:bg-dark-item cursor-pointer flex items-center gap-3 text-gray-300">
-                <i class="fab fa-viber text-viber"></i> Viber
+            <div class="p-3 rounded-lg hover:bg-dark-gray flex items-center gap-3 text-sm text-gray-400 cursor-pointer transition">
+                <i class="fab fa-viber text-purple-500"></i> Viber
             </div>
         </nav>
 
-        <div class="flex-1 overflow-y-auto p-4 space-y-3">
-            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Contacts</h4>
+        <div class="flex-1 overflow-y-auto px-2 py-4">
+            <p class="px-4 text-[10px] uppercase tracking-widest text-gray-600 font-bold mb-4">Contacts</p>
             
-            <div onclick="selectChat('U')" class="p-3 rounded-lg flex items-center gap-3 cursor-pointer hover:bg-dark-item active-chat border-l-4 border-accent">
-                <div class="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold">U</div>
+            <div class="p-4 rounded-xl active-contact flex items-center gap-4 cursor-pointer mb-1">
+                <div class="w-10 h-10 rounded-full bg-accent-blue flex items-center justify-center font-bold text-sm">U</div>
                 <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between">
-                        <h5 class="font-medium text-white truncate">User Name</h5>
-                        <p class="text-xs text-green-500">Online</p>
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-sm font-semibold truncate">User Name</h4>
+                        <span class="text-[10px] text-green-500 font-medium">Online</span>
                     </div>
-                    <p class="text-xs text-gray-400 truncate">ဟုတ်ကဲ့ပါခင်ဗျာ၊ ဘယ် Product အမျိုးအစားကို...</p>
+                    <p class="text-xs text-gray-500 truncate">ဈေးနှုန်းလေး သိချင်လို့ပါ...</p>
                 </div>
             </div>
 
-            <div onclick="selectChat('K')" class="p-3 rounded-lg flex items-center gap-3 cursor-pointer hover:bg-dark-item">
-                <div class="w-10 h-10 rounded-full bg-viber flex items-center justify-center font-bold">K</div>
+            <div class="p-4 rounded-xl hover:bg-dark-gray flex items-center gap-4 cursor-pointer transition mb-1 text-gray-400">
+                <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-sm text-white">K</div>
                 <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between">
-                        <h5 class="font-medium text-white truncate">Ko Lin</h5>
-                        <p class="text-xs text-gray-500">10:45 AM</p>
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-sm font-semibold truncate">Ko Lin</h4>
+                        <span class="text-[10px]">10:45 AM</span>
                     </div>
-                    <p class="text-xs text-gray-400 truncate">Viber bot မှ စာပိုထားသည်။</p>
+                    <p class="text-xs text-gray-600 truncate">Viber bot မှ စာပို့ထားသည်။</p>
                 </div>
             </div>
         </div>
 
-        <div class="p-4 border-t dark-border text-sm text-gray-500 text-center">
+        <div class="p-4 border-t border-border-gray text-[10px] text-gray-600 text-center uppercase tracking-widest">
             Connected to GitHub
         </div>
     </div>
 
-    <div id="main-chat-area" class="flex-1 flex flex-col bg-dark-bg">
-        <div class="h-16 border-b dark-border flex items-center justify-between px-6">
+    <div class="flex-1 flex flex-col bg-pure-black">
+        <div class="h-16 border-b border-border-gray flex items-center justify-between px-6">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold">U</div>
+                <div class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs">U</div>
                 <div>
-                    <h3 class="font-medium">User Name</h3>
-                    <p class="text-xs text-green-500">Online</p>
+                    <h3 class="text-sm font-bold">User Name</h3>
+                    <p class="text-[10px] text-green-500 uppercase tracking-tighter">Telegram Active</p>
                 </div>
             </div>
-            <div class="flex gap-4 text-gray-400">
-                <i class="fas fa-search cursor-pointer"></i>
-                <i class="fas fa-ellipsis-v cursor-pointer"></i>
+            <div class="flex gap-5 text-gray-500 text-sm">
+                <i class="fas fa-search hover:text-white cursor-pointer transition"></i>
+                <i class="fas fa-ellipsis-v hover:text-white cursor-pointer transition"></i>
             </div>
         </div>
 
-        <div id="chat-window" class="flex-1 overflow-y-auto p-6 space-y-4 flex flex-col">
-            <div class="flex items-start gap-2 self-start">
-                <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-bold text-xs">U</div>
-                <div class="max-w-xs p-3 rounded-lg bg-zinc-800 text-sm">
-                    <p class="text-xs text-telegram mb-1">Telegram</p>
+        <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col">
+            <div class="flex items-start gap-3 max-w-[70%]">
+                <div class="w-8 h-8 rounded-full bg-gray-900 flex-shrink-0 flex items-center justify-center border border-border-gray">
+                    <i class="fab fa-telegram text-sky-500 text-xs"></i>
+                </div>
+                <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
                     မင်္ဂလာပါ၊ ဈေးနှုန်းလေး သိချင်လို့ပါ။
                 </div>
             </div>
-            <div class="max-w-xs p-3 rounded-lg bg-blue-700 self-end text-sm">
-                ဟုတ်ကဲ့ပါခင်ဗျာ၊ ဘယ် Product အမျိုးအစားကို စိတ်ဝင်စားပါသလဲ?
+
+            <div class="self-end max-w-[70%]">
+                <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium leading-relaxed shadow-lg shadow-blue-900/20">
+                    ဟုတ်ကဲ့ပါခင်ဗျာ၊ ဘယ် Product အမျိုးအစားကို စိတ်ဝင်စားပါသလဲ?
+                </div>
+                <p class="text-[9px] text-gray-600 mt-2 text-right">READ 09:24 PM</p>
             </div>
         </div>
 
-        <div class="p-4 border-t dark-border bg-black">
-            <div class="flex items-center gap-3 bg-dark-item rounded-full px-4 py-2 border dark-border">
-                <i class="fas fa-paperclip text-gray-400 cursor-pointer"></i>
-                <input type="text" id="user-input" placeholder="စာရိုက်ပါ..." class="bg-transparent flex-1 outline-none text-sm text-white">
-                <button onclick="sendMessage()" class="bg-accent p-2 rounded-full hover:bg-blue-500 transition">
-                    <i class="fas fa-paper-plane text-xs text-white"></i>
+        <div class="p-6 bg-pure-black border-t border-border-gray">
+            <div class="flex items-center gap-4 bg-dark-gray border border-border-gray rounded-2xl px-5 py-3 focus-within:border-accent-blue transition">
+                <i class="fas fa-paperclip text-gray-500 cursor-pointer hover:text-white"></i>
+                <input type="text" id="user-input" placeholder="မက်ဆေ့ချ် ရေးရန်..." class="bg-transparent flex-1 outline-none text-sm">
+                <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition active:scale-95">
+                    <i class="fas fa-paper-plane text-lg"></i>
                 </button>
             </div>
         </div>
     </div>
 
     <script>
-        let currentChannel = 'all';
-        let currentChatId = 'U'; // User U by default
-
         function sendMessage() {
             const input = document.getElementById('user-input');
             const chatWindow = document.getElementById('chat-window');
             if(input.value.trim() !== "") {
-                const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const msg = `<div class="max-w-xs p-3 rounded-lg bg-blue-700 self-end text-sm">
-                                ${input.value}
-                                <span class="text-xs text-gray-300 block mt-1 text-right">${timestamp}</span>
-                             </div>`;
+                const msg = `
+                    <div class="self-end max-w-[70%]">
+                        <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium leading-relaxed">
+                            ${input.value}
+                        </div>
+                        <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent Just Now</p>
+                    </div>`;
                 chatWindow.innerHTML += msg;
                 input.value = "";
-                chatWindow.scrollTop = chatWindow.scrollHeight;
+                chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' });
             }
-        }
-
-        // Placeholder functions for dynamic content (to be linked in Step 3)
-        function selectChannel(channel) {
-            console.log("Selected Channel:", channel);
-            currentChannel = channel;
-            // logic to update contact list
-        }
-
-        function selectChat(chatId) {
-            console.log("Selected Chat ID:", chatId);
-            currentChatId = chatId;
-            // logic to load chat history
         }
     </script>
 </body>
