@@ -20,10 +20,9 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// ၁။ Database Tables များကို အလိုအလျောက် ဆောက်ပေးမည့် Function
+// ၁။ Database Tables - (Step 1: status နဲ့ notes column များ ထည့်သွင်းထားသည်)
 const initDb = async () => {
     try {
-        // Contacts Table (User Profile များသိမ်းရန်)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS contacts (
                 chat_id TEXT PRIMARY KEY,
@@ -32,11 +31,15 @@ const initDb = async () => {
                 profile_pic TEXT,
                 platform TEXT,
                 status TEXT DEFAULT 'active',
+                notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
 
-        // Messages Table (စာအဝင်အထွက်များသိမ်းရန်)
+        // လက်ရှိ table ထဲကို column အသစ်များ manual ထည့်ခြင်း (Error မတက်အောင်)
+        await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';`);
+        await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS notes TEXT;`);
+
         await pool.query(`
             CREATE TABLE IF NOT EXISTS messages (
                 id SERIAL PRIMARY KEY,
@@ -48,11 +51,11 @@ const initDb = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-
+        
         // sender_type column မရှိသေးလျှင် ထည့်ရန်
         await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_type TEXT;`);
         
-        console.log("✅ Database structure is ready.");
+        console.log("✅ Database structure is updated with Management features.");
     } catch (err) {
         console.error("❌ DB Init Error:", err.message);
     }
@@ -61,7 +64,7 @@ initDb();
 
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-// ၂။ Telegram User ရဲ့ Profile ပုံကို လှမ်းယူတဲ့ Function
+// ၂။ Telegram Profile Pic ယူသည့် Function
 async function getTelegramProfilePic(userId) {
     try {
         const res = await axios.get(`https://api.telegram.org/bot${TG_TOKEN}/getUserProfilePhotos?user_id=${userId}`);
@@ -80,7 +83,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// စာဟောင်းများကို ပြန်ခေါ်သည့် API
+// API လမ်းကြောင်းများ
 app.get('/api/messages', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM messages ORDER BY created_at ASC');
@@ -90,7 +93,6 @@ app.get('/api/messages', async (req, res) => {
     }
 });
 
-// Contact စာရင်းကို ပြန်ခေါ်သည့် API
 app.get('/api/contacts', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM contacts ORDER BY created_at DESC');
@@ -100,24 +102,58 @@ app.get('/api/contacts', async (req, res) => {
     }
 });
 
-// ၃။ Telegram ကနေ စာဝင်လာတဲ့အခါ (Full Name Logic ဖြင့် ပြင်ဆင်ထားသည်)
+// --- Step 2: Management APIs (Block, Note, Delete) ---
+
+// User ကို Block/Unblock လုပ်ရန်
+app.post('/api/contacts/status', async (req, res) => {
+    const { chatId, status } = req.body;
+    try {
+        await pool.query('UPDATE contacts SET status = $1 WHERE chat_id = $2', [status, chatId]);
+        res.json({ success: true, status: status });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// User အတွက် Note သိမ်းရန်
+app.post('/api/contacts/note', async (req, res) => {
+    const { chatId, note } = req.body;
+    try {
+        await pool.query('UPDATE contacts SET notes = $1 WHERE chat_id = $2', [note, chatId]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Chat တစ်ခုလုံးကို ဖျက်ပစ်ရန်
+app.delete('/api/contacts/:chatId', async (req, res) => {
+    const { chatId } = req.params;
+    try {
+        await pool.query('DELETE FROM messages WHERE chat_id = $1', [chatId]);
+        await pool.query('DELETE FROM contacts WHERE chat_id = $1', [chatId]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- ၃။ Webhook with Block Logic ---
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (update.message) {
         const chatId = update.message.chat.id.toString();
-        const text = update.message.text || "";
         
-        // --- နာမည်အပြည့်အစုံရအောင် ပြင်ဆင်သည့်အပိုင်း ---
+        // စာမသိမ်းခင် Block ထားခြင်း ရှိ/မရှိ စစ်ဆေးခြင်း
+        const checkStatus = await pool.query('SELECT status FROM contacts WHERE chat_id = $1', [chatId]);
+        if (checkStatus.rows.length > 0 && checkStatus.rows[0].status === 'blocked') {
+            console.log(`Message from blocked user ${chatId} ignored.`);
+            return res.sendStatus(200);
+        }
+
+        const text = update.message.text || "";
         const firstName = update.message.from.first_name || "";
         const lastName = update.message.from.last_name || "";
         const sender = `${firstName} ${lastName}`.trim() || "Unknown User";
-        // ------------------------------------------
-
         const username = update.message.from.username || "";
 
         try {
-            // (က) User အချက်အလက်ကို Contacts Table မှာ အရင်သိမ်းမယ် (FullName အဖြစ် Update လုပ်မယ်)
             const profilePic = await getTelegramProfilePic(chatId);
+            
             await pool.query(`
                 INSERT INTO contacts (chat_id, first_name, username, profile_pic, platform)
                 VALUES ($1, $2, $3, $4, $5)
@@ -127,13 +163,11 @@ app.post('/webhook/telegram', async (req, res) => {
                     username = EXCLUDED.username
             `, [chatId, sender, username, profilePic, 'Telegram']);
 
-            // (ခ) စာကို Messages Table မှာ သိမ်းမယ်
             await pool.query(
                 'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
                 [sender, text, 'Telegram', chatId, 'user']
             );
 
-            // (ဂ) Dashboard ဆီ Real-time လှမ်းပို့မယ်
             io.emit('new_message', {
                 sender: sender,
                 text: text,
@@ -146,7 +180,7 @@ app.post('/webhook/telegram', async (req, res) => {
     res.sendStatus(200);
 });
 
-// ၄။ Dashboard ကနေ စာပြန်ပို့တဲ့အခါ
+// ၄။ Dashboard Reply Logic
 io.on('connection', (socket) => {
     socket.on('send_reply', async (data) => {
         try {
