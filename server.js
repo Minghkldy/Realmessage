@@ -100,17 +100,23 @@ app.get('/api/contacts', async (req, res) => {
     }
 });
 
-// ၃။ Telegram ကနေ စာဝင်လာတဲ့အခါ
+// ၃။ Telegram ကနေ စာဝင်လာတဲ့အခါ (Full Name Logic ဖြင့် ပြင်ဆင်ထားသည်)
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (update.message) {
         const chatId = update.message.chat.id.toString();
         const text = update.message.text || "";
-        const sender = update.message.from.first_name || "Unknown";
+        
+        // --- နာမည်အပြည့်အစုံရအောင် ပြင်ဆင်သည့်အပိုင်း ---
+        const firstName = update.message.from.first_name || "";
+        const lastName = update.message.from.last_name || "";
+        const sender = `${firstName} ${lastName}`.trim() || "Unknown User";
+        // ------------------------------------------
+
         const username = update.message.from.username || "";
 
         try {
-            // (က) User အချက်အလက်ကို Contacts Table မှာ အရင်သိမ်းမယ်
+            // (က) User အချက်အလက်ကို Contacts Table မှာ အရင်သိမ်းမယ် (FullName အဖြစ် Update လုပ်မယ်)
             const profilePic = await getTelegramProfilePic(chatId);
             await pool.query(`
                 INSERT INTO contacts (chat_id, first_name, username, profile_pic, platform)
