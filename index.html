@@ -295,13 +295,20 @@
         }
 
         socket.on('new_message', (data) => {
-            const senderId = data.chat_id || data.chatId;
-            allMessages.push(data);
-            
-            if (currentChatId !== senderId) {
-                unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-                document.getElementById('notif-sound').play().catch(() => {});
-            }
+    const senderId = data.chat_id || data.chatId; // ပို့တဲ့သူရဲ့ ID ကိုယူတယ်
+    
+    // ၁။ Message History ထဲကို data အသစ် အမြဲပေါင်းထည့်ပေးရမယ်
+    allMessages.push(data);
+    
+    // ၂။ အရေးကြီးဆုံးအချက်- လက်ရှိဖွင့်ထားတဲ့ Chat နဲ့ ပို့တဲ့သူ ID တူနေရင် 
+    // Refresh မလိုဘဲ စာတန်းကို ချက်ချင်း Append လုပ်ခိုင်းရမယ်
+    if (currentChatId === senderId) {
+        appendMessage(data, false); // false ဆိုသည်မှာ bot မဟုတ်ဘဲ user ပို့တာကို ဆိုလိုတယ်
+    } else {
+        // ဖွင့်မထားတဲ့ chat ဆီကစာဆိုရင် Noti အရေအတွက်တိုးမယ်၊ အသံမြည်မယ်
+        unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
+        document.getElementById('notif-sound').play().catch(() => {});
+    }
             
             loadContacts();
             if (currentChatId === senderId) renderMessages();
