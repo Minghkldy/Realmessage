@@ -79,7 +79,7 @@
                     <i id="arrow-icon" class="fas fa-chevron-down dropdown-arrow"></i>
                 </div>
                 
-                <div id="messenger-dropdown">
+                <div id="messenger-dropdown" class="hidden flex-col">
                     <div class="dropdown-item"><i class="fab fa-facebook-messenger w-4"></i><span class="text-xs">Messenger</span></div>
                     <div class="dropdown-item"><i class="fab fa-instagram w-4"></i><span class="text-xs">Instagram</span></div>
                     <div class="dropdown-item"><i class="fab fa-telegram w-4"></i><span class="text-xs">Telegram</span></div>
@@ -156,7 +156,7 @@
                 <label class="text-[10px] text-gray-500 uppercase font-bold tracking-widest flex items-center gap-2">
                     <i class="fas fa-sticky-note text-accent-blue"></i> Internal Notes
                 </label>
-                <textarea id="contact-note" onblur="saveNote()" class="w-full h-32 bg-pure-black border border-border-gray rounded-xl p-4 text-xs outline-none focus:border-accent-blue resize-none text-gray-300 transition" placeholder="Add private details..."></textarea>
+                <itemarea id="contact-note" onblur="saveNote()" class="w-full h-32 bg-pure-black border border-border-gray rounded-xl p-4 text-xs outline-none focus:border-accent-blue resize-none text-gray-300 transition" placeholder="Add private details..."></itemarea>
             </div>
 
             <div class="pt-6 border-t border-border-gray space-y-3">
@@ -178,10 +178,24 @@
 
         function toggleLeftSidebar() { document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed'); }
         function toggleRightPanel() { document.getElementById('right-panel').classList.toggle('hidden'); }
+        
         function toggleDropdown() {
             const dropdown = document.getElementById('messenger-dropdown');
             const arrow = document.getElementById('arrow-icon');
-            dropdown.classList.toggle('show');
+            
+            // Toggle 'hidden' and 'show' classes
+            if (dropdown.classList.contains('hidden')) {
+                dropdown.classList.remove('hidden');
+                dropdown.classList.add('flex');
+                setTimeout(() => dropdown.classList.add('show'), 10);
+            } else {
+                dropdown.classList.remove('show');
+                setTimeout(() => {
+                    dropdown.classList.remove('flex');
+                    dropdown.classList.add('hidden');
+                }, 300);
+            }
+            
             arrow.classList.toggle('rotate-arrow');
         }
 
@@ -295,20 +309,15 @@
         }
 
         socket.on('new_message', (data) => {
-    const senderId = data.chat_id || data.chatId; // ပို့တဲ့သူရဲ့ ID ကိုယူတယ်
-    
-    // ၁။ Message History ထဲကို data အသစ် အမြဲပေါင်းထည့်ပေးရမယ်
-    allMessages.push(data);
-    
-    // ၂။ အရေးကြီးဆုံးအချက်- လက်ရှိဖွင့်ထားတဲ့ Chat နဲ့ ပို့တဲ့သူ ID တူနေရင် 
-    // Refresh မလိုဘဲ စာတန်းကို ချက်ချင်း Append လုပ်ခိုင်းရမယ်
-    if (currentChatId === senderId) {
-        appendMessage(data, false); // false ဆိုသည်မှာ bot မဟုတ်ဘဲ user ပို့တာကို ဆိုလိုတယ်
-    } else {
-        // ဖွင့်မထားတဲ့ chat ဆီကစာဆိုရင် Noti အရေအတွက်တိုးမယ်၊ အသံမြည်မယ်
-        unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-        document.getElementById('notif-sound').play().catch(() => {});
-    }
+            const senderId = data.chat_id || data.chatId; 
+            allMessages.push(data);
+            
+            if (currentChatId === senderId) {
+                appendMessage(data, false); 
+            } else {
+                unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
+                document.getElementById('notif-sound').play().catch(() => {});
+            }
             
             loadContacts();
             if (currentChatId === senderId) renderMessages();
@@ -323,8 +332,6 @@
                 allMessages.push(newMsg);
                 appendMessage(newMsg, true);
                 input.value = "";
-                
-                // Reset unread on reply
                 unreadCounts[currentChatId] = 0;
                 loadContacts();
             } else if (!currentChatId) {
