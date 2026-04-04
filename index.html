@@ -22,17 +22,19 @@
         }
     </script>
     <style>
-        body { background-color: #000000; color: #ffffff; font-family: 'Inter', sans-serif; }
+        body { background-color: #000000; color: #ffffff; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         .active-contact { border-left: 3px solid #3B82F6; background-color: #0f0f0f; }
         
+        /* Sidebar Navigation Styling */
         #left-sidebar { 
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
             overflow: hidden;
-            width: 220px;
+            width: 220px; /* စာတန်းပေါ်ရန် width ပုံမှန်ထားသည် */
         }
         
+        /* Sidebar ပိတ်ထားချိန် */
         .sidebar-collapsed { 
             width: 70px !important; 
         }
@@ -49,7 +51,7 @@
             padding: 12px 24px; 
             cursor: pointer; 
             transition: all 0.2s;
-            color: #6b7280;
+            color: #6b7280; /* gray-500 */
         }
         
         .nav-item:hover { 
@@ -71,35 +73,6 @@
         #right-panel {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        /* ManyChat Style Notification Dot */
-        .noti-dot {
-            position: absolute;
-            top: -2px;
-            right: -2px;
-            background-color: #3B82F6;
-            color: white;
-            font-size: 9px;
-            font-weight: bold;
-            min-width: 16px;
-            height: 16px;
-            padding: 0 4px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #000;
-        }
-        
-        /* Global Badge In Sidebar */
-        .global-badge {
-            background-color: #ef4444; /* Red color for global urgency */
-            color: white;
-            font-size: 10px;
-            padding: 1px 6px;
-            border-radius: 10px;
-            margin-left: auto;
-        }
     </style>
 </head>
 <body class="h-full flex overflow-hidden bg-pure-black">
@@ -109,20 +82,34 @@
     <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray">
         <div class="text-2xl font-bold text-accent-blue px-6 mb-10">
             <i class="fas fa-robot"></i>
-            <span class="nav-text ml-3 text-white">OmniBot</span>
+            <span class="nav-text ml-3">OmniBot</span>
         </div>
         
         <nav class="flex flex-col w-full">
-            <div class="nav-item active-nav relative">
+            <div class="nav-item active-nav">
                 <i class="fas fa-th-large text-xl w-6"></i>
                 <span class="nav-text">Inbox</span>
-                <span id="global-sidebar-count" class="global-badge hidden">0</span>
             </div>
-            <div class="nav-item"><i class="fab fa-facebook-messenger text-xl w-6"></i><span class="nav-text">Messenger</span></div>
-            <div class="nav-item"><i class="fab fa-instagram text-xl w-6"></i><span class="nav-text">Instagram</span></div>
-            <div class="nav-item"><i class="fab fa-telegram text-xl w-6"></i><span class="nav-text">Telegram</span></div>
-            <div class="nav-item"><i class="fab fa-viber text-xl w-6"></i><span class="nav-text">Viber</span></div>
-            <div class="nav-item"><i class="fab fa-whatsapp text-xl w-6"></i><span class="nav-text">WhatsApp</span></div>
+            <div class="nav-item">
+                <i class="fab fa-facebook-messenger text-xl w-6"></i>
+                <span class="nav-text">Messenger</span>
+            </div>
+            <div class="nav-item">
+                <i class="fab fa-instagram text-xl w-6"></i>
+                <span class="nav-text">Instagram</span>
+            </div>
+            <div class="nav-item">
+                <i class="fab fa-telegram text-xl w-6"></i>
+                <span class="nav-text">Telegram</span>
+            </div>
+            <div class="nav-item">
+                <i class="fab fa-viber text-xl w-6"></i>
+                <span class="nav-text">Viber</span>
+            </div>
+            <div class="nav-item">
+                <i class="fab fa-whatsapp text-xl w-6"></i>
+                <span class="nav-text">WhatsApp</span>
+            </div>
         </nav>
 
         <div class="mt-auto w-full">
@@ -134,28 +121,25 @@
     </div>
 
     <div class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray">
-        <div class="p-6 border-b border-border-gray flex justify-between items-center bg-pure-black">
+        <div class="p-6 border-b border-border-gray flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <button onclick="toggleLeftSidebar()" class="text-gray-500 hover:text-white transition">
                     <i class="fas fa-bars text-lg"></i>
                 </button>
                 <h2 class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
             </div>
-            <span id="msg-count-header" class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white hidden">0</span>
+            <span id="msg-count" class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white">0</span>
         </div>
         <div id="contact-list" class="flex-1 overflow-y-auto p-2">
-            <div id="contacts-container" class="space-y-1">
-                </div>
+            <div id="contacts-container" class="space-y-1"></div>
         </div>
     </div>
 
     <div class="flex-1 flex flex-col bg-pure-black relative">
-        <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between bg-dark-gray/50">
+        <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between">
             <div class="flex items-center gap-3">
-                <div class="relative">
-                    <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden" src="">
-                    <div id="header-avatar-text" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs">?</div>
-                </div>
+                <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden" src="">
+                <div id="header-avatar-text" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs">?</div>
                 <div>
                     <h3 id="chat-header-name" class="text-sm font-bold">Select a chat</h3>
                     <p id="chat-status" class="text-[10px] text-gray-600 uppercase tracking-tighter">System Ready</p>
@@ -169,8 +153,7 @@
             </div>
         </div>
 
-        <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col">
-            </div>
+        <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col"></div>
 
         <div class="p-6 border-t border-border-gray bg-pure-black">
             <div class="flex items-center gap-4 bg-dark-gray border border-border-gray rounded-2xl px-5 py-3 focus-within:border-accent-blue transition">
@@ -190,7 +173,7 @@
                 <img id="side-avatar-img" class="w-24 h-24 rounded-full mx-auto border-4 border-pure-black hidden object-cover" src="">
             </div>
             <div>
-                <input type="text" id="edit-nickname" class="bg-transparent text-center font-bold text-lg outline-none focus:border-b border-accent-blue w-full hover:bg-white/5 p-1 rounded transition" placeholder="Edit Nickname">
+                <input type="text" id="edit-nickname" onblur="updateNickname()" class="bg-transparent text-center font-bold text-lg outline-none focus:border-b border-accent-blue w-full hover:bg-white/5 p-1 rounded transition" placeholder="Edit Nickname">
                 <p id="side-platform" class="text-[10px] text-gray-500 uppercase tracking-widest mt-2">Platform: -</p>
             </div>
         </div>
@@ -200,11 +183,18 @@
                 <label class="text-[10px] text-gray-500 uppercase font-bold tracking-widest flex items-center gap-2">
                     <i class="fas fa-sticky-note text-accent-blue"></i> Internal Notes
                 </label>
-                <textarea id="contact-note" class="w-full h-32 bg-pure-black border border-border-gray rounded-xl p-4 text-xs outline-none focus:border-accent-blue resize-none text-gray-300 transition" placeholder="Add private details about this customer..."></textarea>
+                <textarea id="contact-note" onblur="saveNote()" class="w-full h-32 bg-pure-black border border-border-gray rounded-xl p-4 text-xs outline-none focus:border-accent-blue resize-none text-gray-300 transition" placeholder="Add private details about this customer..."></textarea>
             </div>
-            <button class="w-full py-3 border border-border-gray text-gray-500 rounded-xl text-[11px] font-bold hover:bg-red-500/10 hover:text-red-500 transition flex items-center justify-center gap-2">
-                <i class="fas fa-trash-alt"></i> DELETE CONVERSATION
-            </button>
+
+            <div class="pt-6 border-t border-border-gray space-y-3">
+                <p class="text-[10px] text-gray-600 uppercase font-bold tracking-widest px-1">Actions</p>
+                <button onclick="toggleBlock()" class="w-full py-3 bg-red-900/10 text-red-500 rounded-xl text-[11px] font-bold hover:bg-red-900/30 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-ban"></i> BLOCK CUSTOMER
+                </button>
+                <button onclick="deleteContact()" class="w-full py-3 border border-border-gray text-gray-500 rounded-xl text-[11px] font-bold hover:bg-white/5 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-trash-alt"></i> DELETE CONVERSATION
+                </button>
+            </div>
         </div>
     </div>
 
@@ -213,168 +203,148 @@
         const chatWindow = document.getElementById('chat-window');
         const notifSound = document.getElementById('notif-sound');
         const contactsContainer = document.getElementById('contacts-container');
-        
         let currentChatId = "";
         let allMessages = [];
-        let unreadCounts = {}; // Track unreads in memory
 
-        function toggleLeftSidebar() { document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed'); }
-        function toggleRightPanel() { document.getElementById('right-panel').classList.toggle('hidden'); }
+        function toggleLeftSidebar() {
+            document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed');
+        }
 
-        // Core Load Contacts Function
+        function toggleRightPanel() {
+            document.getElementById('right-panel').classList.toggle('hidden');
+        }
+
         async function loadContacts() {
             try {
                 const res = await fetch('/api/contacts');
                 const contacts = await res.json();
-                renderContactList(contacts);
+                contactsContainer.innerHTML = '';
+                contacts.forEach(c => {
+                    const item = document.createElement('div');
+                    item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
+                    item.onclick = () => selectContact(c);
+                    const avatar = c.profile_pic ? 
+                        `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` :
+                        `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold">${(c.nickname || c.first_name).charAt(0)}</div>`;
+                    item.innerHTML = `${avatar}<div class="flex-1 min-w-0"><p class="text-sm font-bold truncate">${c.nickname || c.first_name}</p><p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p></div>`;
+                    contactsContainer.appendChild(item);
+                });
             } catch (err) { console.error("Load Contacts Error:", err); }
-        }
-
-        function renderContactList(contacts) {
-            contactsContainer.innerHTML = '';
-            let totalGlobalUnread = 0;
-
-            contacts.forEach(c => {
-                const unread = unreadCounts[c.chat_id] || 0;
-                totalGlobalUnread += unread;
-                const isActive = currentChatId === c.chat_id;
-
-                const item = document.createElement('div');
-                item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray mb-1 ${isActive ? 'active-contact' : ''}`;
-                item.onclick = () => selectContact(c);
-                
-                const avatarContent = c.profile_pic ? 
-                    `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` :
-                    `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold">${(c.nickname || c.first_name).charAt(0)}</div>`;
-
-                item.innerHTML = `
-                    <div class="relative">
-                        ${avatarContent}
-                        ${unread > 0 ? `<div class="noti-dot">${unread}</div>` : ''}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-bold truncate ${unread > 0 ? 'text-white' : 'text-gray-400'}">${c.nickname || c.first_name}</p>
-                        <p class="text-[10px] text-gray-600 uppercase tracking-tighter">${c.platform}</p>
-                    </div>
-                `;
-                contactsContainer.appendChild(item);
-            });
-
-            updateGlobalBadges(totalGlobalUnread);
-        }
-
-        function updateGlobalBadges(count) {
-            const sidebarBadge = document.getElementById('global-sidebar-count');
-            const headerBadge = document.getElementById('msg-count-header');
-
-            if (count > 0) {
-                sidebarBadge.innerText = count;
-                sidebarBadge.classList.remove('hidden');
-                headerBadge.innerText = count;
-                headerBadge.classList.remove('hidden');
-            } else {
-                sidebarBadge.classList.add('hidden');
-                headerBadge.classList.add('hidden');
-            }
         }
 
         function selectContact(contact) {
             currentChatId = contact.chat_id;
-            unreadCounts[currentChatId] = 0; // Clear unread on select
-            
-            // Header Info
             const displayName = contact.nickname || contact.first_name;
             document.getElementById('chat-header-name').innerText = displayName;
             document.getElementById('edit-nickname').value = displayName;
             document.getElementById('contact-note').value = contact.notes || "";
             document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
             
-            // Avatar Switch
-            if(contact.profile_pic) {
-                document.getElementById('header-avatar-img').src = contact.profile_pic;
-                document.getElementById('header-avatar-img').classList.remove('hidden');
-                document.getElementById('header-avatar-text').classList.add('hidden');
-            } else {
-                document.getElementById('header-avatar-text').innerText = displayName.charAt(0);
-                document.getElementById('header-avatar-text').classList.remove('hidden');
-                document.getElementById('header-avatar-img').classList.add('hidden');
-            }
+            const hAvatarImg = document.getElementById('header-avatar-img');
+            const hAvatarTxt = document.getElementById('header-avatar-text');
+            const sAvatarImg = document.getElementById('side-avatar-img');
+            const sAvatarTxt = document.getElementById('side-avatar');
             
+            if(contact.profile_pic) {
+                hAvatarImg.src = contact.profile_pic; hAvatarImg.classList.remove('hidden'); hAvatarTxt.classList.add('hidden');
+                sAvatarImg.src = contact.profile_pic; sAvatarImg.classList.remove('hidden'); sAvatarTxt.classList.add('hidden');
+            } else {
+                const initial = displayName.charAt(0);
+                hAvatarTxt.innerText = initial; hAvatarTxt.classList.remove('hidden'); hAvatarImg.classList.add('hidden');
+                sAvatarTxt.innerText = initial; sAvatarTxt.classList.remove('hidden'); sAvatarImg.classList.add('hidden');
+            }
             document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
             document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase tracking-tighter font-bold";
-            
-            loadContacts(); // Re-render to clear dots
+            loadContacts(); 
             renderMessages();
         }
 
-        socket.on('new_message', (data) => {
-            const senderId = data.chat_id || data.chatId;
-            
-            if (currentChatId !== senderId) {
-                unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-                notifSound.play().catch(e => {});
-            }
-            
-            allMessages.push(data);
-            if (currentChatId === senderId) {
-                appendMessage(data, false);
-                unreadCounts[senderId] = 0; // If already open, keep at 0
-            }
-            
+        async function updateNickname() {
+            if (!currentChatId) return;
+            const newName = document.getElementById('edit-nickname').value;
+            await fetch('/api/contacts/nickname', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, nickname: newName }) });
             loadContacts();
+        }
+
+        async function toggleBlock() {
+            if (!currentChatId) return;
+            if (!confirm("ဒီ User ကို Block လုပ်မှာ သေချာပါသလား?")) return;
+            await fetch('/api/contacts/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, status: 'blocked' }) });
+            location.reload();
+        }
+
+        async function deleteContact() {
+            if (!currentChatId || !confirm("ဒီ Conversation တစ်ခုလုံးကို ဖျက်ပစ်မှာ သေချာပါသလား?")) return;
+            await fetch(`/api/contacts/${currentChatId}`, { method: 'DELETE' });
+            location.reload();
+        }
+
+        async function saveNote() {
+            if (!currentChatId) return;
+            const noteValue = document.getElementById('contact-note').value;
+            await fetch('/api/contacts/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, note: noteValue }) });
+        }
+
+        function renderMessages() {
+            chatWindow.innerHTML = "";
+            const filtered = allMessages.filter(m => m.chat_id === currentChatId);
+            filtered.forEach(msg => appendMessage(msg, msg.sender_type === 'bot'));
+        }
+
+        function appendMessage(data, isBot = false) {
+            const msgHtml = isBot ? `
+                <div class="self-end max-w-[70%]">
+                    <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${data.text}</div>
+                    <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
+                </div>
+            ` : `
+                <div class="flex items-start gap-3 max-w-[70%]">
+                    <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-border-gray bg-gray-900 flex items-center justify-center">
+                        ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover">` : `<i class="fab fa-telegram text-sky-500 text-xs"></i>`}
+                    </div>
+                    <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
+                        <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>${data.text}
+                    </div>
+                </div>
+            `;
+            chatWindow.innerHTML += msgHtml; 
+            chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' });
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/messages');
+                allMessages = await response.json();
+                document.getElementById('msg-count').innerText = allMessages.length;
+                if(currentChatId) renderMessages();
+            } catch (err) { console.log("History Load Error:", err); }
+        }
+
+        socket.on('new_message', (data) => {
+            notifSound.play().catch(e => {});
+            allMessages.push(data);
+            document.getElementById('msg-count').innerText = allMessages.length;
+            loadContacts();
+            if (currentChatId === data.chatId || currentChatId === data.chat_id) appendMessage(data, false);
         });
 
         function sendMessage() {
             const input = document.getElementById('user-input');
-            const text = input.value.trim();
-            if(text && currentChatId) {
+            if(input.value.trim() !== "" && currentChatId !== "") {
+                const text = input.value;
                 socket.emit('send_reply', { chatId: currentChatId, text: text });
                 const newMsg = { text: text, sender_type: 'bot', chat_id: currentChatId };
                 allMessages.push(newMsg); 
                 appendMessage(newMsg, true); 
                 input.value = "";
-                unreadCounts[currentChatId] = 0;
-                loadContacts();
+            } else if (!currentChatId) { 
+                alert("Please select a contact first."); 
             }
         }
 
-        function appendMessage(data, isBot = false) {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = isBot ? "self-end max-w-[75%]" : "self-start max-w-[75%]";
-            
-            msgDiv.innerHTML = isBot ? `
-                <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${data.text}</div>
-                <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
-            ` : `
-                <div class="flex items-start gap-3">
-                    <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
-                        <p class="text-[10px] text-sky-400 mb-1 font-bold">User</p>${data.text}
-                    </div>
-                </div>
-            `;
-            chatWindow.appendChild(msgDiv); 
-            chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' });
-        }
-
-        function renderMessages() {
-            chatWindow.innerHTML = "";
-            const filtered = allMessages.filter(m => (m.chat_id === currentChatId || m.chatId === currentChatId));
-            filtered.forEach(msg => appendMessage(msg, msg.sender_type === 'bot'));
-        }
-
         function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
-        
-        async function loadHistory() {
-            try {
-                const response = await fetch('/api/messages');
-                allMessages = await response.json();
-            } catch (err) { console.error("History error:", err); }
-        }
 
-        window.onload = async () => { 
-            await loadHistory();
-            await loadContacts(); 
-        };
+        window.onload = () => { loadContacts(); loadHistory(); };
     </script>
 </body>
 </html>
