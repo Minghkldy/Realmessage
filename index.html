@@ -36,7 +36,6 @@
         .sidebar-collapsed { width: 70px !important; }
         .sidebar-collapsed .nav-text, .sidebar-collapsed .dropdown-arrow { display: none; }
 
-        /* --- Sidebar ပိတ်ထားရင် နှိပ်လို့မရအောင် Lock ချခြင်း --- */
         .sidebar-collapsed nav, 
         .sidebar-collapsed .mt-auto {
             pointer-events: none; 
@@ -65,11 +64,36 @@
             0% { transform: scale(0); }
             100% { transform: scale(1); }
         }
+
+        /* Image Preview Modal Style */
+        #imagePreviewModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+        }
+        #imagePreviewModal img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            cursor: default;
+        }
     </style>
 </head>
 <body class="h-full flex overflow-hidden bg-pure-black">
 
     <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
+
+    <div id="imagePreviewModal" onclick="closeImagePreview()">
+        <img id="previewImg" src="" onclick="event.stopPropagation()">
+    </div>
 
     <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray sidebar-collapsed">
         
@@ -210,6 +234,18 @@
             arrow.classList.toggle('rotate-arrow');
         }
 
+        // Image Preview Functions
+        function showImagePreview(url) {
+            const modal = document.getElementById('imagePreviewModal');
+            const img = document.getElementById('previewImg');
+            img.src = url;
+            modal.style.display = 'flex';
+        }
+
+        function closeImagePreview() {
+            document.getElementById('imagePreviewModal').style.display = 'none';
+        }
+
         async function loadContacts() {
             try {
                 const res = await fetch('/api/contacts');
@@ -302,20 +338,19 @@
             const window = document.getElementById('chat-window');
             let contentHtml = data.text;
 
-            // Media file ပြသရန် logic (file_url သို့မဟုတ် fileUrl ကို စစ်ဆေးခြင်း)
             const mediaUrl = data.file_url || data.fileUrl;
             const mediaType = data.file_type || data.fileType;
 
             if (mediaUrl) {
                 if (mediaType && mediaType.includes('image')) {
-                    contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md" onclick="window.open('${mediaUrl}')">`;
+                    // onclick="window.open" ကို showImagePreview သို့ ပြောင်းလဲလိုက်သည်
+                    contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md" onclick="showImagePreview('${mediaUrl}')">`;
                 } else if (mediaType && mediaType.includes('video')) {
                     contentHtml = `<video controls class="max-w-xs rounded-lg mt-2 border border-border-gray shadow-md"><source src="${mediaUrl}"></video>`;
                 } else if (mediaType && mediaType.includes('audio')) {
                     contentHtml = `<audio controls class="mt-2 w-full max-w-[200px]"><source src="${mediaUrl}"></audio>`;
                 }
                 
-                // Text ပါလာပါက တွဲပြရန်
                 if(data.text && data.text !== `Sent a ${mediaType?.split('/')[0]}`) {
                     contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
                 }
@@ -352,7 +387,6 @@
             formData.append('chatId', currentChatId);
 
             try {
-                // Uploading State ပြရန် (optional)
                 const window = document.getElementById('chat-window');
                 const loadingId = "loading-" + Date.now();
                 window.insertAdjacentHTML('beforeend', `<div id="${loadingId}" class="self-end text-[10px] text-gray-500">Uploading ${file.name}...</div>`);
@@ -375,7 +409,7 @@
                     };
                     allMessages.push(newMsg);
                     appendMessage(newMsg, true);
-                    event.target.value = ""; // Clear input
+                    event.target.value = ""; 
                 } else {
                     alert("Upload failed!");
                 }
