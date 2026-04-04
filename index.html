@@ -120,7 +120,7 @@
         
         <nav class="flex flex-col w-full">
             <div>
-                <div class="nav-item active-nav" id="inbox-nav" onclick="backToInbox()">
+                <div class="nav-item active-nav" id="inbox-nav" onclick="toggleDropdown()">
                     <i class="fas fa-th-large text-xl w-6"></i>
                     <span class="nav-text">Inbox</span>
                     <i id="arrow-icon" class="fas fa-chevron-down dropdown-arrow"></i>
@@ -147,12 +147,12 @@
                         <i class="fab fa-viber w-4 text-[#7360f2]"></i>
                         <span class="text-xs">Viber</span>
                     </div>
-
-                    <div class="dropdown-item border-t border-white/5 mt-2 pt-2" onclick="loadBotSettings()">
-                        <i class="fas fa-robot w-4 text-blue-500"></i>
-                        <span class="text-xs font-bold text-blue-400">Bot Config</span>
-                    </div>
                 </div>
+            </div>
+
+            <div id="bot-config-nav" class="nav-item" onclick="loadBotSettings()">
+                <i class="fas fa-robot text-xl w-6"></i>
+                <span class="nav-text">Bot Config</span>
             </div>
         </nav>
 
@@ -280,25 +280,28 @@
             }
             
             arrow.classList.toggle('rotate-arrow');
+            
+            // Inbox ကိုနှိပ်ရင် Chat Area ပြန်ပြရန်
+            document.getElementById('main-dashboard-content').classList.remove('hidden');
+            document.getElementById('bot-settings-area').classList.add('hidden');
+            document.getElementById('inbox-nav').classList.add('active-nav');
+            document.getElementById('bot-config-nav').classList.remove('active-nav');
+            filterContacts('all');
         }
 
-        // NEW: Bot Config Page ကိုပြရန် function
         function loadBotSettings() {
             document.getElementById('main-dashboard-content').classList.add('hidden');
             document.getElementById('bot-settings-area').classList.remove('hidden');
             document.getElementById('right-panel').classList.add('hidden');
             
-            // Sidebar active state ပြောင်းရန်
+            // Sidebar active state update
             document.getElementById('inbox-nav').classList.remove('active-nav');
-        }
-
-        // NEW: Inbox ကိုပြန်သွားရန် function
-        function backToInbox() {
-            document.getElementById('main-dashboard-content').classList.remove('hidden');
-            document.getElementById('bot-settings-area').classList.add('hidden');
-            document.getElementById('inbox-nav').classList.add('active-nav');
-            toggleDropdown();
-            filterContacts('all');
+            document.getElementById('bot-config-nav').classList.add('active-nav');
+            
+            // Close dropdown if open
+            const dropdown = document.getElementById('messenger-dropdown');
+            dropdown.classList.remove('show');
+            dropdown.classList.add('hidden');
         }
 
         function showImagePreview(url) {
