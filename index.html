@@ -302,14 +302,22 @@
             const window = document.getElementById('chat-window');
             let contentHtml = data.text;
 
-            // Media file များပါလာပါက ပြသရန် logic
-            if (data.fileUrl) {
-                if (data.fileType && data.fileType.includes('image')) {
-                    contentHtml = `<img src="${data.fileUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer" onclick="window.open('${data.fileUrl}')">`;
-                } else if (data.fileType && data.fileType.includes('video')) {
-                    contentHtml = `<video controls class="max-w-xs rounded-lg mt-2"><source src="${data.fileUrl}"></video>`;
-                } else if (data.fileType && data.fileType.includes('audio')) {
-                    contentHtml = `<audio controls class="mt-2"><source src="${data.fileUrl}"></audio>`;
+            // Media file ပြသရန် logic (file_url သို့မဟုတ် fileUrl ကို စစ်ဆေးခြင်း)
+            const mediaUrl = data.file_url || data.fileUrl;
+            const mediaType = data.file_type || data.fileType;
+
+            if (mediaUrl) {
+                if (mediaType && mediaType.includes('image')) {
+                    contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md" onclick="window.open('${mediaUrl}')">`;
+                } else if (mediaType && mediaType.includes('video')) {
+                    contentHtml = `<video controls class="max-w-xs rounded-lg mt-2 border border-border-gray shadow-md"><source src="${mediaUrl}"></video>`;
+                } else if (mediaType && mediaType.includes('audio')) {
+                    contentHtml = `<audio controls class="mt-2 w-full max-w-[200px]"><source src="${mediaUrl}"></audio>`;
+                }
+                
+                // Text ပါလာပါက တွဲပြရန်
+                if(data.text && data.text !== `Sent a ${mediaType?.split('/')[0]}`) {
+                    contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
                 }
             }
 
@@ -332,7 +340,6 @@
             window.scrollTo({ top: window.scrollHeight, behavior: 'smooth' });
         }
 
-        // File Upload Handling Function
         async function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file || !currentChatId) {
@@ -345,27 +352,36 @@
             formData.append('chatId', currentChatId);
 
             try {
+                // Uploading State ပြရန် (optional)
+                const window = document.getElementById('chat-window');
+                const loadingId = "loading-" + Date.now();
+                window.insertAdjacentHTML('beforeend', `<div id="${loadingId}" class="self-end text-[10px] text-gray-500">Uploading ${file.name}...</div>`);
+
                 const response = await fetch('/api/upload', {
                     method: 'POST',
                     body: formData
                 });
 
+                document.getElementById(loadingId).remove();
+
                 if (response.ok) {
                     const data = await response.json();
                     const newMsg = { 
                         text: `Sent a ${file.type.split('/')[0]}`, 
-                        fileUrl: data.fileUrl, 
-                        fileType: file.type,
+                        file_url: data.fileUrl, 
+                        file_type: file.type,
                         sender_type: 'bot', 
                         chat_id: currentChatId 
                     };
                     allMessages.push(newMsg);
                     appendMessage(newMsg, true);
+                    event.target.value = ""; // Clear input
                 } else {
                     alert("Upload failed!");
                 }
             } catch (err) {
                 console.error("Upload error:", err);
+                alert("Error connecting to server.");
             }
         }
 
@@ -374,14 +390,12 @@
             allMessages.push(data);
             
             if (currentChatId === senderId) {
-                appendMessage(data, false); 
+                appendMessage(data, data.sender_type === 'bot'); 
             } else {
                 unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
                 document.getElementById('notif-sound').play().catch(() => {});
+                loadContacts();
             }
-            
-            loadContacts();
-            if (currentChatId === senderId) renderMessages();
         });
 
         function sendMessage() {
@@ -394,7 +408,6 @@
                 appendMessage(newMsg, true);
                 input.value = "";
                 unreadCounts[currentChatId] = 0;
-                loadContacts();
             } else if (!currentChatId) {
                 alert("Please select a contact first.");
             }
