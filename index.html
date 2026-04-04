@@ -34,7 +34,7 @@
         }
         
         .sidebar-collapsed { width: 70px !important; }
-        .sidebar-collapsed .nav-text { display: none; }
+        .sidebar-collapsed .nav-text, .sidebar-collapsed .dropdown-arrow { display: none; }
 
         .nav-item { 
             display: flex; align-items: center; gap: 16px; width: 100%; 
@@ -43,6 +43,14 @@
         .nav-item:hover { color: white; background-color: rgba(255,255,255,0.05); }
         .nav-text { font-size: 14px; font-weight: 500; white-space: nowrap; }
         .active-nav { color: #3B82F6; }
+
+        /* Dropdown Styling */
+        #messenger-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: rgba(0,0,0,0.2); }
+        #messenger-dropdown.show { max-height: 300px; }
+        .dropdown-item { padding-left: 56px; padding-top: 10px; padding-bottom: 10px; display: flex; align-items: center; gap: 12px; color: #6b7280; transition: 0.2s; cursor: pointer; }
+        .dropdown-item:hover { color: white; }
+        .dropdown-arrow { transition: transform 0.3s; margin-left: auto; font-size: 10px; }
+        .rotate-arrow { transform: rotate(180deg); }
 
         .noti-badge {
             animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -64,14 +72,21 @@
         </div>
         
         <nav class="flex flex-col w-full">
-            <div class="nav-item active-nav">
-                <i class="fas fa-th-large text-xl w-6"></i>
-                <span class="nav-text">Inbox</span>
+            <div>
+                <div class="nav-item active-nav" onclick="toggleDropdown()">
+                    <i class="fas fa-th-large text-xl w-6"></i>
+                    <span class="nav-text">Inbox</span>
+                    <i id="arrow-icon" class="fas fa-chevron-down dropdown-arrow"></i>
+                </div>
+                
+                <div id="messenger-dropdown">
+                    <div class="dropdown-item"><i class="fab fa-facebook-messenger w-5"></i><span class="text-xs">Messenger</span></div>
+                    <div class="dropdown-item"><i class="fab fa-instagram w-5"></i><span class="text-xs">Instagram</span></div>
+                    <div class="dropdown-item"><i class="fab fa-telegram w-5"></i><span class="text-xs">Telegram</span></div>
+                    <div class="dropdown-item"><i class="fab fa-whatsapp w-5"></i><span class="text-xs">WhatsApp</span></div>
+                    <div class="dropdown-item"><i class="fab fa-viber w-5"></i><span class="text-xs">Viber</span></div>
+                </div>
             </div>
-            <div class="nav-item"><i class="fab fa-facebook-messenger text-xl w-6"></i><span class="nav-text">Messenger</span></div>
-            <div class="nav-item"><i class="fab fa-instagram text-xl w-6"></i><span class="nav-text">Instagram</span></div>
-            <div class="nav-item"><i class="fab fa-telegram text-xl w-6"></i><span class="nav-text">Telegram</span></div>
-            <div class="nav-item"><i class="fab fa-whatsapp text-xl w-6"></i><span class="nav-text">WhatsApp</span></div>
         </nav>
 
         <div class="mt-auto w-full">
@@ -168,10 +183,17 @@
         function toggleLeftSidebar() { document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed'); }
         function toggleRightPanel() { document.getElementById('right-panel').classList.toggle('hidden'); }
         
-        // Function to toggle the chat inbox list
         function toggleInbox() { 
             const inbox = document.getElementById('chat-list-container');
             inbox.classList.toggle('hidden');
+        }
+
+        // Dropdown Toggle Logic
+        function toggleDropdown() {
+            const dropdown = document.getElementById('messenger-dropdown');
+            const arrow = document.getElementById('arrow-icon');
+            dropdown.classList.toggle('show');
+            arrow.classList.toggle('rotate-arrow');
         }
 
         async function loadContacts() {
@@ -207,7 +229,7 @@
 
         function selectContact(contact) {
             currentChatId = contact.chat_id;
-            unreadCounts[currentChatId] = 0; // Reset count for this chat
+            unreadCounts[currentChatId] = 0; 
             
             const displayName = contact.nickname || contact.first_name;
             document.getElementById('chat-header-name').innerText = displayName;
@@ -215,7 +237,6 @@
             document.getElementById('contact-note').value = contact.notes || "";
             document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
             
-            // Avatar update logic
             const hImg = document.getElementById('header-avatar-img');
             const hTxt = document.getElementById('header-avatar-text');
             const sImg = document.getElementById('side-avatar-img');
@@ -313,7 +334,6 @@
             }
         }
 
-        // Action Functions
         async function updateNickname() {
             if (!currentChatId) return;
             const newName = document.getElementById('edit-nickname').value;
