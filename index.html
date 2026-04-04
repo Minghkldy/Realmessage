@@ -53,12 +53,11 @@
             <span id="msg-count" class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white">0</span>
         </div>
         <div id="contact-list" class="flex-1 overflow-y-auto p-2">
-            <div id="contacts-container" class="space-y-1">
-                </div>
+            <div id="contacts-container" class="space-y-1"></div>
         </div>
     </div>
 
-    <div class="flex-1 flex flex-col bg-pure-black">
+    <div class="flex-1 flex flex-col bg-pure-black relative">
         <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between">
             <div class="flex items-center gap-3">
                 <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden" src="">
@@ -68,15 +67,15 @@
                     <p id="chat-status" class="text-[10px] text-gray-600 uppercase tracking-tighter">System Ready</p>
                 </div>
             </div>
-            <div class="flex items-center gap-4 text-gray-500">
-                <button onclick="toggleRightPanel()" class="hover:text-white transition">
+            
+            <div class="flex items-center gap-4">
+                <button onclick="toggleRightPanel()" class="text-gray-500 hover:text-white transition p-2">
                     <i class="fas fa-user-circle text-xl"></i>
                 </button>
             </div>
         </div>
 
-        <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col">
-            </div>
+        <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col"></div>
 
         <div class="p-6 border-t border-border-gray bg-pure-black">
             <div class="flex items-center gap-4 bg-dark-gray border border-border-gray rounded-2xl px-5 py-3 focus-within:border-accent-blue transition">
@@ -89,7 +88,7 @@
         </div>
     </div>
 
-    <div id="right-panel" class="w-80 border-l border-border-gray bg-dark-gray flex flex-col p-6 space-y-8 overflow-y-auto transition-all duration-300">
+    <div id="right-panel" class="hidden w-80 border-l border-border-gray bg-dark-gray flex flex-col p-6 space-y-8 overflow-y-auto transition-all duration-300">
         <div class="text-center space-y-4 pt-4">
             <div id="side-avatar-container" class="relative inline-block">
                 <div id="side-avatar" class="w-24 h-24 bg-accent-blue rounded-full mx-auto flex items-center justify-center text-3xl font-bold border-4 border-pure-black">?</div>
@@ -129,7 +128,7 @@
         let currentChatId = "";
         let allMessages = [];
 
-        // Panel Toggle Function
+        // Toggle Panel Function
         function toggleRightPanel() {
             const panel = document.getElementById('right-panel');
             panel.classList.toggle('hidden');
@@ -164,15 +163,12 @@
 
         function selectContact(contact) {
             currentChatId = contact.chat_id;
-            
-            // Header & Profile Panel Update
             const displayName = contact.nickname || contact.first_name;
             document.getElementById('chat-header-name').innerText = displayName;
             document.getElementById('edit-nickname').value = displayName;
             document.getElementById('contact-note').value = contact.notes || "";
             document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
 
-            // Avatar Logic for Header
             const hAvatarImg = document.getElementById('header-avatar-img');
             const hAvatarTxt = document.getElementById('header-avatar-text');
             const sAvatarImg = document.getElementById('side-avatar-img');
