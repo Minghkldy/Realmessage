@@ -318,6 +318,23 @@
             await fetch('/api/contacts/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, note: noteValue }) });
         }
 
+        async function toggleBlock() {
+            if (!currentChatId) return;
+            if (confirm("Are you sure you want to block this customer? They won't be able to message you.")) {
+                try {
+                    await fetch('/api/contacts/block', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ chatId: currentChatId }) 
+                    });
+                    alert("User blocked successfully.");
+                    location.reload();
+                } catch (err) {
+                    console.error("Block Error:", err);
+                }
+            }
+        }
+
         async function deleteContact() {
             if (!currentChatId || !confirm("Delete this conversation?")) return;
             await fetch(`/api/contacts/${currentChatId}`, { method: 'DELETE' });
