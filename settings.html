@@ -30,6 +30,9 @@
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #1f1f1f; border-radius: 10px; }
+        .save-single-btn {
+            @apply px-3 py-2 bg-dark-gray border border-border-gray rounded-lg text-[10px] uppercase font-bold hover:bg-accent-blue transition active:scale-95;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-pure-black p-6">
@@ -50,12 +53,15 @@
         <div class="grid gap-6">
             
             <div class="bg-dark-gray border border-border-gray rounded-2xl p-8 space-y-6">
-                <div class="flex items-center gap-3 border-b border-border-gray pb-4">
-                    <i class="fab fa-telegram text-2xl text-sky-500"></i>
-                    <div>
-                        <h2 class="font-bold text-sm">Telegram Connection</h2>
-                        <p class="text-[11px] text-gray-500">Manage your Telegram Bot API Integration</p>
+                <div class="flex items-center justify-between border-b border-border-gray pb-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fab fa-telegram text-2xl text-sky-500"></i>
+                        <div>
+                            <h2 class="font-bold text-sm">Telegram Connection</h2>
+                            <p class="text-[11px] text-gray-500">Manage your Telegram Bot API Integration</p>
+                        </div>
                     </div>
+                    <button onclick="saveSingle('telegram_token')" class="bg-pure-black border border-border-gray px-4 py-2 rounded-lg text-[10px] font-bold hover:bg-sky-600 transition uppercase">Save</button>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -72,51 +78,63 @@
             </div>
 
             <div class="bg-dark-gray border border-border-gray rounded-2xl p-8 space-y-6">
-                <div class="flex items-center gap-3 border-b border-border-gray pb-4">
-                    <i class="fab fa-viber text-2xl text-purple-500"></i>
-                    <div>
-                        <h2 class="font-bold text-sm">Viber Business API</h2>
-                        <p class="text-[11px] text-gray-500">Connect your Viber Partner/Chatbot Account</p>
+                <div class="flex items-center justify-between border-b border-border-gray pb-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fab fa-viber text-2xl text-purple-500"></i>
+                        <div>
+                            <h2 class="font-bold text-sm">Viber Business API</h2>
+                            <p class="text-[11px] text-gray-500">Connect your Viber Partner/Chatbot Account</p>
+                        </div>
                     </div>
+                    <button onclick="saveSingle('viber_auth_token')" class="bg-pure-black border border-border-gray px-4 py-2 rounded-lg text-[10px] font-bold hover:bg-purple-600 transition uppercase">Save</button>
                 </div>
                 <div>
                     <label class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Viber Auth Token</label>
                     <div class="relative mt-2">
-                        <input type="password" id="viber_token" 
+                        <input type="password" id="viber_auth_token" 
                                class="setting-input w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-purple-500 transition"
                                placeholder="Enter Viber Auth Token">
-                        <i onclick="toggleVisibility('viber_token')" class="fas fa-eye absolute right-4 top-4 text-gray-600 cursor-pointer hover:text-white"></i>
+                        <i onclick="toggleVisibility('viber_auth_token')" class="fas fa-eye absolute right-4 top-4 text-gray-600 cursor-pointer hover:text-white"></i>
                     </div>
                 </div>
             </div>
 
             <div class="bg-dark-gray border border-border-gray rounded-2xl p-8 space-y-6">
-                <div class="flex items-center gap-3 border-b border-border-gray pb-4">
-                    <i class="fab fa-facebook-messenger text-2xl text-pink-500"></i>
-                    <div>
-                        <h2 class="font-bold text-sm">Meta Integration</h2>
-                        <p class="text-[11px] text-gray-500">Facebook Page & Instagram Business Access</p>
+                <div class="flex items-center justify-between border-b border-border-gray pb-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fab fa-facebook-messenger text-2xl text-pink-500"></i>
+                        <div>
+                            <h2 class="font-bold text-sm">Meta Integration</h2>
+                            <p class="text-[11px] text-gray-500">Facebook Page & Instagram Business Access</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="saveSingle('meta_page_access_token')" class="bg-pure-black border border-border-gray px-3 py-2 rounded-lg text-[9px] font-bold hover:bg-pink-600 transition uppercase">Save Token</button>
+                        <button onclick="saveSingle('meta_verify_token')" class="bg-pure-black border border-border-gray px-3 py-2 rounded-lg text-[9px] font-bold hover:bg-pink-600 transition uppercase">Save Verify</button>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-2">
                         <label class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Page Access Token</label>
-                        <input type="password" id="meta_token" class="setting-input w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-pink-500 transition">
+                        <input type="password" id="meta_page_access_token" class="setting-input w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-pink-500 transition">
                     </div>
                     <div class="space-y-2">
                         <label class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Verify Token (Webhook)</label>
-                        <input type="text" id="meta_verify" class="setting-input w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-pink-500 transition" placeholder="Any string you set">
+                        <input type="text" id="meta_verify_token" class="setting-input w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-pink-500 transition" placeholder="Any string you set">
                     </div>
                 </div>
             </div>
 
             <div class="bg-dark-gray border border-border-gray rounded-2xl p-8 space-y-6">
-                <div class="flex items-center gap-3 border-b border-border-gray pb-4">
-                    <i class="fab fa-whatsapp text-2xl text-green-500"></i>
-                    <div>
-                        <h2 class="font-bold text-sm">WhatsApp Cloud API</h2>
-                        <p class="text-[11px] text-gray-500">Meta WhatsApp Business API Access</p>
+                <div class="flex items-center justify-between border-b border-border-gray pb-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fab fa-whatsapp text-2xl text-green-500"></i>
+                        <div>
+                            <h2 class="font-bold text-sm">WhatsApp Cloud API</h2>
+                            <p class="text-[11px] text-gray-500">Meta WhatsApp Business API Access</p>
+                        </div>
                     </div>
+                    <button onclick="saveAllSettings()" class="bg-pure-black border border-border-gray px-4 py-2 rounded-lg text-[10px] font-bold hover:bg-green-600 transition uppercase">Save</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-2">
@@ -164,12 +182,30 @@
             el.type = el.type === 'password' ? 'text' : 'password';
         }
 
+        // --- Single Save Function ---
+        async function saveSingle(key) {
+            const value = document.getElementById(key).value;
+            try {
+                const res = await fetch('/api/settings/single', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key, value })
+                });
+                if (res.ok) {
+                    alert(`✅ ${key} saved successfully!`);
+                } else {
+                    alert("❌ Failed to save setting.");
+                }
+            } catch (err) {
+                alert("❌ Error: " + err.message);
+            }
+        }
+
         async function saveAllSettings() {
             const btn = document.getElementById('save-btn');
             const inputs = document.querySelectorAll('.setting-input');
             const settingsData = {};
 
-            // Input IDs တွေကို key အဖြစ်သုံးပြီး value တွေယူမယ်
             inputs.forEach(input => {
                 settingsData[input.id] = input.value;
             });
@@ -178,7 +214,6 @@
             btn.disabled = true;
 
             try {
-                // Backend ရဲ့ bulk update API ကိုလှမ်းခေါ်မယ်
                 const res = await fetch('/api/settings/bulk', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -186,7 +221,7 @@
                 });
 
                 if (res.ok) {
-                    alert("✅ All settings saved and Telegram Webhook updated!");
+                    alert("✅ All settings saved and Webhooks updated!");
                 } else {
                     const errData = await res.json();
                     throw new Error(errData.error || "Failed to save");
