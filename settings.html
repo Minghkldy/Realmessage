@@ -21,17 +21,22 @@
         }
     </script>
     <style>
-        body { background-color: #000000; color: #ffffff; }
+        body { 
+            background-color: #000000; 
+            color: #ffffff; 
+            margin: 0;
+            overflow-y: auto; /* Scroll ဆွဲလို့ရအောင် လုပ်ထားသည် */
+        }
         /* Scrollbar အလှဆင်ရန် */
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #1f1f1f; border-radius: 10px; }
     </style>
 </head>
-<body class="h-full flex items-center justify-center p-6">
+<body class="min-h-screen bg-pure-black p-6">
 
-    <div class="w-full max-w-2xl space-y-8 my-10">
-        <div class="flex items-center justify-between">
+    <div class="w-full max-w-2xl mx-auto space-y-8 my-6">
+        <div class="flex items-center justify-between sticky top-0 bg-pure-black py-4 z-10 border-b border-border-gray/50 mb-4">
             <div class="flex items-center gap-4">
                 <a href="/" class="w-10 h-10 rounded-full border border-border-gray flex items-center justify-center hover:bg-dark-gray transition">
                     <i class="fas fa-arrow-left text-gray-400"></i>
@@ -126,27 +131,24 @@
                 </div>
             </div>
 
-            <div class="flex gap-4">
-                <button onclick="saveAllSettings()" id="save-btn" class="flex-1 bg-accent-blue hover:bg-blue-600 text-white font-bold py-4 rounded-xl transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
+            <div class="pb-10">
+                <button onclick="saveAllSettings()" id="save-btn" class="w-full bg-accent-blue hover:bg-blue-600 text-white font-bold py-4 rounded-xl transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 active:scale-95">
                     <i class="fas fa-save"></i> Save All Changes
                 </button>
             </div>
 
         </div>
 
-        <p class="text-center text-[11px] text-gray-600 uppercase tracking-tighter">
+        <p class="text-center text-[11px] text-gray-600 uppercase tracking-tighter pb-10">
             Changes will take effect after server restart
         </p>
     </div>
 
     <script>
-        // Database ကနေ လက်ရှိ Settings တွေ အကုန်ယူမယ်
         async function loadSettings() {
             try {
                 const res = await fetch('/api/settings');
                 const data = await res.json();
-                
-                // input ID တွေနဲ့ data key တွေ တိုက်စစ်ပြီး value ထည့်မယ်
                 const inputs = document.querySelectorAll('.setting-input');
                 inputs.forEach(input => {
                     if (data[input.id]) {
@@ -158,19 +160,16 @@
             }
         }
 
-        // Token ကို ဖျောက်/ပြ လုပ်ဖို့
         function toggleVisibility(id) {
             const el = document.getElementById(id);
             el.type = el.type === 'password' ? 'text' : 'password';
         }
 
-        // Settings အကုန်လုံးကို တစ်ပြိုင်တည်းသိမ်းဖို့
         async function saveAllSettings() {
             const btn = document.getElementById('save-btn');
             const inputs = document.querySelectorAll('.setting-input');
             const settingsData = {};
 
-            // Value တွေကို စုစည်းမယ်
             inputs.forEach(input => {
                 settingsData[input.id] = input.value;
             });
