@@ -51,8 +51,9 @@
         .active-nav { color: #3B82F6; }
 
         #messenger-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: rgba(0,0,0,0.1); }
-        #messenger-dropdown.show { max-height: 300px; }
-        .dropdown-item { padding-left: 56px; padding-top: 10px; padding-bottom: 10px; display: flex; align-items: center; gap: 12px; color: #6b7280; transition: 0.2s; cursor: pointer; }
+        #messenger-dropdown.show { max-height: 400px; }
+        /* padding နဲ့ flex alignment ပြင်ဆင်ထားသည် */
+        .dropdown-item { padding-left: 56px; padding-top: 12px; padding-bottom: 12px; display: flex; align-items: center; gap: 12px; color: #6b7280; transition: 0.2s; cursor: pointer; }
         .dropdown-item:hover { color: white; }
         .dropdown-arrow { transition: transform 0.3s; margin-left: auto; font-size: 10px; }
         .rotate-arrow { transform: rotate(180deg); }
@@ -65,7 +66,6 @@
             100% { transform: scale(1); }
         }
 
-        /* Image Preview Modal Style */
         #imagePreviewModal {
             display: none;
             position: fixed;
@@ -111,11 +111,26 @@
                 </div>
                 
                 <div id="messenger-dropdown" class="hidden flex-col">
-                    <div class="dropdown-item" onclick="filterContacts('messenger')"><i class="fab fa-facebook-messenger w-4"></i><span class="text-xs">Messenger</span></div>
-                    <div class="dropdown-item" onclick="filterContacts('instagram')"><i class="fab fa-instagram w-4"></i><span class="text-xs">Instagram</span></div>
-                    <div class="dropdown-item" onclick="filterContacts('telegram')"><i class="fab fa-telegram w-4"></i><span class="text-xs">Telegram</span></div>
-                    <div class="dropdown-item" onclick="filterContacts('whatsapp')"><i class="fab fa-whatsapp w-4"></i><span class="text-xs">WhatsApp</span></div>
-                    <div class="dropdown-item" onclick="filterContacts('viber')"><i class="fab fa-viber w-4 text-[#7360f2]"></i><span class="text-xs">Viber</span></div>
+                    <div class="dropdown-item" onclick="filterContacts('messenger')">
+                        <i class="fab fa-facebook-messenger w-4 text-[#0084FF]"></i>
+                        <span class="text-xs">Messenger</span>
+                    </div>
+                    <div class="dropdown-item" onclick="filterContacts('instagram')">
+                        <i class="fab fa-instagram w-4 text-[#E4405F]"></i>
+                        <span class="text-xs">Instagram</span>
+                    </div>
+                    <div class="dropdown-item" onclick="filterContacts('telegram')">
+                        <i class="fab fa-telegram w-4 text-[#26A5E4]"></i>
+                        <span class="text-xs">Telegram</span>
+                    </div>
+                    <div class="dropdown-item" onclick="filterContacts('whatsapp')">
+                        <i class="fab fa-whatsapp w-4 text-[#25D366]"></i>
+                        <span class="text-xs">WhatsApp</span>
+                    </div>
+                    <div class="dropdown-item" onclick="filterContacts('viber')">
+                        <i class="fab fa-viber w-4 text-[#7360f2]"></i>
+                        <span class="text-xs">Viber</span>
+                    </div>
                 </div>
             </div>
         </nav>
@@ -418,7 +433,6 @@
 
                 if (response.ok) {
                     event.target.value = ""; 
-                    // Manually push/append ပိတ်ထားသည် (Socket မှ တစ်ဆင့်သာ ပြမည်)
                 } else {
                     alert("Upload failed!");
                 }
@@ -431,7 +445,6 @@
         socket.on('new_message', (data) => {
             const senderId = data.chat_id || data.chatId; 
             
-            // Duplicate စစ်ဆေးရန် (optional ဒါပေမယ့် စိတ်ချရအောင် ထည့်ထားပေးတယ်)
             const isDuplicate = allMessages.some(m => m.id === data.id && data.id !== undefined);
             if (!isDuplicate) {
                 allMessages.push(data);
@@ -452,7 +465,6 @@
                 socket.emit('send_reply', { chatId: currentChatId, text: text });
                 input.value = "";
                 unreadCounts[currentChatId] = 0;
-                // Manually push/append ပိတ်ထားသည် (Socket မှ တစ်ဆင့်သာ ပြမည်)
             } else if (!currentChatId) {
                 alert("Please select a contact first.");
             }
