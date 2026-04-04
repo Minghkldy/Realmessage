@@ -68,6 +68,11 @@
                     <p id="chat-status" class="text-[10px] text-gray-600 uppercase tracking-tighter">System Ready</p>
                 </div>
             </div>
+            <div class="flex items-center gap-4 text-gray-500">
+                <button onclick="toggleRightPanel()" class="hover:text-white transition">
+                    <i class="fas fa-user-circle text-xl"></i>
+                </button>
+            </div>
         </div>
 
         <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col">
@@ -84,7 +89,7 @@
         </div>
     </div>
 
-    <div class="w-80 border-l border-border-gray bg-dark-gray flex flex-col p-6 space-y-8 overflow-y-auto">
+    <div id="right-panel" class="w-80 border-l border-border-gray bg-dark-gray flex flex-col p-6 space-y-8 overflow-y-auto transition-all duration-300">
         <div class="text-center space-y-4 pt-4">
             <div id="side-avatar-container" class="relative inline-block">
                 <div id="side-avatar" class="w-24 h-24 bg-accent-blue rounded-full mx-auto flex items-center justify-center text-3xl font-bold border-4 border-pure-black">?</div>
@@ -123,6 +128,12 @@
         const contactsContainer = document.getElementById('contacts-container');
         let currentChatId = "";
         let allMessages = [];
+
+        // Panel Toggle Function
+        function toggleRightPanel() {
+            const panel = document.getElementById('right-panel');
+            panel.classList.toggle('hidden');
+        }
 
         async function loadContacts() {
             try {
