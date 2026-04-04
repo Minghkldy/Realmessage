@@ -115,13 +115,16 @@ app.post('/api/settings/bulk', async (req, res) => {
     const RENDER_URL = "https://realmessage-live.onrender.com"; // မင်းရဲ့ Render URL
 
     try {
-        const queries = Object.entries(settingsData).map(([key, value]) => {
-            return pool.query(
-                'INSERT INTO settings (key, value) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+        // syntax error မတက်အောင် တစ်ခုချင်းစီ loop ပတ်ပြီး သေချာအောင် သိမ်းမယ်
+        for (const [key, value] of Object.entries(settingsData)) {
+            await pool.query(
+                `INSERT INTO settings (key, value) 
+                 VALUES ($1, $2) 
+                 ON CONFLICT (key) 
+                 DO UPDATE SET value = EXCLUDED.value`,
                 [key, value]
             );
-        });
-        await Promise.all(queries);
+        }
 
         // Telegram Token ပါလာရင် Webhook ကို တစ်ခါတည်း ချိတ်ပေးမယ်
         if (settingsData.telegram_token) {
