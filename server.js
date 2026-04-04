@@ -20,10 +20,9 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// ၁။ Database Tables - (Nickname Column နှင့် အခြားလိုအပ်ချက်များ ထည့်သွင်းခြင်း)
+// ၁။ Database Tables Initialization
 const initDb = async () => {
     try {
-        // Contacts Table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS contacts (
                 chat_id TEXT PRIMARY KEY,
@@ -38,12 +37,10 @@ const initDb = async () => {
             )
         `);
 
-        // Column များ ရှိမရှိ စစ်ဆေးပြီး အသစ်တိုးခြင်း
         await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';`);
         await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS notes TEXT;`);
         await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS nickname TEXT;`);
 
-        // Messages Table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS messages (
                 id SERIAL PRIMARY KEY,
@@ -57,7 +54,6 @@ const initDb = async () => {
         `);
         await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_type TEXT;`);
 
-        // Settings Table (API Keys များသိမ်းရန်)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY,
@@ -65,40 +61,31 @@ const initDb = async () => {
             )
         `);
         
-        console.log("✅ Database structure is updated with Nickname & Management features.");
+        console.log("✅ Database structure is ready.");
     } catch (err) {
         console.error("❌ DB Init Error:", err.message);
     }
 };
 initDb();
 
-const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-
-// ၂။ Telegram Profile Pic ယူသည့် Function
-async function getTelegramProfilePic(userId) {
+// ၂။ Helper: Get Telegram Profile Pic
+async function getTelegramProfilePic(userId, token) {
     try {
-        const res = await axios.get(`https://api.telegram.org/bot${TG_TOKEN}/getUserProfilePhotos?user_id=${userId}`);
+        const res = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos?user_id=${userId}`);
         if (res.data.result.total_count > 0) {
             const fileId = res.data.result.photos[0][0].file_id;
-            const fileRes = await axios.get(`https://api.telegram.org/bot${TG_TOKEN}/getFile?file_id=${fileId}`);
-            return `https://api.telegram.org/file/bot${TG_TOKEN}/${fileRes.data.result.file_path}`;
+            const fileRes = await axios.get(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
+            return `https://api.telegram.org/file/bot${token}/${fileRes.data.result.file_path}`;
         }
-        return `https://ui-avatars.com/api/?name=User&background=random`;
-    } catch (e) { 
-        return `https://ui-avatars.com/api/?name=User&background=random`; 
-    }
+    } catch (e) { console.error("Avatar Fetch Error"); }
+    return `https://ui-avatars.com/api/?name=User&background=random`;
 }
 
-// --- Page Routes ---
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+// --- Routes ---
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/settings', (req, res) => res.sendFile(path.join(__dirname, 'settings.html')));
 
-app.get('/settings', (req, res) => {
-    res.sendFile(path.join(__dirname, 'settings.html'));
-});
-
-// --- API လမ်းကြောင်းများ ---
+// --- API Endpoints ---
 app.get('/api/messages', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM messages ORDER BY created_at ASC');
@@ -113,7 +100,6 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Settings APIs ---
 app.get('/api/settings', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM settings');
@@ -123,15 +109,35 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/settings', async (req, res) => {
-    const { key, value } = req.body;
+// --- Bulk Settings & Auto-Webhook Connection ---
+app.post('/api/settings/bulk', async (req, res) => {
+    const settingsData = req.body;
+    const RENDER_URL = "https://realmessage-live.onrender.com"; // မင်းရဲ့ Render URL
+
     try {
-        await pool.query('INSERT INTO settings (key, value) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', [key, value]);
+        const queries = Object.entries(settingsData).map(([key, value]) => {
+            return pool.query(
+                'INSERT INTO settings (key, value) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+                [key, value]
+            );
+        });
+        await Promise.all(queries);
+
+        // Telegram Token ပါလာရင် Webhook ကို တစ်ခါတည်း ချိတ်ပေးမယ်
+        if (settingsData.telegram_token) {
+            const webhookUrl = `${RENDER_URL}/webhook/telegram`;
+            await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${webhookUrl}`);
+            console.log(`✅ Webhook updated to: ${webhookUrl}`);
+        }
+
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        console.error("Bulk Save Error:", err.message);
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// --- Management APIs (Updated for Nickname) ---
+// --- Management APIs ---
 app.post('/api/contacts/nickname', async (req, res) => {
     const { chatId, nickname } = req.body;
     try {
@@ -148,10 +154,10 @@ app.post('/api/contacts/status', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/contacts/note', async (req, res) => {
-    const { chatId, note } = req.body;
+app.post('/api/contacts/block', async (req, res) => {
+    const { chatId } = req.body;
     try {
-        await pool.query('UPDATE contacts SET notes = $1 WHERE chat_id = $2', [note, chatId]);
+        await pool.query("UPDATE contacts SET status = 'blocked' WHERE chat_id = $1", [chatId]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -165,69 +171,65 @@ app.delete('/api/contacts/:chatId', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Webhook with Block Logic ---
+// --- Webhook with Telegram ---
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (update.message) {
         const chatId = update.message.chat.id.toString();
+        
+        // Block စစ်မယ်
         const checkStatus = await pool.query('SELECT status FROM contacts WHERE chat_id = $1', [chatId]);
-        if (checkStatus.rows.length > 0 && checkStatus.rows[0].status === 'blocked') {
-            return res.sendStatus(200);
-        }
+        if (checkStatus.rows.length > 0 && checkStatus.rows[0].status === 'blocked') return res.sendStatus(200);
 
         const text = update.message.text || "";
-        const firstName = update.message.from.first_name || "";
-        const lastName = update.message.from.last_name || "";
-        const sender = `${firstName} ${lastName}`.trim() || "Unknown User";
+        const sender = `${update.message.from.first_name || ""} ${update.message.from.last_name || ""}`.trim() || "Unknown";
         const username = update.message.from.username || "";
 
         try {
-            const profilePic = await getTelegramProfilePic(chatId);
-            await pool.query(`
-                INSERT INTO contacts (chat_id, first_name, username, profile_pic, platform)
-                VALUES ($1, $2, $3, $4, $5)
-                ON CONFLICT (chat_id) DO UPDATE SET 
-                    first_name = EXCLUDED.first_name, 
-                    profile_pic = EXCLUDED.profile_pic,
-                    username = EXCLUDED.username
-            `, [chatId, sender, username, profilePic, 'Telegram']);
+            // DB ထဲက Token ယူသုံးမယ်
+            const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
+            const currentToken = settingsRes.rows[0]?.value;
 
-            await pool.query(
-                'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
-                [sender, text, 'Telegram', chatId, 'user']
-            );
+            if (currentToken) {
+                const profilePic = await getTelegramProfilePic(chatId, currentToken);
+                await pool.query(`
+                    INSERT INTO contacts (chat_id, first_name, username, profile_pic, platform)
+                    VALUES ($1, $2, $3, $4, $5)
+                    ON CONFLICT (chat_id) DO UPDATE SET first_name = EXCLUDED.first_name, profile_pic = EXCLUDED.profile_pic
+                `, [chatId, sender, username, profilePic, 'Telegram']);
 
-            // Nickname ရှိမရှိစစ်ရန် (ရှိလျှင် nickname လွှတ်မည်)
-            const contactInfo = await pool.query('SELECT nickname FROM contacts WHERE chat_id = $1', [chatId]);
-            const displayName = (contactInfo.rows[0] && contactInfo.rows[0].nickname) ? contactInfo.rows[0].nickname : sender;
+                await pool.query(
+                    'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
+                    [sender, text, 'Telegram', chatId, 'user']
+                );
 
-            io.emit('new_message', {
-                sender: displayName,
-                text: text,
-                chatId: chatId,
-                profile_pic: profilePic,
-                sender_type: 'user'
-            });
-        } catch (err) { console.error("Webhook Save Error:", err.message); }
+                const contactInfo = await pool.query('SELECT nickname FROM contacts WHERE chat_id = $1', [chatId]);
+                const displayName = contactInfo.rows[0]?.nickname || sender;
+
+                io.emit('new_message', { sender: displayName, text, chatId, profile_pic: profilePic, sender_type: 'user' });
+            }
+        } catch (err) { console.error("Webhook Error:", err.message); }
     }
     res.sendStatus(200);
 });
 
-// Dashboard Reply Logic
+// --- Dashboard Reply Logic ---
 io.on('connection', (socket) => {
     socket.on('send_reply', async (data) => {
         try {
-            await axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
-                chat_id: data.chatId,
-                text: data.text
-            });
-            await pool.query(
-                'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
-                ['OmniBot', data.text, 'Telegram', data.chatId, 'bot']
-            );
-        } catch (e) { console.error("Dashboard Reply Error:", e.message); }
+            const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
+            const botToken = settingsRes.rows[0]?.value;
+
+            if (botToken) {
+                await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: data.chatId, text: data.text });
+                await pool.query(
+                    'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
+                    ['OmniBot', data.text, 'Telegram', data.chatId, 'bot']
+                );
+            }
+        } catch (e) { console.error("Reply Error:", e.response?.data || e.message); }
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
