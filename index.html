@@ -104,17 +104,18 @@
         
         <nav class="flex flex-col w-full">
             <div>
-                <div class="nav-item active-nav" onclick="toggleDropdown()">
+                <div class="nav-item active-nav" onclick="filterContacts('all'); toggleDropdown();">
                     <i class="fas fa-th-large text-xl w-6"></i>
                     <span class="nav-text">Inbox</span>
                     <i id="arrow-icon" class="fas fa-chevron-down dropdown-arrow"></i>
                 </div>
                 
                 <div id="messenger-dropdown" class="hidden flex-col">
-                    <div class="dropdown-item"><i class="fab fa-facebook-messenger w-4"></i><span class="text-xs">Messenger</span></div>
-                    <div class="dropdown-item"><i class="fab fa-instagram w-4"></i><span class="text-xs">Instagram</span></div>
-                    <div class="dropdown-item"><i class="fab fa-telegram w-4"></i><span class="text-xs">Telegram</span></div>
-                    <div class="dropdown-item"><i class="fab fa-whatsapp w-4"></i><span class="text-xs">WhatsApp</span></div>
+                    <div class="dropdown-item" onclick="filterContacts('messenger')"><i class="fab fa-facebook-messenger w-4"></i><span class="text-xs">Messenger</span></div>
+                    <div class="dropdown-item" onclick="filterContacts('instagram')"><i class="fab fa-instagram w-4"></i><span class="text-xs">Instagram</span></div>
+                    <div class="dropdown-item" onclick="filterContacts('telegram')"><i class="fab fa-telegram w-4"></i><span class="text-xs">Telegram</span></div>
+                    <div class="dropdown-item" onclick="filterContacts('whatsapp')"><i class="fab fa-whatsapp w-4"></i><span class="text-xs">WhatsApp</span></div>
+                    <div class="dropdown-item" onclick="filterContacts('viber')"><i class="fab fa-viber w-4 text-[#7360f2]"></i><span class="text-xs">Viber</span></div>
                 </div>
             </div>
         </nav>
@@ -133,7 +134,7 @@
                 <button onclick="toggleLeftSidebar()" class="text-gray-500 hover:text-white transition">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h2 class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
+                <h2 id="inbox-title" class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
             </div>
             <span id="global-msg-count" class="hidden bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white noti-badge">0</span>
         </div>
@@ -208,6 +209,7 @@
         let currentChatId = "";
         let allMessages = [];
         let unreadCounts = {};
+        let cachedContacts = []; // Contact data အားလုံးသိမ်းရန်
 
         function toggleLeftSidebar() { 
             document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed'); 
@@ -249,32 +251,51 @@
         async function loadContacts() {
             try {
                 const res = await fetch('/api/contacts');
-                const contacts = await res.json();
-                const container = document.getElementById('contacts-container');
-                container.innerHTML = '';
-                
-                contacts.forEach(c => {
-                    const count = unreadCounts[c.chat_id] || 0;
-                    const item = document.createElement('div');
-                    item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
-                    item.onclick = () => selectContact(c);
-                    
-                    const avatarContent = c.profile_pic ? 
-                        `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` :
-                        `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray">${(c.nickname || c.first_name).charAt(0)}</div>`;
-
-                    item.innerHTML = `
-                        ${avatarContent}
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-bold truncate ${count > 0 ? 'text-white' : 'text-gray-400'}">${c.nickname || c.first_name}</p>
-                            <p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p>
-                        </div>
-                        ${count > 0 ? `<span class="bg-accent-blue text-[10px] w-5 h-5 flex items-center justify-center rounded-full text-white noti-badge font-bold">${count}</span>` : ''}
-                    `;
-                    container.appendChild(item);
-                });
-                updateGlobalBadge();
+                cachedContacts = await res.json();
+                renderContacts(cachedContacts);
             } catch (err) { console.error("Load Contacts Error:", err); }
+        }
+
+        // Filtering Function
+        function filterContacts(platform) {
+            let filtered;
+            const title = document.getElementById('inbox-title');
+            
+            if (platform === 'all') {
+                filtered = cachedContacts;
+                title.innerText = "Inbox";
+            } else {
+                filtered = cachedContacts.filter(c => c.platform.toLowerCase() === platform.toLowerCase());
+                title.innerText = platform.toUpperCase();
+            }
+            renderContacts(filtered);
+        }
+
+        function renderContacts(contacts) {
+            const container = document.getElementById('contacts-container');
+            container.innerHTML = '';
+            
+            contacts.forEach(c => {
+                const count = unreadCounts[c.chat_id] || 0;
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
+                item.onclick = () => selectContact(c);
+                
+                const avatarContent = c.profile_pic ? 
+                    `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` :
+                    `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray">${(c.nickname || c.first_name).charAt(0)}</div>`;
+
+                item.innerHTML = `
+                    ${avatarContent}
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold truncate ${count > 0 ? 'text-white' : 'text-gray-400'}">${c.nickname || c.first_name}</p>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p>
+                    </div>
+                    ${count > 0 ? `<span class="bg-accent-blue text-[10px] w-5 h-5 flex items-center justify-center rounded-full text-white noti-badge font-bold">${count}</span>` : ''}
+                `;
+                container.appendChild(item);
+            });
+            updateGlobalBadge();
         }
 
         function selectContact(contact) {
@@ -304,7 +325,7 @@
             document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
             document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase font-bold";
             
-            loadContacts();
+            renderContacts(cachedContacts); 
             renderMessages();
         }
 
@@ -343,7 +364,6 @@
 
             if (mediaUrl) {
                 if (mediaType && mediaType.includes('image')) {
-                    // onclick="window.open" ကို showImagePreview သို့ ပြောင်းလဲလိုက်သည်
                     contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md" onclick="showImagePreview('${mediaUrl}')">`;
                 } else if (mediaType && mediaType.includes('video')) {
                     contentHtml = `<video controls class="max-w-xs rounded-lg mt-2 border border-border-gray shadow-md"><source src="${mediaUrl}"></video>`;
@@ -428,7 +448,7 @@
             } else {
                 unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
                 document.getElementById('notif-sound').play().catch(() => {});
-                loadContacts();
+                renderContacts(cachedContacts);
             }
         });
 
