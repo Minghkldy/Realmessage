@@ -36,6 +36,14 @@
         .sidebar-collapsed { width: 70px !important; }
         .sidebar-collapsed .nav-text, .sidebar-collapsed .dropdown-arrow { display: none; }
 
+        /* --- Sidebar ပိတ်ထားရင် နှိပ်လို့မရအောင် လုပ်သည့်အပိုင်း --- */
+        .sidebar-collapsed nav, 
+        .sidebar-collapsed .mt-auto {
+            pointer-events: none; /* နှိပ်လို့မရအောင် ပိတ်ထားမယ် */
+            opacity: 0.6;        /* ပိတ်ထားမှန်းသိသာအောင် အရောင်မှိန်ထားမယ် */
+        }
+        /* ------------------------------------------------ */
+
         .nav-item { 
             display: flex; align-items: center; gap: 16px; width: 100%; 
             padding: 12px 24px; cursor: pointer; transition: 0.2s; color: #6b7280;
@@ -44,7 +52,6 @@
         .nav-text { font-size: 14px; font-weight: 500; white-space: nowrap; }
         .active-nav { color: #3B82F6; }
 
-        /* Dropdown Styling */
         #messenger-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: rgba(0,0,0,0.1); }
         #messenger-dropdown.show { max-height: 300px; }
         .dropdown-item { padding-left: 56px; padding-top: 10px; padding-bottom: 10px; display: flex; align-items: center; gap: 12px; color: #6b7280; transition: 0.2s; cursor: pointer; }
@@ -65,8 +72,9 @@
 
     <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
-    <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray">
-        <div class="text-2xl font-bold text-accent-blue px-6 mb-10">
+    <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray sidebar-collapsed">
+        
+        <div class="text-2xl font-bold text-accent-blue px-6 mb-10 cursor-pointer" onclick="toggleLeftSidebar()">
             <i class="fas fa-robot"></i>
             <span class="nav-text ml-3">OmniBot</span>
         </div>
@@ -156,7 +164,7 @@
                 <label class="text-[10px] text-gray-500 uppercase font-bold tracking-widest flex items-center gap-2">
                     <i class="fas fa-sticky-note text-accent-blue"></i> Internal Notes
                 </label>
-                <itemarea id="contact-note" onblur="saveNote()" class="w-full h-32 bg-pure-black border border-border-gray rounded-xl p-4 text-xs outline-none focus:border-accent-blue resize-none text-gray-300 transition" placeholder="Add private details..."></itemarea>
+                <textarea id="contact-note" onblur="saveNote()" class="w-full h-32 bg-pure-black border border-border-gray rounded-xl p-4 text-xs outline-none focus:border-accent-blue resize-none text-gray-300 transition" placeholder="Add private details..."></textarea>
             </div>
 
             <div class="pt-6 border-t border-border-gray space-y-3">
@@ -176,14 +184,16 @@
         let allMessages = [];
         let unreadCounts = {};
 
-        function toggleLeftSidebar() { document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed'); }
+        function toggleLeftSidebar() { 
+            document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed'); 
+        }
+        
         function toggleRightPanel() { document.getElementById('right-panel').classList.toggle('hidden'); }
         
         function toggleDropdown() {
             const dropdown = document.getElementById('messenger-dropdown');
             const arrow = document.getElementById('arrow-icon');
             
-            // Toggle 'hidden' and 'show' classes
             if (dropdown.classList.contains('hidden')) {
                 dropdown.classList.remove('hidden');
                 dropdown.classList.add('flex');
