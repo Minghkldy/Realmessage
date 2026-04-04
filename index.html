@@ -31,10 +31,9 @@
         #left-sidebar { 
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
             overflow: hidden;
-            width: 220px; /* စာတန်းပေါ်ရန် width ပုံမှန်ထားသည် */
+            width: 220px; 
         }
         
-        /* Sidebar ပိတ်ထားချိန် */
         .sidebar-collapsed { 
             width: 70px !important; 
         }
@@ -51,7 +50,7 @@
             padding: 12px 24px; 
             cursor: pointer; 
             transition: all 0.2s;
-            color: #6b7280; /* gray-500 */
+            color: #6b7280; 
         }
         
         .nav-item:hover { 
@@ -72,6 +71,20 @@
 
         #right-panel {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ManyChat Style Notification Badge */
+        .noti-dot {
+            width: 18px;
+            height: 18px;
+            background-color: #3B82F6;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -205,6 +218,7 @@
         const contactsContainer = document.getElementById('contacts-container');
         let currentChatId = "";
         let allMessages = [];
+        let unreadCounts = {}; // Chat အလိုက် count သိမ်းရန်
 
         function toggleLeftSidebar() {
             document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed');
@@ -219,21 +233,44 @@
                 const res = await fetch('/api/contacts');
                 const contacts = await res.json();
                 contactsContainer.innerHTML = '';
+                
                 contacts.forEach(c => {
                     const item = document.createElement('div');
                     item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
                     item.onclick = () => selectContact(c);
+                    
                     const avatar = c.profile_pic ? 
                         `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` :
                         `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold">${(c.nickname || c.first_name).charAt(0)}</div>`;
-                    item.innerHTML = `${avatar}<div class="flex-1 min-w-0"><p class="text-sm font-bold truncate">${c.nickname || c.first_name}</p><p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p></div>`;
+                    
+                    // Unread badge logic
+                    const count = unreadCounts[c.chat_id] || 0;
+                    const badge = count > 0 ? `<div class="noti-dot ml-auto">${count}</div>` : '';
+
+                    item.innerHTML = `
+                        ${avatar}
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-bold truncate">${c.nickname || c.first_name}</p>
+                            <p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p>
+                        </div>
+                        ${badge}
+                    `;
                     contactsContainer.appendChild(item);
                 });
+
+                // Update Top/Global message count
+                const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+                document.getElementById('msg-count').innerText = totalUnread;
+                
             } catch (err) { console.error("Load Contacts Error:", err); }
         }
 
         function selectContact(contact) {
             currentChatId = contact.chat_id;
+            
+            // နှိပ်လိုက်ရင် Noti ပျောက်သွားစေရန်
+            unreadCounts[currentChatId] = 0;
+            
             const displayName = contact.nickname || contact.first_name;
             document.getElementById('chat-header-name').innerText = displayName;
             document.getElementById('edit-nickname').value = displayName;
@@ -255,6 +292,7 @@
             }
             document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
             document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase tracking-tighter font-bold";
+            
             loadContacts(); 
             renderMessages();
         }
@@ -315,7 +353,6 @@
             try {
                 const response = await fetch('/api/messages');
                 allMessages = await response.json();
-                document.getElementById('msg-count').innerText = allMessages.length;
                 if(currentChatId) renderMessages();
             } catch (err) { console.log("History Load Error:", err); }
         }
@@ -323,9 +360,17 @@
         socket.on('new_message', (data) => {
             notifSound.play().catch(e => {});
             allMessages.push(data);
-            document.getElementById('msg-count').innerText = allMessages.length;
+            
+            const senderId = data.chat_id || data.chatId;
+            
+            // လက်ရှိ chat မဟုတ်ရင် count တိုးမယ်
+            if (senderId !== currentChatId) {
+                unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
+            } else {
+                appendMessage(data, false);
+            }
+            
             loadContacts();
-            if (currentChatId === data.chatId || currentChatId === data.chat_id) appendMessage(data, false);
         });
 
         function sendMessage() {
@@ -337,6 +382,10 @@
                 allMessages.push(newMsg); 
                 appendMessage(newMsg, true); 
                 input.value = "";
+                
+                // စာပြန်လိုက်ရင်လည်း noti ဖြုတ်မယ်
+                unreadCounts[currentChatId] = 0;
+                loadContacts();
             } else if (!currentChatId) { 
                 alert("Please select a contact first."); 
             }
