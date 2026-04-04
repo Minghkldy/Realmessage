@@ -5,6 +5,7 @@ const path = require('path');
 const http = require('http');
 const { Server } = require("socket.io");
 const { Pool } = require('pg');
+const multer = require('multer'); // ဖိုင် upload အတွက် ထည့်သွင်းခြင်း
 require('dotenv').config();
 
 const app = express();
@@ -13,6 +14,22 @@ const io = new Server(server);
 
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname)));
+// Upload လုပ်ထားတဲ့ ဖိုင်တွေကို browser ကနေ ကြည့်လို့ရအောင် static path ပေးခြင်း
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// --- Multer Setup (ဖိုင်တွေကို server ပေါ်က uploads folder ထဲသိမ်းရန်) ---
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadPath = path.join(__dirname, 'uploads');
+        const fs = require('fs');
+        if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath);
+        cb(null, uploadPath);
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
 
 // Database Connection
 const pool = new Pool({
@@ -49,10 +66,14 @@ const initDb = async () => {
                 platform TEXT,
                 chat_id TEXT,
                 sender_type TEXT,
+                file_url TEXT,
+                file_type TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
         await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_type TEXT;`);
+        await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url TEXT;`);
+        await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_type TEXT;`);
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS settings (
@@ -100,6 +121,31 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- API: File Upload Route ---
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+    const { chatId } = req.body;
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+    const fileType = req.file.mimetype;
+
+    try {
+        // Platform ရှာရန်
+        const contactRes = await pool.query('SELECT platform FROM contacts WHERE chat_id = $1', [chatId]);
+        const platform = contactRes.rows[0]?.platform || 'Unknown';
+
+        // Database ထဲသိမ်းရန်
+        await pool.query(
+            'INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            ['OmniBot', `Sent a ${fileType.split('/')[0]}`, platform, chatId, 'bot', fileUrl, fileType]
+        );
+
+        res.json({ success: true, fileUrl: fileUrl });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get('/api/settings', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM settings');
@@ -109,7 +155,6 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Individual Setting Save (တိုးထည့်ပေးထားသည့်အပိုင်း) ---
 app.post('/api/settings/single', async (req, res) => {
     const { key, value } = req.body;
     const RENDER_URL = "https://realmessage-live.onrender.com"; 
@@ -122,7 +167,6 @@ app.post('/api/settings/single', async (req, res) => {
             await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2)', [key, value]);
         }
 
-        // Webhook Auto Updates
         if (key === 'telegram_token' && value) {
             await axios.get(`https://api.telegram.org/bot${value}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
         }
@@ -139,7 +183,6 @@ app.post('/api/settings/single', async (req, res) => {
     }
 });
 
-// --- Bulk Settings Update ---
 app.post('/api/settings/bulk', async (req, res) => {
     const settingsData = req.body;
     const RENDER_URL = "https://realmessage-live.onrender.com"; 
