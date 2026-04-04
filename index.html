@@ -26,13 +26,16 @@
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         .active-contact { border-left: 3px solid #3B82F6; background-color: #0f0f0f; }
+        /* Sidebar transition အတွက် custom style */
+        #left-sidebar { transition: width 0.3s ease; overflow: hidden; }
+        .sidebar-collapsed { width: 0px !important; border-right: none !important; padding-left: 0 !important; padding-right: 0 !important; }
     </style>
 </head>
 <body class="h-full flex overflow-hidden bg-pure-black">
 
     <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
-    <div class="w-20 flex-shrink-0 flex flex-col items-center border-r border-border-gray py-6 space-y-8 bg-dark-gray">
+    <div id="left-sidebar" class="w-20 flex-shrink-0 flex flex-col items-center border-r border-border-gray py-6 space-y-8 bg-dark-gray">
         <div class="text-2xl font-bold text-accent-blue"><i class="fas fa-robot"></i></div>
         <nav class="flex flex-col gap-8 text-gray-500 text-xl">
             <i class="fas fa-th-large text-accent-blue cursor-pointer" title="All Messages"></i>
@@ -49,7 +52,10 @@
 
     <div class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray">
         <div class="p-6 border-b border-border-gray flex justify-between items-center">
-            <h2 class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
+            <button onclick="toggleLeftSidebar()" class="text-gray-500 hover:text-white transition mr-2">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h2 class="font-bold text-sm uppercase tracking-widest flex-1">Inbox</h2>
             <span id="msg-count" class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white">0</span>
         </div>
         <div id="contact-list" class="flex-1 overflow-y-auto p-2">
@@ -128,7 +134,13 @@
         let currentChatId = "";
         let allMessages = [];
 
-        // Toggle Panel Function
+        // Sidebar Toggle Function (အသစ်)
+        function toggleLeftSidebar() {
+            const sidebar = document.getElementById('left-sidebar');
+            sidebar.classList.toggle('sidebar-collapsed');
+        }
+
+        // Right Panel Toggle Function
         function toggleRightPanel() {
             const panel = document.getElementById('right-panel');
             panel.classList.toggle('hidden');
