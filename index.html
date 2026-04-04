@@ -52,7 +52,6 @@
 
         #messenger-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: rgba(0,0,0,0.1); }
         #messenger-dropdown.show { max-height: 400px; }
-        /* padding နဲ့ flex alignment ပြင်ဆင်ထားသည် */
         .dropdown-item { padding-left: 56px; padding-top: 12px; padding-bottom: 12px; display: flex; align-items: center; gap: 12px; color: #6b7280; transition: 0.2s; cursor: pointer; }
         .dropdown-item:hover { color: white; }
         .dropdown-arrow { transition: transform 0.3s; margin-left: auto; font-size: 10px; }
@@ -64,6 +63,24 @@
         @keyframes pop {
             0% { transform: scale(0); }
             100% { transform: scale(1); }
+        }
+
+        /* ခေါင်းလောင်း တုန်ခါမည့် Animation */
+        @keyframes ring {
+            0% { transform: rotate(0); }
+            10% { transform: rotate(15deg); }
+            20% { transform: rotate(-15deg); }
+            30% { transform: rotate(10deg); }
+            40% { transform: rotate(-10deg); }
+            50% { transform: rotate(5deg); }
+            60% { transform: rotate(-5deg); }
+            100% { transform: rotate(0); }
+        }
+
+        .ring-animation {
+            display: inline-block;
+            animation: ring 0.5s ease;
+            animation-iteration-count: infinite;
         }
 
         #imagePreviewModal {
@@ -149,7 +166,10 @@
                 <button onclick="toggleLeftSidebar()" class="text-gray-500 hover:text-white transition">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h2 id="inbox-title" class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
+                <div class="flex items-center gap-2">
+                    <h2 id="inbox-title" class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
+                    <i id="noti-bell" class="fas fa-bell text-gray-500 hidden text-xs transition-colors duration-300"></i>
+                </div>
             </div>
             <span id="global-msg-count" class="hidden bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white noti-badge">0</span>
         </div>
@@ -345,11 +365,19 @@
         function updateGlobalBadge() {
             const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
             const badge = document.getElementById('global-msg-count');
+            const bell = document.getElementById('noti-bell');
+
             if (total > 0) {
                 badge.innerText = total;
                 badge.classList.remove('hidden');
+                // ခေါင်းလောင်းလေးကို အဝါရောင်ပြောင်းပြီး တုန်ခါစေရန်
+                bell.classList.remove('hidden');
+                bell.classList.add('ring-animation', 'text-yellow-400');
             } else {
                 badge.classList.add('hidden');
+                // ခေါင်းလောင်းလေးကို ပြန်ဖျောက်ရန်
+                bell.classList.add('hidden');
+                bell.classList.remove('ring-animation', 'text-yellow-400');
             }
         }
 
