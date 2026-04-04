@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniBot - Professional Dashboard</title>
+    <title>OmniBot - Ultimate Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="/socket.io/socket.io.js"></script>
@@ -45,7 +45,7 @@
         .active-nav { color: #3B82F6; }
 
         /* Dropdown Styling */
-        #messenger-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: rgba(0,0,0,0.2); }
+        #messenger-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: rgba(0,0,0,0.1); }
         #messenger-dropdown.show { max-height: 300px; }
         .dropdown-item { padding-left: 56px; padding-top: 10px; padding-bottom: 10px; display: flex; align-items: center; gap: 12px; color: #6b7280; transition: 0.2s; cursor: pointer; }
         .dropdown-item:hover { color: white; }
@@ -80,11 +80,10 @@
                 </div>
                 
                 <div id="messenger-dropdown">
-                    <div class="dropdown-item"><i class="fab fa-facebook-messenger w-5"></i><span class="text-xs">Messenger</span></div>
-                    <div class="dropdown-item"><i class="fab fa-instagram w-5"></i><span class="text-xs">Instagram</span></div>
-                    <div class="dropdown-item"><i class="fab fa-telegram w-5"></i><span class="text-xs">Telegram</span></div>
-                    <div class="dropdown-item"><i class="fab fa-whatsapp w-5"></i><span class="text-xs">WhatsApp</span></div>
-                    <div class="dropdown-item"><i class="fab fa-viber w-5"></i><span class="text-xs">Viber</span></div>
+                    <div class="dropdown-item"><i class="fab fa-facebook-messenger w-4"></i><span class="text-xs">Messenger</span></div>
+                    <div class="dropdown-item"><i class="fab fa-instagram w-4"></i><span class="text-xs">Instagram</span></div>
+                    <div class="dropdown-item"><i class="fab fa-telegram w-4"></i><span class="text-xs">Telegram</span></div>
+                    <div class="dropdown-item"><i class="fab fa-whatsapp w-4"></i><span class="text-xs">WhatsApp</span></div>
                 </div>
             </div>
         </nav>
@@ -97,7 +96,7 @@
         </div>
     </div>
 
-    <div id="chat-list-container" class="hidden w-80 flex-shrink-0 flex flex-col border-r border-border-gray">
+    <div id="chat-list-container" class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black">
         <div class="p-6 border-b border-border-gray flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <button onclick="toggleLeftSidebar()" class="text-gray-500 hover:text-white transition">
@@ -113,11 +112,8 @@
     </div>
 
     <div class="flex-1 flex flex-col bg-pure-black relative">
-        <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between">
+        <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between bg-pure-black">
             <div class="flex items-center gap-3">
-                <button onclick="toggleInbox()" class="text-gray-500 hover:text-white transition mr-2">
-                    <i class="fas fa-bars"></i>
-                </button>
                 <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden border border-border-gray" src="">
                 <div id="header-avatar-text" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs">?</div>
                 <div>
@@ -150,7 +146,7 @@
                 <img id="side-avatar-img" class="w-24 h-24 rounded-full mx-auto border-4 border-pure-black hidden object-cover" src="">
             </div>
             <div>
-                <input type="text" id="edit-nickname" onblur="updateNickname()" class="bg-transparent text-center font-bold text-lg outline-none focus:border-b border-accent-blue w-full p-1 transition" placeholder="Nickname">
+                <input type="text" id="edit-nickname" onblur="updateNickname()" class="bg-transparent text-center font-bold text-lg outline-none focus:border-b border-accent-blue w-full p-1" placeholder="Nickname">
                 <p id="side-platform" class="text-[10px] text-gray-500 uppercase tracking-widest mt-2">Platform: -</p>
             </div>
         </div>
@@ -182,13 +178,6 @@
 
         function toggleLeftSidebar() { document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed'); }
         function toggleRightPanel() { document.getElementById('right-panel').classList.toggle('hidden'); }
-        
-        function toggleInbox() { 
-            const inbox = document.getElementById('chat-list-container');
-            inbox.classList.toggle('hidden');
-        }
-
-        // Dropdown Toggle Logic
         function toggleDropdown() {
             const dropdown = document.getElementById('messenger-dropdown');
             const arrow = document.getElementById('arrow-icon');
@@ -209,12 +198,12 @@
                     item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
                     item.onclick = () => selectContact(c);
                     
-                    const avatar = c.profile_pic ? 
+                    const avatarContent = c.profile_pic ? 
                         `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` :
                         `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray">${(c.nickname || c.first_name).charAt(0)}</div>`;
 
                     item.innerHTML = `
-                        ${avatar}
+                        ${avatarContent}
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-bold truncate ${count > 0 ? 'text-white' : 'text-gray-400'}">${c.nickname || c.first_name}</p>
                             <p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p>
@@ -301,7 +290,7 @@
                     </div>
                 </div>
             `;
-            window.innerHTML += msgHtml;
+            window.insertAdjacentHTML('beforeend', msgHtml);
             window.scrollTo({ top: window.scrollHeight, behavior: 'smooth' });
         }
 
@@ -327,8 +316,10 @@
                 allMessages.push(newMsg);
                 appendMessage(newMsg, true);
                 input.value = "";
+                
+                // Reset unread on reply
                 unreadCounts[currentChatId] = 0;
-                updateGlobalBadge();
+                loadContacts();
             } else if (!currentChatId) {
                 alert("Please select a contact first.");
             }
@@ -349,18 +340,9 @@
 
         async function toggleBlock() {
             if (!currentChatId) return;
-            if (confirm("Are you sure you want to block this customer? They won't be able to message you.")) {
-                try {
-                    await fetch('/api/contacts/block', { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify({ chatId: currentChatId }) 
-                    });
-                    alert("User blocked successfully.");
-                    location.reload();
-                } catch (err) {
-                    console.error("Block Error:", err);
-                }
+            if (confirm("Block this customer?")) {
+                await fetch('/api/contacts/block', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId }) });
+                location.reload();
             }
         }
 
