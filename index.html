@@ -27,7 +27,6 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         .active-contact { border-left: 3px solid #3B82F6; background-color: #0f0f0f; }
         
-        /* Sidebar Navigation Styling */
         #left-sidebar { 
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
             overflow: hidden;
@@ -69,22 +68,19 @@
             color: #3B82F6;
         }
 
-        #right-panel {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
         /* ManyChat Style Notification Badge */
-        .noti-dot {
-            width: 18px;
-            height: 18px;
+        .noti-badge {
             background-color: #3B82F6;
             color: white;
-            border-radius: 50%;
+            font-size: 10px;
+            font-weight: bold;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 999px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
-            font-weight: bold;
+            padding: 0 5px;
         }
     </style>
 </head>
@@ -141,7 +137,7 @@
                 </button>
                 <h2 class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
             </div>
-            <span id="msg-count" class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white">0</span>
+            <span id="global-msg-count" class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white hidden">0</span>
         </div>
         <div id="contact-list" class="flex-1 overflow-y-auto p-2">
             <div id="contacts-container" class="space-y-1"></div>
@@ -158,7 +154,6 @@
                     <p id="chat-status" class="text-[10px] text-gray-600 uppercase tracking-tighter">System Ready</p>
                 </div>
             </div>
-            
             <div class="flex items-center gap-4">
                 <button onclick="toggleRightPanel()" class="text-gray-500 hover:text-white transition p-2">
                     <i class="fas fa-user-circle text-xl"></i>
@@ -190,7 +185,6 @@
                 <p id="side-platform" class="text-[10px] text-gray-500 uppercase tracking-widest mt-2">Platform: -</p>
             </div>
         </div>
-
         <div class="space-y-6">
             <div class="space-y-3">
                 <label class="text-[10px] text-gray-500 uppercase font-bold tracking-widest flex items-center gap-2">
@@ -198,9 +192,7 @@
                 </label>
                 <textarea id="contact-note" onblur="saveNote()" class="w-full h-32 bg-pure-black border border-border-gray rounded-xl p-4 text-xs outline-none focus:border-accent-blue resize-none text-gray-300 transition" placeholder="Add private details about this customer..."></textarea>
             </div>
-
             <div class="pt-6 border-t border-border-gray space-y-3">
-                <p class="text-[10px] text-gray-600 uppercase font-bold tracking-widest px-1">Actions</p>
                 <button onclick="toggleBlock()" class="w-full py-3 bg-red-900/10 text-red-500 rounded-xl text-[11px] font-bold hover:bg-red-900/30 transition flex items-center justify-center gap-2">
                     <i class="fas fa-ban"></i> BLOCK CUSTOMER
                 </button>
@@ -216,9 +208,11 @@
         const chatWindow = document.getElementById('chat-window');
         const notifSound = document.getElementById('notif-sound');
         const contactsContainer = document.getElementById('contacts-container');
+        const globalMsgBadge = document.getElementById('global-msg-count');
+        
         let currentChatId = "";
         let allMessages = [];
-        let unreadCounts = {}; // Chat အလိုက် count သိမ်းရန်
+        let unreadCounts = {}; // အဓိက logic: {chat_id: count}
 
         function toggleLeftSidebar() {
             document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed');
@@ -228,47 +222,56 @@
             document.getElementById('right-panel').classList.toggle('hidden');
         }
 
+        // Contact list ကို Noti ပါအောင် render လုပ်ခြင်း
         async function loadContacts() {
             try {
                 const res = await fetch('/api/contacts');
                 const contacts = await res.json();
                 contactsContainer.innerHTML = '';
                 
+                let totalUnread = 0;
+
                 contacts.forEach(c => {
                     const item = document.createElement('div');
-                    item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
+                    const isSelected = currentChatId === c.chat_id;
+                    item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${isSelected ? 'active-contact' : ''}`;
                     item.onclick = () => selectContact(c);
                     
                     const avatar = c.profile_pic ? 
                         `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` :
-                        `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold">${(c.nickname || c.first_name).charAt(0)}</div>`;
+                        `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold">${(c.nickname || c.first_name || "?").charAt(0)}</div>`;
                     
-                    // Unread badge logic
+                    // Noti Badge Logic
                     const count = unreadCounts[c.chat_id] || 0;
-                    const badge = count > 0 ? `<div class="noti-dot ml-auto">${count}</div>` : '';
+                    totalUnread += count;
+                    const badgeHtml = count > 0 ? `<div class="noti-badge ml-auto">${count}</div>` : '';
 
                     item.innerHTML = `
                         ${avatar}
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm font-bold truncate">${c.nickname || c.first_name}</p>
+                            <p class="text-sm font-bold truncate ${count > 0 ? 'text-white' : 'text-gray-300'}">${c.nickname || c.first_name}</p>
                             <p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p>
                         </div>
-                        ${badge}
+                        ${badgeHtml}
                     `;
                     contactsContainer.appendChild(item);
                 });
 
-                // Update Top/Global message count
-                const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
-                document.getElementById('msg-count').innerText = totalUnread;
-                
+                // Global Inbox Noti update
+                if (totalUnread > 0) {
+                    globalMsgBadge.innerText = totalUnread;
+                    globalMsgBadge.classList.remove('hidden');
+                } else {
+                    globalMsgBadge.classList.add('hidden');
+                }
+
             } catch (err) { console.error("Load Contacts Error:", err); }
         }
 
         function selectContact(contact) {
             currentChatId = contact.chat_id;
             
-            // နှိပ်လိုက်ရင် Noti ပျောက်သွားစေရန်
+            // ဝင်ကြည့်လိုက်တာနဲ့ Noti ဖြုတ်မယ်
             unreadCounts[currentChatId] = 0;
             
             const displayName = contact.nickname || contact.first_name;
@@ -291,41 +294,48 @@
                 sAvatarTxt.innerText = initial; sAvatarTxt.classList.remove('hidden'); sAvatarImg.classList.add('hidden');
             }
             document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
-            document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase tracking-tighter font-bold";
             
             loadContacts(); 
             renderMessages();
         }
 
-        async function updateNickname() {
-            if (!currentChatId) return;
-            const newName = document.getElementById('edit-nickname').value;
-            await fetch('/api/contacts/nickname', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, nickname: newName }) });
-            loadContacts();
-        }
+        // Socket ကနေ စာအသစ်ဝင်လာရင် Noti တိုးမယ့် အပိုင်း
+        socket.on('new_message', (data) => {
+            const incomingChatId = data.chat_id || data.chatId;
+            
+            // လက်ရှိဖွင့်ထားတဲ့ Chat မဟုတ်ရင် Noti Count တိုးမယ်
+            if (incomingChatId !== currentChatId) {
+                unreadCounts[incomingChatId] = (unreadCounts[incomingChatId] || 0) + 1;
+                notifSound.play().catch(e => {});
+            } else {
+                // ဖွင့်ထားတဲ့ Chat ဆိုရင်တော့ ချက်ချင်းစာပြမယ်
+                appendMessage(data, false);
+            }
+            
+            allMessages.push(data);
+            loadContacts(); // UI ပြန် update လုပ်
+        });
 
-        async function toggleBlock() {
-            if (!currentChatId) return;
-            if (!confirm("ဒီ User ကို Block လုပ်မှာ သေချာပါသလား?")) return;
-            await fetch('/api/contacts/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, status: 'blocked' }) });
-            location.reload();
-        }
-
-        async function deleteContact() {
-            if (!currentChatId || !confirm("ဒီ Conversation တစ်ခုလုံးကို ဖျက်ပစ်မှာ သေချာပါသလား?")) return;
-            await fetch(`/api/contacts/${currentChatId}`, { method: 'DELETE' });
-            location.reload();
-        }
-
-        async function saveNote() {
-            if (!currentChatId) return;
-            const noteValue = document.getElementById('contact-note').value;
-            await fetch('/api/contacts/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, note: noteValue }) });
+        function sendMessage() {
+            const input = document.getElementById('user-input');
+            if(input.value.trim() !== "" && currentChatId !== "") {
+                const text = input.value;
+                socket.emit('send_reply', { chatId: currentChatId, text: text });
+                
+                const newMsg = { text: text, sender_type: 'bot', chat_id: currentChatId };
+                allMessages.push(newMsg); 
+                appendMessage(newMsg, true); 
+                
+                // စာပြန်လိုက်ရင်လည်း Noti ပျောက်ရမယ်
+                unreadCounts[currentChatId] = 0;
+                input.value = "";
+                loadContacts();
+            }
         }
 
         function renderMessages() {
             chatWindow.innerHTML = "";
-            const filtered = allMessages.filter(m => m.chat_id === currentChatId);
+            const filtered = allMessages.filter(m => (m.chat_id === currentChatId || m.chatId === currentChatId));
             filtered.forEach(msg => appendMessage(msg, msg.sender_type === 'bot'));
         }
 
@@ -357,43 +367,25 @@
             } catch (err) { console.log("History Load Error:", err); }
         }
 
-        socket.on('new_message', (data) => {
-            notifSound.play().catch(e => {});
-            allMessages.push(data);
-            
-            const senderId = data.chat_id || data.chatId;
-            
-            // လက်ရှိ chat မဟုတ်ရင် count တိုးမယ်
-            if (senderId !== currentChatId) {
-                unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-            } else {
-                appendMessage(data, false);
-            }
-            
+        async function updateNickname() {
+            if (!currentChatId) return;
+            const newName = document.getElementById('edit-nickname').value;
+            await fetch('/api/contacts/nickname', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, nickname: newName }) });
             loadContacts();
-        });
+        }
 
-        function sendMessage() {
-            const input = document.getElementById('user-input');
-            if(input.value.trim() !== "" && currentChatId !== "") {
-                const text = input.value;
-                socket.emit('send_reply', { chatId: currentChatId, text: text });
-                const newMsg = { text: text, sender_type: 'bot', chat_id: currentChatId };
-                allMessages.push(newMsg); 
-                appendMessage(newMsg, true); 
-                input.value = "";
-                
-                // စာပြန်လိုက်ရင်လည်း noti ဖြုတ်မယ်
-                unreadCounts[currentChatId] = 0;
-                loadContacts();
-            } else if (!currentChatId) { 
-                alert("Please select a contact first."); 
-            }
+        async function saveNote() {
+            if (!currentChatId) return;
+            const noteValue = document.getElementById('contact-note').value;
+            await fetch('/api/contacts/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, note: noteValue }) });
         }
 
         function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
 
-        window.onload = () => { loadContacts(); loadHistory(); };
+        window.onload = () => { 
+            loadContacts(); 
+            loadHistory(); 
+        };
     </script>
 </body>
 </html>
