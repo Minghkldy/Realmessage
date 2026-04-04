@@ -27,12 +27,14 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         .active-contact { border-left: 3px solid #3B82F6; background-color: #0f0f0f; }
         
+        /* Sidebar Navigation Styling */
         #left-sidebar { 
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
             overflow: hidden;
-            width: 220px;
+            width: 220px; /* စာတန်းပေါ်ရန် width ပုံမှန်ထားသည် */
         }
         
+        /* Sidebar ပိတ်ထားချိန် */
         .sidebar-collapsed { 
             width: 70px !important; 
         }
@@ -49,7 +51,7 @@
             padding: 12px 24px; 
             cursor: pointer; 
             transition: all 0.2s;
-            color: #6b7280;
+            color: #6b7280; /* gray-500 */
         }
         
         .nav-item:hover { 
@@ -71,21 +73,6 @@
         #right-panel {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        /* Notification Styling */
-        .noti-dot {
-            background-color: #3B82F6;
-            color: white;
-            font-size: 10px;
-            font-weight: bold;
-            min-width: 18px;
-            height: 18px;
-            padding: 0 5px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
     </style>
 </head>
 <body class="h-full flex overflow-hidden bg-pure-black">
@@ -103,11 +90,26 @@
                 <i class="fas fa-th-large text-xl w-6"></i>
                 <span class="nav-text">Inbox</span>
             </div>
-            <div class="nav-item"><i class="fab fa-facebook-messenger text-xl w-6"></i><span class="nav-text">Messenger</span></div>
-            <div class="nav-item"><i class="fab fa-instagram text-xl w-6"></i><span class="nav-text">Instagram</span></div>
-            <div class="nav-item"><i class="fab fa-telegram text-xl w-6"></i><span class="nav-text">Telegram</span></div>
-            <div class="nav-item"><i class="fab fa-viber text-xl w-6"></i><span class="nav-text">Viber</span></div>
-            <div class="nav-item"><i class="fab fa-whatsapp text-xl w-6"></i><span class="nav-text">WhatsApp</span></div>
+            <div class="nav-item">
+                <i class="fab fa-facebook-messenger text-xl w-6"></i>
+                <span class="nav-text">Messenger</span>
+            </div>
+            <div class="nav-item">
+                <i class="fab fa-instagram text-xl w-6"></i>
+                <span class="nav-text">Instagram</span>
+            </div>
+            <div class="nav-item">
+                <i class="fab fa-telegram text-xl w-6"></i>
+                <span class="nav-text">Telegram</span>
+            </div>
+            <div class="nav-item">
+                <i class="fab fa-viber text-xl w-6"></i>
+                <span class="nav-text">Viber</span>
+            </div>
+            <div class="nav-item">
+                <i class="fab fa-whatsapp text-xl w-6"></i>
+                <span class="nav-text">WhatsApp</span>
+            </div>
         </nav>
 
         <div class="mt-auto w-full">
@@ -126,7 +128,7 @@
                 </button>
                 <h2 class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
             </div>
-            <span id="msg-count" class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white hidden">0</span>
+            <span id="msg-count" class="bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white">0</span>
         </div>
         <div id="contact-list" class="flex-1 overflow-y-auto p-2">
             <div id="contacts-container" class="space-y-1"></div>
@@ -183,7 +185,12 @@
                 </label>
                 <textarea id="contact-note" onblur="saveNote()" class="w-full h-32 bg-pure-black border border-border-gray rounded-xl p-4 text-xs outline-none focus:border-accent-blue resize-none text-gray-300 transition" placeholder="Add private details about this customer..."></textarea>
             </div>
+
             <div class="pt-6 border-t border-border-gray space-y-3">
+                <p class="text-[10px] text-gray-600 uppercase font-bold tracking-widest px-1">Actions</p>
+                <button onclick="toggleBlock()" class="w-full py-3 bg-red-900/10 text-red-500 rounded-xl text-[11px] font-bold hover:bg-red-900/30 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-ban"></i> BLOCK CUSTOMER
+                </button>
                 <button onclick="deleteContact()" class="w-full py-3 border border-border-gray text-gray-500 rounded-xl text-[11px] font-bold hover:bg-white/5 transition flex items-center justify-center gap-2">
                     <i class="fas fa-trash-alt"></i> DELETE CONVERSATION
                 </button>
@@ -198,10 +205,14 @@
         const contactsContainer = document.getElementById('contacts-container');
         let currentChatId = "";
         let allMessages = [];
-        let unreadCounts = {}; // Chat ID အလိုက် မဖတ်ရသေးတဲ့အရေအတွက်သိမ်းရန်
 
-        function toggleLeftSidebar() { document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed'); }
-        function toggleRightPanel() { document.getElementById('right-panel').classList.toggle('hidden'); }
+        function toggleLeftSidebar() {
+            document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed');
+        }
+
+        function toggleRightPanel() {
+            document.getElementById('right-panel').classList.toggle('hidden');
+        }
 
         async function loadContacts() {
             try {
@@ -210,60 +221,68 @@
                 contactsContainer.innerHTML = '';
                 contacts.forEach(c => {
                     const item = document.createElement('div');
-                    const isUnread = unreadCounts[c.chat_id] > 0;
                     item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
                     item.onclick = () => selectContact(c);
-                    
                     const avatar = c.profile_pic ? 
                         `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` :
                         `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold">${(c.nickname || c.first_name).charAt(0)}</div>`;
-                    
-                    // Noti Badge ပေါ်ရန် logic
-                    const notiBadge = isUnread ? `<div class="noti-dot">${unreadCounts[c.chat_id]}</div>` : '';
-
-                    item.innerHTML = `${avatar}<div class="flex-1 min-w-0"><p class="text-sm font-bold truncate">${c.nickname || c.first_name}</p><p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p></div>${notiBadge}`;
+                    item.innerHTML = `${avatar}<div class="flex-1 min-w-0"><p class="text-sm font-bold truncate">${c.nickname || c.first_name}</p><p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p></div>`;
                     contactsContainer.appendChild(item);
                 });
-                updateGlobalNotiCount();
             } catch (err) { console.error("Load Contacts Error:", err); }
-        }
-
-        function updateGlobalNotiCount() {
-            const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
-            const globalBadge = document.getElementById('msg-count');
-            if (totalUnread > 0) {
-                globalBadge.innerText = totalUnread;
-                globalBadge.classList.remove('hidden');
-            } else {
-                globalBadge.classList.add('hidden');
-            }
         }
 
         function selectContact(contact) {
             currentChatId = contact.chat_id;
-            unreadCounts[currentChatId] = 0; // ဝင်ကြည့်လိုက်တာနဲ့ count ကို ၀ လုပ်မယ်
-            
             const displayName = contact.nickname || contact.first_name;
             document.getElementById('chat-header-name').innerText = displayName;
             document.getElementById('edit-nickname').value = displayName;
             document.getElementById('contact-note').value = contact.notes || "";
             document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
             
-            if(contact.profile_pic) {
-                document.getElementById('header-avatar-img').src = contact.profile_pic;
-                document.getElementById('header-avatar-img').classList.remove('hidden');
-                document.getElementById('header-avatar-text').classList.add('hidden');
-            } else {
-                document.getElementById('header-avatar-text').innerText = displayName.charAt(0);
-                document.getElementById('header-avatar-text').classList.remove('hidden');
-                document.getElementById('header-avatar-img').classList.add('hidden');
-            }
+            const hAvatarImg = document.getElementById('header-avatar-img');
+            const hAvatarTxt = document.getElementById('header-avatar-text');
+            const sAvatarImg = document.getElementById('side-avatar-img');
+            const sAvatarTxt = document.getElementById('side-avatar');
             
+            if(contact.profile_pic) {
+                hAvatarImg.src = contact.profile_pic; hAvatarImg.classList.remove('hidden'); hAvatarTxt.classList.add('hidden');
+                sAvatarImg.src = contact.profile_pic; sAvatarImg.classList.remove('hidden'); sAvatarTxt.classList.add('hidden');
+            } else {
+                const initial = displayName.charAt(0);
+                hAvatarTxt.innerText = initial; hAvatarTxt.classList.remove('hidden'); hAvatarImg.classList.add('hidden');
+                sAvatarTxt.innerText = initial; sAvatarTxt.classList.remove('hidden'); sAvatarImg.classList.add('hidden');
+            }
             document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
             document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase tracking-tighter font-bold";
-            
             loadContacts(); 
             renderMessages();
+        }
+
+        async function updateNickname() {
+            if (!currentChatId) return;
+            const newName = document.getElementById('edit-nickname').value;
+            await fetch('/api/contacts/nickname', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, nickname: newName }) });
+            loadContacts();
+        }
+
+        async function toggleBlock() {
+            if (!currentChatId) return;
+            if (!confirm("ဒီ User ကို Block လုပ်မှာ သေချာပါသလား?")) return;
+            await fetch('/api/contacts/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, status: 'blocked' }) });
+            location.reload();
+        }
+
+        async function deleteContact() {
+            if (!currentChatId || !confirm("ဒီ Conversation တစ်ခုလုံးကို ဖျက်ပစ်မှာ သေချာပါသလား?")) return;
+            await fetch(`/api/contacts/${currentChatId}`, { method: 'DELETE' });
+            location.reload();
+        }
+
+        async function saveNote() {
+            if (!currentChatId) return;
+            const noteValue = document.getElementById('contact-note').value;
+            await fetch('/api/contacts/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, note: noteValue }) });
         }
 
         function renderMessages() {
@@ -292,19 +311,21 @@
             chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' });
         }
 
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/messages');
+                allMessages = await response.json();
+                document.getElementById('msg-count').innerText = allMessages.length;
+                if(currentChatId) renderMessages();
+            } catch (err) { console.log("History Load Error:", err); }
+        }
+
         socket.on('new_message', (data) => {
-            const senderId = data.chat_id || data.chatId;
             notifSound.play().catch(e => {});
             allMessages.push(data);
-            
-            if (currentChatId !== senderId) {
-                unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-            } else {
-                unreadCounts[senderId] = 0;
-                appendMessage(data, false);
-            }
-            
+            document.getElementById('msg-count').innerText = allMessages.length;
             loadContacts();
+            if (currentChatId === data.chatId || currentChatId === data.chat_id) appendMessage(data, false);
         });
 
         function sendMessage() {
@@ -316,22 +337,12 @@
                 allMessages.push(newMsg); 
                 appendMessage(newMsg, true); 
                 input.value = "";
-                // ကိုယ်စာပို့လိုက်ရင်လည်း unread count ကို ရှင်းမယ်
-                unreadCounts[currentChatId] = 0;
-                updateGlobalNotiCount();
-                loadContacts();
+            } else if (!currentChatId) { 
+                alert("Please select a contact first."); 
             }
         }
 
         function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
-        
-        async function loadHistory() {
-            try {
-                const response = await fetch('/api/messages');
-                allMessages = await response.json();
-                if(currentChatId) renderMessages();
-            } catch (err) { console.log(err); }
-        }
 
         window.onload = () => { loadContacts(); loadHistory(); };
     </script>
