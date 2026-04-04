@@ -132,7 +132,7 @@ app.post('/api/settings/bulk', async (req, res) => {
             console.log(`✅ Telegram Webhook updated`);
         }
 
-        // Viber Webhook Update (Viber Token ရှိမှ အလုပ်လုပ်မယ်)
+        // Viber Webhook Update
         if (settingsData.viber_auth_token) {
             const webhookUrl = `${RENDER_URL}/webhook/viber`;
             await axios.post(`https://chatapi.viber.com/pa/set_webhook`, {
@@ -149,10 +149,73 @@ app.post('/api/settings/bulk', async (req, res) => {
     }
 });
 
+// --- Messenger Webhook Verification (Facebook Needs This) ---
+app.get('/webhook/messenger', async (req, res) => {
+    const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'meta_verify_token'");
+    const VERIFY_TOKEN = settingsRes.rows[0]?.value;
+
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode && token) {
+        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+            console.log('✅ Messenger Webhook Verified');
+            res.status(200).send(challenge);
+        } else {
+            res.sendStatus(403);
+        }
+    }
+});
+
+// --- Messenger Message Receiver ---
+app.post('/webhook/messenger', async (req, res) => {
+    const body = req.body;
+    if (body.object === 'page') {
+        body.entry.forEach(async (entry) => {
+            const webhookEvent = entry.messaging[0];
+            const senderId = webhookEvent.sender.id;
+
+            if (webhookEvent.message && webhookEvent.message.text) {
+                const text = webhookEvent.message.text;
+                
+                const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'meta_page_access_token'");
+                const PAGE_ACCESS_TOKEN = settingsRes.rows[0]?.value;
+
+                let senderName = "Messenger User";
+                let profilePic = `https://ui-avatars.com/api/?name=Messenger&background=random`;
+
+                if (PAGE_ACCESS_TOKEN) {
+                    try {
+                        const userRes = await axios.get(`https://graph.facebook.com/${senderId}?fields=first_name,last_name,profile_pic&access_token=${PAGE_ACCESS_TOKEN}`);
+                        senderName = `${userRes.data.first_name} ${userRes.data.last_name}`;
+                        profilePic = userRes.data.profile_pic || profilePic;
+                    } catch (e) { console.error("Messenger Profile Fetch Error"); }
+                }
+
+                await pool.query(`
+                    INSERT INTO contacts (chat_id, first_name, profile_pic, platform)
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (chat_id) DO UPDATE SET first_name = EXCLUDED.first_name, profile_pic = EXCLUDED.profile_pic
+                `, [senderId, senderName, profilePic, 'Messenger']);
+
+                await pool.query(
+                    'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
+                    [senderName, text, 'Messenger', senderId, 'user']
+                );
+                
+                io.emit('new_message', { sender: senderName, text, chatId: senderId, profile_pic: profilePic, platform: 'Messenger', sender_type: 'user' });
+            }
+        });
+        res.status(200).send('EVENT_RECEIVED');
+    } else {
+        res.sendStatus(404);
+    }
+});
+
 // --- Viber Webhook ---
 app.post('/webhook/viber', async (req, res) => {
     const update = req.body;
-    // Viber က message event ဖြစ်မှ အောက်က logic အလုပ်လုပ်မယ်
     if (update.event === 'message') {
         const chatId = update.sender.id;
         const senderName = update.sender.name;
@@ -220,7 +283,7 @@ app.post('/webhook/telegram', async (req, res) => {
 io.on('connection', (socket) => {
     socket.on('send_reply', async (data) => {
         try {
-            const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'viber_auth_token')");
+            const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'viber_auth_token', 'meta_page_access_token')");
             const tokens = {};
             settingsRes.rows.forEach(row => tokens[row.key] = row.value);
 
@@ -233,6 +296,11 @@ io.on('connection', (socket) => {
                     text: data.text,
                     sender: { name: "OmniBot" }
                 }, { headers: { 'X-Viber-Auth-Token': tokens.viber_auth_token } });
+            } else if (data.platform === 'Messenger' && tokens.meta_page_access_token) {
+                await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${tokens.meta_page_access_token}`, {
+                    recipient: { id: data.chatId },
+                    message: { text: data.text }
+                });
             }
 
             await pool.query(
