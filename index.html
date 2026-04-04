@@ -209,7 +209,7 @@
         let currentChatId = "";
         let allMessages = [];
         let unreadCounts = {};
-        let cachedContacts = []; // Contact data အားလုံးသိမ်းရန်
+        let cachedContacts = []; 
 
         function toggleLeftSidebar() { 
             document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed'); 
@@ -236,7 +236,6 @@
             arrow.classList.toggle('rotate-arrow');
         }
 
-        // Image Preview Functions
         function showImagePreview(url) {
             const modal = document.getElementById('imagePreviewModal');
             const img = document.getElementById('previewImg');
@@ -256,7 +255,6 @@
             } catch (err) { console.error("Load Contacts Error:", err); }
         }
 
-        // Filtering Function
         function filterContacts(platform) {
             let filtered;
             const title = document.getElementById('inbox-title');
@@ -291,7 +289,7 @@
                         <p class="text-sm font-bold truncate ${count > 0 ? 'text-white' : 'text-gray-400'}">${c.nickname || c.first_name}</p>
                         <p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p>
                     </div>
-                    ${count > 0 ? `<span class="bg-accent-blue text-[10px] w-5 h-5 flex items-center justify-center rounded-full text-white noti-badge font-bold">${count}</span>` : ''}
+                    ${count > 0 ? `<span class="bg-accent-blue text-[10px] w-5 h-5 flex items-center justify-center rounded-full text-white notif-badge font-bold">${count}</span>` : ''}
                 `;
                 container.appendChild(item);
             });
@@ -356,50 +354,44 @@
         }
 
         function appendMessage(data, isBot) {
-    const window = document.getElementById('chat-window');
-    
-    // မူလစာသားကို ယူထားမယ်
-    let contentHtml = data.text || "";
+            const window = document.getElementById('chat-window');
+            let contentHtml = data.text || "";
 
-    // Image သို့မဟုတ် Media URL ရှိမရှိ စစ်ဆေးမယ်
-    // Database ကလာတဲ့ Key name တွေဖြစ်တဲ့ file_url နဲ့ file_type ကို သေချာအောင် စစ်မယ်
-    const mediaUrl = data.file_url || data.fileUrl;
-    const mediaType = data.file_type || data.fileType || "";
+            const mediaUrl = data.file_url || data.fileUrl;
+            const mediaType = data.file_type || data.fileType || "";
 
-    if (mediaUrl) {
-        if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
-            // ပုံဖြစ်ခဲ့ရင် img tag နဲ့ ပြမယ်
-            contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md" onclick="showImagePreview('${mediaUrl}')">`;
-        } else if (mediaType.includes('video')) {
-            contentHtml = `<video controls class="max-w-xs rounded-lg mt-2 border border-border-gray shadow-md"><source src="${mediaUrl}"></video>`;
-        } else if (mediaType.includes('audio')) {
-            contentHtml = `<audio controls class="mt-2 w-full max-w-[200px]"><source src="${mediaUrl}"></audio>`;
+            if (mediaUrl) {
+                if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+                    contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md" onclick="showImagePreview('${mediaUrl}')">`;
+                } else if (mediaType.includes('video')) {
+                    contentHtml = `<video controls class="max-w-xs rounded-lg mt-2 border border-border-gray shadow-md"><source src="${mediaUrl}"></video>`;
+                } else if (mediaType.includes('audio')) {
+                    contentHtml = `<audio controls class="mt-2 w-full max-w-[200px]"><source src="${mediaUrl}"></audio>`;
+                }
+                
+                if(data.text && !data.text.includes("Sent a")) {
+                    contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
+                }
+            }
+
+            const msgHtml = isBot ? `
+                <div class="self-end max-w-[70%]">
+                    <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
+                    <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
+                </div>
+            ` : `
+                <div class="flex items-start gap-3 max-w-[70%]">
+                    <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-border-gray bg-gray-900 flex items-center justify-center text-[10px]">
+                        ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover">` : `<i class="fas fa-user text-gray-500"></i>`}
+                    </div>
+                    <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
+                        <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>${contentHtml}
+                    </div>
+                </div>
+            `;
+            window.insertAdjacentHTML('beforeend', msgHtml);
+            window.scrollTo({ top: window.scrollHeight, behavior: 'smooth' });
         }
-        
-        // စာသားလည်းပါရင် ပုံရဲ့အပေါ်မှာ စာသားကိုပါ ပြပေးမယ်
-        if(data.text && !data.text.includes("Sent a")) {
-            contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
-        }
-    }
-
-    const msgHtml = isBot ? `
-        <div class="self-end max-w-[70%]">
-            <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
-            <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
-        </div>
-    ` : `
-        <div class="flex items-start gap-3 max-w-[70%]">
-            <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-border-gray bg-gray-900 flex items-center justify-center text-[10px]">
-                ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover">` : `<i class="fas fa-user text-gray-500"></i>`}
-            </div>
-            <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
-                <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>${contentHtml}
-            </div>
-        </div>
-    `;
-    window.insertAdjacentHTML('beforeend', msgHtml);
-    window.scrollTo({ top: window.scrollHeight, behavior: 'smooth' });
-}
 
         async function handleFileUpload(event) {
             const file = event.target.files[0];
@@ -425,17 +417,8 @@
                 document.getElementById(loadingId).remove();
 
                 if (response.ok) {
-                    const data = await response.json();
-                    const newMsg = { 
-                        text: `Sent a ${file.type.split('/')[0]}`, 
-                        file_url: data.fileUrl, 
-                        file_type: file.type,
-                        sender_type: 'bot', 
-                        chat_id: currentChatId 
-                    };
-                    allMessages.push(newMsg);
-                    appendMessage(newMsg, true);
                     event.target.value = ""; 
+                    // Manually push/append ပိတ်ထားသည် (Socket မှ တစ်ဆင့်သာ ပြမည်)
                 } else {
                     alert("Upload failed!");
                 }
@@ -447,14 +430,18 @@
 
         socket.on('new_message', (data) => {
             const senderId = data.chat_id || data.chatId; 
-            allMessages.push(data);
             
-            if (currentChatId === senderId) {
-                appendMessage(data, data.sender_type === 'bot'); 
-            } else {
-                unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-                document.getElementById('notif-sound').play().catch(() => {});
-                renderContacts(cachedContacts);
+            // Duplicate စစ်ဆေးရန် (optional ဒါပေမယ့် စိတ်ချရအောင် ထည့်ထားပေးတယ်)
+            const isDuplicate = allMessages.some(m => m.id === data.id && data.id !== undefined);
+            if (!isDuplicate) {
+                allMessages.push(data);
+                if (currentChatId === senderId) {
+                    appendMessage(data, data.sender_type === 'bot'); 
+                } else {
+                    unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
+                    document.getElementById('notif-sound').play().catch(() => {});
+                    renderContacts(cachedContacts);
+                }
             }
         });
 
@@ -463,11 +450,9 @@
             const text = input.value.trim();
             if(text !== "" && currentChatId !== "") {
                 socket.emit('send_reply', { chatId: currentChatId, text: text });
-                const newMsg = { text: text, sender_type: 'bot', chat_id: currentChatId };
-                allMessages.push(newMsg);
-                appendMessage(newMsg, true);
                 input.value = "";
                 unreadCounts[currentChatId] = 0;
+                // Manually push/append ပိတ်ထားသည် (Socket မှ တစ်ဆင့်သာ ပြမည်)
             } else if (!currentChatId) {
                 alert("Please select a contact first.");
             }
