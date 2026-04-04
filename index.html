@@ -36,13 +36,12 @@
         .sidebar-collapsed { width: 70px !important; }
         .sidebar-collapsed .nav-text, .sidebar-collapsed .dropdown-arrow { display: none; }
 
-        /* --- Sidebar ပိတ်ထားရင် နှိပ်လို့မရအောင် လုပ်သည့်အပိုင်း --- */
+        /* --- Sidebar ပိတ်ထားရင် နှိပ်လို့မရအောင် Lock ချခြင်း --- */
         .sidebar-collapsed nav, 
         .sidebar-collapsed .mt-auto {
-            pointer-events: none; /* နှိပ်လို့မရအောင် ပိတ်ထားမယ် */
-            opacity: 0.6;        /* ပိတ်ထားမှန်းသိသာအောင် အရောင်မှိန်ထားမယ် */
+            pointer-events: none; 
+            opacity: 0.6;
         }
-        /* ------------------------------------------------ */
 
         .nav-item { 
             display: flex; align-items: center; gap: 16px; width: 100%; 
@@ -138,7 +137,9 @@
 
         <div class="p-6 border-t border-border-gray bg-pure-black">
             <div class="flex items-center gap-4 bg-dark-gray border border-border-gray rounded-2xl px-5 py-3 focus-within:border-accent-blue transition">
-                <i class="fas fa-paperclip text-gray-500 cursor-pointer hover:text-white"></i>
+                <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)" accept="image/*,video/*,audio/*">
+                <i class="fas fa-paperclip text-gray-500 cursor-pointer hover:text-white" onclick="document.getElementById('file-input').click()"></i>
+                
                 <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Reply here..." class="bg-transparent flex-1 outline-none text-sm text-white">
                 <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition">
                     <i class="fas fa-paper-plane text-lg"></i>
@@ -299,9 +300,22 @@
 
         function appendMessage(data, isBot) {
             const window = document.getElementById('chat-window');
+            let contentHtml = data.text;
+
+            // Media file များပါလာပါက ပြသရန် logic
+            if (data.fileUrl) {
+                if (data.fileType && data.fileType.includes('image')) {
+                    contentHtml = `<img src="${data.fileUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer" onclick="window.open('${data.fileUrl}')">`;
+                } else if (data.fileType && data.fileType.includes('video')) {
+                    contentHtml = `<video controls class="max-w-xs rounded-lg mt-2"><source src="${data.fileUrl}"></video>`;
+                } else if (data.fileType && data.fileType.includes('audio')) {
+                    contentHtml = `<audio controls class="mt-2"><source src="${data.fileUrl}"></audio>`;
+                }
+            }
+
             const msgHtml = isBot ? `
                 <div class="self-end max-w-[70%]">
-                    <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${data.text}</div>
+                    <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
                     <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
                 </div>
             ` : `
@@ -310,12 +324,49 @@
                         ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover">` : `<i class="fas fa-user text-gray-500"></i>`}
                     </div>
                     <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
-                        <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>${data.text}
+                        <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>${contentHtml}
                     </div>
                 </div>
             `;
             window.insertAdjacentHTML('beforeend', msgHtml);
             window.scrollTo({ top: window.scrollHeight, behavior: 'smooth' });
+        }
+
+        // File Upload Handling Function
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file || !currentChatId) {
+                alert("Please select a chat first!");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('chatId', currentChatId);
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const newMsg = { 
+                        text: `Sent a ${file.type.split('/')[0]}`, 
+                        fileUrl: data.fileUrl, 
+                        fileType: file.type,
+                        sender_type: 'bot', 
+                        chat_id: currentChatId 
+                    };
+                    allMessages.push(newMsg);
+                    appendMessage(newMsg, true);
+                } else {
+                    alert("Upload failed!");
+                }
+            } catch (err) {
+                console.error("Upload error:", err);
+            }
         }
 
         socket.on('new_message', (data) => {
