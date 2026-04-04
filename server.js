@@ -112,10 +112,9 @@ app.get('/api/settings', async (req, res) => {
 // --- Bulk Settings & Auto-Webhook Connection ---
 app.post('/api/settings/bulk', async (req, res) => {
     const settingsData = req.body;
-    const RENDER_URL = "https://realmessage-live.onrender.com"; // မင်းရဲ့ Render URL
+    const RENDER_URL = "https://realmessage-live.onrender.com"; 
 
     try {
-        // syntax error မတက်အောင် တစ်ခုချင်းစီ loop ပတ်ပြီး သေချာအောင် သိမ်းမယ်
         for (const [key, value] of Object.entries(settingsData)) {
             await pool.query(
                 `INSERT INTO settings (key, value) 
@@ -126,11 +125,21 @@ app.post('/api/settings/bulk', async (req, res) => {
             );
         }
 
-        // Telegram Token ပါလာရင် Webhook ကို တစ်ခါတည်း ချိတ်ပေးမယ်
+        // Telegram Webhook Update
         if (settingsData.telegram_token) {
             const webhookUrl = `${RENDER_URL}/webhook/telegram`;
             await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${webhookUrl}`);
-            console.log(`✅ Webhook updated to: ${webhookUrl}`);
+            console.log(`✅ Telegram Webhook updated`);
+        }
+
+        // Viber Webhook Update (Viber Token ရှိမှ အလုပ်လုပ်မယ်)
+        if (settingsData.viber_auth_token) {
+            const webhookUrl = `${RENDER_URL}/webhook/viber`;
+            await axios.post(`https://chatapi.viber.com/pa/set_webhook`, {
+                url: webhookUrl,
+                event_types: ["delivered", "seen", "failed", "subscribed", "unsubscribed", "message"]
+            }, { headers: { 'X-Viber-Auth-Token': settingsData.viber_auth_token } });
+            console.log(`✅ Viber Webhook updated`);
         }
 
         res.json({ success: true });
@@ -140,47 +149,39 @@ app.post('/api/settings/bulk', async (req, res) => {
     }
 });
 
-// --- Management APIs ---
-app.post('/api/contacts/nickname', async (req, res) => {
-    const { chatId, nickname } = req.body;
-    try {
-        await pool.query('UPDATE contacts SET nickname = $1 WHERE chat_id = $2', [nickname, chatId]);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+// --- Viber Webhook ---
+app.post('/webhook/viber', async (req, res) => {
+    const update = req.body;
+    // Viber က message event ဖြစ်မှ အောက်က logic အလုပ်လုပ်မယ်
+    if (update.event === 'message') {
+        const chatId = update.sender.id;
+        const senderName = update.sender.name;
+        const profilePic = update.sender.avatar || `https://ui-avatars.com/api/?name=${senderName}&background=random`;
+        const text = update.message.text;
+
+        try {
+            await pool.query(`
+                INSERT INTO contacts (chat_id, first_name, profile_pic, platform)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (chat_id) DO UPDATE SET first_name = EXCLUDED.first_name, profile_pic = EXCLUDED.profile_pic
+            `, [chatId, senderName, profilePic, 'Viber']);
+
+            await pool.query(
+                'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
+                [senderName, text, 'Viber', chatId, 'user']
+            );
+
+            io.emit('new_message', { sender: senderName, text, chatId, profile_pic: profilePic, platform: 'Viber', sender_type: 'user' });
+        } catch (err) { console.error("Viber DB Error:", err.message); }
+    }
+    res.sendStatus(200);
 });
 
-app.post('/api/contacts/status', async (req, res) => {
-    const { chatId, status } = req.body;
-    try {
-        await pool.query('UPDATE contacts SET status = $1 WHERE chat_id = $2', [status, chatId]);
-        res.json({ success: true, status: status });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/contacts/block', async (req, res) => {
-    const { chatId } = req.body;
-    try {
-        await pool.query("UPDATE contacts SET status = 'blocked' WHERE chat_id = $1", [chatId]);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.delete('/api/contacts/:chatId', async (req, res) => {
-    const { chatId } = req.params;
-    try {
-        await pool.query('DELETE FROM messages WHERE chat_id = $1', [chatId]);
-        await pool.query('DELETE FROM contacts WHERE chat_id = $1', [chatId]);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// --- Webhook with Telegram ---
+// --- Telegram Webhook ---
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (update.message) {
         const chatId = update.message.chat.id.toString();
-        
-        // Block စစ်မယ်
         const checkStatus = await pool.query('SELECT status FROM contacts WHERE chat_id = $1', [chatId]);
         if (checkStatus.rows.length > 0 && checkStatus.rows[0].status === 'blocked') return res.sendStatus(200);
 
@@ -189,7 +190,6 @@ app.post('/webhook/telegram', async (req, res) => {
         const username = update.message.from.username || "";
 
         try {
-            // DB ထဲက Token ယူသုံးမယ်
             const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
             const currentToken = settingsRes.rows[0]?.value;
 
@@ -209,9 +209,9 @@ app.post('/webhook/telegram', async (req, res) => {
                 const contactInfo = await pool.query('SELECT nickname FROM contacts WHERE chat_id = $1', [chatId]);
                 const displayName = contactInfo.rows[0]?.nickname || sender;
 
-                io.emit('new_message', { sender: displayName, text, chatId, profile_pic: profilePic, sender_type: 'user' });
+                io.emit('new_message', { sender: displayName, text, chatId, profile_pic: profilePic, platform: 'Telegram', sender_type: 'user' });
             }
-        } catch (err) { console.error("Webhook Error:", err.message); }
+        } catch (err) { console.error("Telegram Webhook Error:", err.message); }
     }
     res.sendStatus(200);
 });
@@ -220,17 +220,26 @@ app.post('/webhook/telegram', async (req, res) => {
 io.on('connection', (socket) => {
     socket.on('send_reply', async (data) => {
         try {
-            const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
-            const botToken = settingsRes.rows[0]?.value;
+            const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'viber_auth_token')");
+            const tokens = {};
+            settingsRes.rows.forEach(row => tokens[row.key] = row.value);
 
-            if (botToken) {
-                await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, { chat_id: data.chatId, text: data.text });
-                await pool.query(
-                    'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
-                    ['OmniBot', data.text, 'Telegram', data.chatId, 'bot']
-                );
+            if (data.platform === 'Telegram' && tokens.telegram_token) {
+                await axios.post(`https://api.telegram.org/bot${tokens.telegram_token}/sendMessage`, { chat_id: data.chatId, text: data.text });
+            } else if (data.platform === 'Viber' && tokens.viber_auth_token) {
+                await axios.post(`https://chatapi.viber.com/pa/send_message`, {
+                    receiver: data.chatId,
+                    type: "text",
+                    text: data.text,
+                    sender: { name: "OmniBot" }
+                }, { headers: { 'X-Viber-Auth-Token': tokens.viber_auth_token } });
             }
-        } catch (e) { console.error("Reply Error:", e.response?.data || e.message); }
+
+            await pool.query(
+                'INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)',
+                ['OmniBot', data.text, data.platform, data.chatId, 'bot']
+            );
+        } catch (e) { console.error("Reply Error:", e.message); }
     });
 });
 
