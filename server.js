@@ -109,14 +109,43 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Bulk Settings Update (Syntax Error Fixed) ---
+// --- Individual Setting Save (တိုးထည့်ပေးထားသည့်အပိုင်း) ---
+app.post('/api/settings/single', async (req, res) => {
+    const { key, value } = req.body;
+    const RENDER_URL = "https://realmessage-live.onrender.com"; 
+
+    try {
+        const check = await pool.query('SELECT key FROM settings WHERE key = $1', [key]);
+        if (check.rows.length > 0) {
+            await pool.query('UPDATE settings SET value = $2 WHERE key = $1', [key, value]);
+        } else {
+            await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2)', [key, value]);
+        }
+
+        // Webhook Auto Updates
+        if (key === 'telegram_token' && value) {
+            await axios.get(`https://api.telegram.org/bot${value}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
+        }
+        if (key === 'viber_auth_token' && value) {
+            await axios.post(`https://chatapi.viber.com/pa/set_webhook`, {
+                url: `${RENDER_URL}/webhook/viber`,
+                event_types: ["delivered", "seen", "failed", "subscribed", "unsubscribed", "message"]
+            }, { headers: { 'X-Viber-Auth-Token': value } });
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Bulk Settings Update ---
 app.post('/api/settings/bulk', async (req, res) => {
     const settingsData = req.body;
     const RENDER_URL = "https://realmessage-live.onrender.com"; 
 
     try {
         for (const [key, value] of Object.entries(settingsData)) {
-            // "ON CONFLICT" syntax error ကို ရှောင်ဖို့ Check and Update logic သုံးထားပါတယ်
             const check = await pool.query('SELECT key FROM settings WHERE key = $1', [key]);
             if (check.rows.length > 0) {
                 await pool.query('UPDATE settings SET value = $2 WHERE key = $1', [key, value]);
@@ -185,7 +214,6 @@ app.post('/webhook/messenger', async (req, res) => {
                     } catch (e) { console.error("Messenger Profile Error"); }
                 }
 
-                // Contact check and save
                 const contactCheck = await pool.query('SELECT chat_id FROM contacts WHERE chat_id = $1', [senderId]);
                 if (contactCheck.rows.length > 0) {
                     await pool.query('UPDATE contacts SET first_name = $2, profile_pic = $3 WHERE chat_id = $1', [senderId, senderName, profilePic]);
