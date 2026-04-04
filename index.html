@@ -356,44 +356,50 @@
         }
 
         function appendMessage(data, isBot) {
-            const window = document.getElementById('chat-window');
-            let contentHtml = data.text;
+    const window = document.getElementById('chat-window');
+    
+    // မူလစာသားကို ယူထားမယ်
+    let contentHtml = data.text || "";
 
-            const mediaUrl = data.file_url || data.fileUrl;
-            const mediaType = data.file_type || data.fileType;
+    // Image သို့မဟုတ် Media URL ရှိမရှိ စစ်ဆေးမယ်
+    // Database ကလာတဲ့ Key name တွေဖြစ်တဲ့ file_url နဲ့ file_type ကို သေချာအောင် စစ်မယ်
+    const mediaUrl = data.file_url || data.fileUrl;
+    const mediaType = data.file_type || data.fileType || "";
 
-            if (mediaUrl) {
-                if (mediaType && mediaType.includes('image')) {
-                    contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md" onclick="showImagePreview('${mediaUrl}')">`;
-                } else if (mediaType && mediaType.includes('video')) {
-                    contentHtml = `<video controls class="max-w-xs rounded-lg mt-2 border border-border-gray shadow-md"><source src="${mediaUrl}"></video>`;
-                } else if (mediaType && mediaType.includes('audio')) {
-                    contentHtml = `<audio controls class="mt-2 w-full max-w-[200px]"><source src="${mediaUrl}"></audio>`;
-                }
-                
-                if(data.text && data.text !== `Sent a ${mediaType?.split('/')[0]}`) {
-                    contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
-                }
-            }
-
-            const msgHtml = isBot ? `
-                <div class="self-end max-w-[70%]">
-                    <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
-                    <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
-                </div>
-            ` : `
-                <div class="flex items-start gap-3 max-w-[70%]">
-                    <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-border-gray bg-gray-900 flex items-center justify-center text-[10px]">
-                        ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover">` : `<i class="fas fa-user text-gray-500"></i>`}
-                    </div>
-                    <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
-                        <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>${contentHtml}
-                    </div>
-                </div>
-            `;
-            window.insertAdjacentHTML('beforeend', msgHtml);
-            window.scrollTo({ top: window.scrollHeight, behavior: 'smooth' });
+    if (mediaUrl) {
+        if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+            // ပုံဖြစ်ခဲ့ရင် img tag နဲ့ ပြမယ်
+            contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md" onclick="showImagePreview('${mediaUrl}')">`;
+        } else if (mediaType.includes('video')) {
+            contentHtml = `<video controls class="max-w-xs rounded-lg mt-2 border border-border-gray shadow-md"><source src="${mediaUrl}"></video>`;
+        } else if (mediaType.includes('audio')) {
+            contentHtml = `<audio controls class="mt-2 w-full max-w-[200px]"><source src="${mediaUrl}"></audio>`;
         }
+        
+        // စာသားလည်းပါရင် ပုံရဲ့အပေါ်မှာ စာသားကိုပါ ပြပေးမယ်
+        if(data.text && !data.text.includes("Sent a")) {
+            contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
+        }
+    }
+
+    const msgHtml = isBot ? `
+        <div class="self-end max-w-[70%]">
+            <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
+            <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
+        </div>
+    ` : `
+        <div class="flex items-start gap-3 max-w-[70%]">
+            <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-border-gray bg-gray-900 flex items-center justify-center text-[10px]">
+                ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover">` : `<i class="fas fa-user text-gray-500"></i>`}
+            </div>
+            <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
+                <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>${contentHtml}
+            </div>
+        </div>
+    `;
+    window.insertAdjacentHTML('beforeend', msgHtml);
+    window.scrollTo({ top: window.scrollHeight, behavior: 'smooth' });
+}
 
         async function handleFileUpload(event) {
             const file = event.target.files[0];
