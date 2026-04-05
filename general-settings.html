@@ -128,16 +128,14 @@
     </div>
 
     <script>
-        // နာမည်ရိုက်တာနဲ့ Avatar Preview ကို တခါတည်းပြောင်းပေးရန်
         function updateAvatarPreview(name) {
             const preview = document.getElementById('avatar_preview');
-            // File ရွေးမထားမှသာ UI Avatar ကို ပြောင်းမယ်
             if (name.trim() !== "" && !document.getElementById('avatar_input').files.length) {
-                preview.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
+                const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
+                preview.src = avatarUrl;
             }
         }
 
-        // ဖိုင်ရွေးပြီး ပုံတင်လျှင် Preview ပြရန်
         document.getElementById('avatar_input').onchange = function (evt) {
             const [file] = this.files;
             if (file) {
@@ -145,7 +143,6 @@
             }
         }
 
-        // Settings များကို သိမ်းဆည်းရန်
         async function saveSettings() {
             const pass = document.getElementById('new_password').value;
             const confirm = document.getElementById('confirm_password').value;
@@ -154,10 +151,10 @@
                 return alert("❌ Passwords do not match!");
             }
 
-            // FormData ကိုသုံးပြီး Image File ရော JSON data ရော ပို့နိုင်အောင်ပြင်ဆင်ခြင်း
             const formData = new FormData();
+            const nickname = document.getElementById('admin_nickname').value;
             formData.append('site_name', document.getElementById('site_name').value);
-            formData.append('admin_nickname', document.getElementById('admin_nickname').value);
+            formData.append('admin_nickname', nickname);
             formData.append('admin_email', document.getElementById('admin_email').value);
             formData.append('enable_autoreply', document.getElementById('enable_autoreply').checked);
             formData.append('autoreply_text', document.getElementById('autoreply_text').value);
@@ -168,31 +165,40 @@
                 formData.append('admin_password', pass);
             }
 
-            // အကယ်၍ ပုံအသစ်တင်ထားရင် အဲဒီ file ကိုပါ ပို့မယ်
             const avatarInput = document.getElementById('avatar_input');
+            let finalAvatarUrl = "";
+
             if (avatarInput.files.length > 0) {
                 formData.append('avatar', avatarInput.files[0]);
             } else {
-                // ပုံအသစ်မတင်ရင် UI Avatar Link ကို အခြေခံအဖြစ် ထည့်ပေးထားနိုင်ပါတယ်
-                const nickname = document.getElementById('admin_nickname').value;
-                formData.append('admin_avatar', `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random&color=fff`);
+                finalAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random&color=fff`;
+                formData.append('admin_avatar', finalAvatarUrl);
             }
             
             try {
-                // API Route ကို '/api/settings/bulk' အတိုင်းထားပေးထားပါတယ်
                 const response = await fetch('/api/settings/bulk', {
                     method: 'POST',
                     body: formData 
-                    // FormData သုံးရင် 'Content-Type' header ထည့်စရာမလိုပါ (Browser က အလိုအလျောက် boundary သတ်မှတ်ပေးပါလိမ့်မယ်)
                 });
 
                 if (response.ok) {
-                    alert("✅ Settings အားလုံးကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။");
-                    if (window.parent && window.parent.location) {
-                        window.parent.location.reload();
-                    } else {
-                        window.location.reload();
+                    const result = await response.json();
+                    const updatedAvatar = result.admin_avatar || finalAvatarUrl;
+                    
+                    // LocalStorage တွင် သိမ်းဆည်းခြင်း
+                    localStorage.setItem('admin_avatar', updatedAvatar);
+                    localStorage.setItem('admin_nickname', nickname);
+
+                    // Parent window (index.html) သို့ Event လွှတ်ခြင်း
+                    if (window.parent) {
+                        const event = new CustomEvent('profileUpdate', { 
+                            detail: { avatar: updatedAvatar, nickname: nickname } 
+                        });
+                        window.parent.dispatchEvent(event);
                     }
+
+                    alert("✅ Settings အားလုံးကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။");
+                    
                 } else {
                     alert("❌ သိမ်းဆည်းရာတွင် အမှားအယွင်းရှိပါသည်။");
                 }
@@ -202,7 +208,6 @@
             }
         }
 
-        // စာမျက်နှာပွင့်လာလျှင် လက်ရှိ Settings များကို Database မှ ခေါ်ပြရန်
         window.onload = async () => {
             try {
                 const res = await fetch('/api/settings');
@@ -213,13 +218,13 @@
                 if (data.site_name) document.getElementById('site_name').value = data.site_name;
                 if (data.admin_nickname) {
                     document.getElementById('admin_nickname').value = data.admin_nickname;
-                    // လက်ရှိသိမ်းထားတဲ့ Avatar URL ရှိရင် အဲဒါပြမယ်၊ မရှိရင် UI Avatar ပြရန်
-                    document.getElementById('avatar_preview').src = data.admin_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.admin_nickname)}&background=random&color=fff`;
+                    const currentAvatar = data.admin_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.admin_nickname)}&background=random&color=fff`;
+                    document.getElementById('avatar_preview').src = currentAvatar;
+                    localStorage.setItem('admin_avatar', currentAvatar);
                 }
                 if (data.admin_email) document.getElementById('admin_email').value = data.admin_email;
                 if (data.autoreply_text) document.getElementById('autoreply_text').value = data.autoreply_text;
                 
-                // Checkbox value များကို boolean အဖြစ် ပြန်စစ်ဆေးခြင်း
                 document.getElementById('enable_autoreply').checked = (data.enable_autoreply === "true" || data.enable_autoreply === true);
                 document.getElementById('notif_sound').checked = (data.notif_sound === "true" || data.notif_sound === true);
                 document.getElementById('auto_refresh').checked = (data.auto_refresh === "true" || data.auto_refresh === true);
