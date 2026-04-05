@@ -14,12 +14,11 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 // Middleware
-app.use(bodyParser.json({ limit: '50mb' })); // Base64 image တွေအတွက် limit တိုးထားပါတယ်
+app.use(bodyParser.json({ limit: '50mb' })); 
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname)));
 
 // --- Multer Memory Storage Setup ---
-// Render Free Tier မှာ Disk သုံးမရလို့ Memory Storage ပြောင်းလိုက်ပါတယ်
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
@@ -115,14 +114,26 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Admin Profile သိမ်းတဲ့အပိုင်းကို Base64 သို့ ပြောင်းပြင်ထားသည်
+// --- ထပ်ပေါင်းထည့်လိုက်သော အပိုင်း (404 Error ရှင်းရန်) ---
+app.post('/api/settings/single', async (req, res) => {
+    const { key, value } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
+            [key, value]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     const settingsData = req.body;
     const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`; 
 
     try {
         if (req.file) {
-            // ပုံကို Base64 string အဖြစ်ပြောင်းလဲခြင်း
             const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
             settingsData.admin_avatar = base64Image;
         }
@@ -147,12 +158,10 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     }
 });
 
-// Dashboard မှ ပုံပို့တဲ့အခါ Base64 ဖြင့် DB တွင် သိမ်းခြင်း
 app.post('/api/upload', upload.single('file'), async (req, res) => {
     const { chatId } = req.body;
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    // ပုံကို Base64 string အဖြစ်ပြောင်းလဲခြင်း
     const base64File = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
 
     try {
@@ -171,7 +180,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
             const tokenRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
             const token = tokenRes.rows[0]?.value;
             if (token) {
-                // Telegram ကို ပုံပို့ဖို့ FormData သုံးပြီး Buffer ကို တိုက်ရိုက်ပို့သည်
                 const FormData = require('form-data');
                 const form = new FormData();
                 form.append('chat_id', chatId);
