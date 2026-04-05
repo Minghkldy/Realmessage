@@ -88,7 +88,7 @@
     <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray">
         <div class="text-2xl font-bold text-accent-blue px-6 mb-10 cursor-pointer flex items-center" onclick="toggleLeftSidebar()">
             <i class="fas fa-robot w-6 text-center"></i>
-            <span class="nav-text ml-3">OmniBot</span>
+            <span id="brand-name" class="nav-text ml-3">OmniBot</span>
         </div>
         
         <nav class="flex flex-col w-full">
@@ -137,52 +137,71 @@
         </div>
     </div>
 
-    <div id="main-dashboard-content" class="flex flex-1">
-        <div id="chat-list-container" class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black">
-            <div class="p-6 border-b border-border-gray flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <button onclick="toggleLeftSidebar()" class="text-gray-500 hover:text-white transition">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                    <div class="flex items-center gap-2">
-                        <h2 id="inbox-title" class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
-                        <i id="noti-bell" class="fas fa-bell text-gray-500 hidden text-xs"></i>
-                    </div>
-                </div>
-                <span id="global-msg-count" class="hidden bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white noti-badge">0</span>
+    <div id="main-dashboard-content" class="flex flex-1 flex-col">
+        <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between bg-dark-gray">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleLeftSidebar()" class="text-gray-500 hover:text-white transition md:hidden">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
-            <div id="contact-list" class="flex-1 overflow-y-auto p-2">
-                <div id="contacts-container" class="space-y-1"></div>
+            
+            <div class="flex items-center space-x-3 cursor-pointer group">
+                <div class="text-right hidden md:block">
+                    <p id="top-admin-name" class="text-sm font-medium text-white">Admin</p>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest">System Admin</p>
+                </div>
+                <div class="relative">
+                    <img id="top-admin-avatar" src="https://ui-avatars.com/api/?name=Admin&background=random" 
+                         class="w-9 h-9 rounded-full border border-white/10 object-cover">
+                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-[#000] rounded-full"></div>
+                </div>
             </div>
         </div>
 
-        <div class="flex-1 flex flex-col bg-pure-black relative">
-            <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between bg-pure-black">
-                <div class="flex items-center gap-3">
-                    <div id="header-avatar-container">
-                        <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden border border-border-gray object-cover" src="">
-                        <div id="header-avatar-text" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs uppercase text-white">?</div>
+        <div class="flex flex-1 overflow-hidden">
+            <div id="chat-list-container" class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black">
+                <div class="p-6 border-b border-border-gray flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <h2 id="inbox-title" class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
+                            <i id="noti-bell" class="fas fa-bell text-gray-500 hidden text-xs"></i>
+                        </div>
                     </div>
-                    <div>
-                        <h3 id="chat-header-name" class="text-sm font-bold">Select a chat</h3>
-                        <p id="chat-status" class="text-[10px] text-gray-600 uppercase">System Ready</p>
-                    </div>
+                    <span id="global-msg-count" class="hidden bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white noti-badge">0</span>
                 </div>
-                <button onclick="toggleRightPanel()" class="text-gray-500 hover:text-white transition p-2">
-                    <i class="fas fa-user-circle text-xl"></i>
-                </button>
+                <div id="contact-list" class="flex-1 overflow-y-auto p-2">
+                    <div id="contacts-container" class="space-y-1"></div>
+                </div>
             </div>
 
-            <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col"></div>
-
-            <div class="p-6 border-t border-border-gray bg-pure-black">
-                <div class="flex items-center gap-4 bg-dark-gray border border-border-gray rounded-2xl px-5 py-3 focus-within:border-accent-blue transition">
-                    <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)" accept="image/*,video/*,audio/*">
-                    <i class="fas fa-paperclip text-gray-500 cursor-pointer hover:text-white" onclick="document.getElementById('file-input').click()"></i>
-                    <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Reply here..." class="bg-transparent flex-1 outline-none text-sm text-white">
-                    <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition">
-                        <i class="fas fa-paper-plane text-lg"></i>
+            <div class="flex-1 flex flex-col bg-pure-black relative">
+                <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between bg-pure-black">
+                    <div class="flex items-center gap-3">
+                        <div id="header-avatar-container">
+                            <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden border border-border-gray object-cover" src="">
+                            <div id="header-avatar-text" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs uppercase text-white">?</div>
+                        </div>
+                        <div>
+                            <h3 id="chat-header-name" class="text-sm font-bold">Select a chat</h3>
+                            <p id="chat-status" class="text-[10px] text-gray-600 uppercase">System Ready</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleRightPanel()" class="text-gray-500 hover:text-white transition p-2">
+                        <i class="fas fa-user-circle text-xl"></i>
                     </button>
+                </div>
+
+                <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col"></div>
+
+                <div class="p-6 border-t border-border-gray bg-pure-black">
+                    <div class="flex items-center gap-4 bg-dark-gray border border-border-gray rounded-2xl px-5 py-3 focus-within:border-accent-blue transition">
+                        <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)" accept="image/*,video/*,audio/*">
+                        <i class="fas fa-paperclip text-gray-500 cursor-pointer hover:text-white" onclick="document.getElementById('file-input').click()"></i>
+                        <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Reply here..." class="bg-transparent flex-1 outline-none text-sm text-white">
+                        <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition">
+                            <i class="fas fa-paper-plane text-lg"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -230,11 +249,31 @@
         let unreadCounts = {};
         let cachedContacts = []; 
 
+        // Website Name နှင့် Admin Profile ကို Database မှ ခေါ်ယူပြသရန်
+        async function loadSystemSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                
+                // Website Name ပြောင်းလဲခြင်း
+                if (data.site_name) {
+                    document.getElementById('brand-name').innerText = data.site_name;
+                }
+                
+                // Admin Profile ပြောင်းလဲခြင်း
+                if (data.admin_nickname) {
+                    document.getElementById('top-admin-name').innerText = data.admin_nickname;
+                    document.getElementById('top-admin-avatar').src = `https://ui-avatars.com/api/?name=${data.admin_nickname}&background=random`;
+                }
+            } catch (e) {
+                console.error("Error loading settings:", e);
+            }
+        }
+
         function toggleLeftSidebar() { 
             const sidebar = document.getElementById('left-sidebar');
             sidebar.classList.toggle('sidebar-collapsed'); 
             
-            // Collapsed ဖြစ်သွားရင် Dropdown ပါ ပိတ်သွားအောင် လုပ်ခြင်း
             if(sidebar.classList.contains('sidebar-collapsed')) {
                 const dropdown = document.getElementById('messenger-dropdown');
                 dropdown.classList.remove('show');
@@ -250,7 +289,6 @@
         
         function toggleDropdown() {
             const sidebar = document.getElementById('left-sidebar');
-            // Sidebar ပိတ်ထားရင် Dropdown နှိပ်လိုက်တာနဲ့ အလိုအလျောက် ပွင့်လာစေဖို့
             if(sidebar.classList.contains('sidebar-collapsed')) {
                 toggleLeftSidebar();
             }
@@ -357,7 +395,7 @@
 
         function selectContact(contact) {
             currentChatId = contact.chat_id;
-            unreadCounts[currentChatId] = 0; // Clear unread on select
+            unreadCounts[currentChatId] = 0; 
             const displayName = contact.nickname || contact.first_name;
             document.getElementById('chat-header-name').innerText = displayName;
             document.getElementById('edit-nickname').value = displayName;
@@ -464,7 +502,6 @@
 
         socket.on('new_message', (data) => {
             const senderId = data.chat_id || data.chatId;
-            // Redundant messages မဖြစ်အောင် ID စစ်ခြင်း
             if (!allMessages.some(m => m.id === data.id && data.id !== undefined)) {
                 allMessages.push(data);
                 if (currentChatId === senderId) {
@@ -513,7 +550,9 @@
         }
 
         function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
+        
         window.onload = () => { 
+            loadSystemSettings(); // System settings အရင် load လုပ်မယ်
             loadContacts(); 
             loadHistory(); 
         };
