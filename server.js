@@ -92,7 +92,6 @@ async function getTelegramProfilePic(userId, token) {
 async function handleIncomingMessage(payload) {
     const { sender, text, platform, chatId, profilePic, fileUrl, fileType } = payload;
     try {
-        // Contact Update
         await pool.query(`
             INSERT INTO contacts (chat_id, first_name, profile_pic, platform) 
             VALUES ($1, $2, $3, $4) 
@@ -100,7 +99,6 @@ async function handleIncomingMessage(payload) {
             [chatId, sender, profilePic, platform]
         );
 
-        // User Message သိမ်းခြင်း
         await pool.query(
             'INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
             [sender, text, platform, chatId, 'user', fileUrl, fileType]
@@ -108,7 +106,6 @@ async function handleIncomingMessage(payload) {
 
         io.emit('new_message', { sender, text, chatId, profile_pic: profilePic, platform, sender_type: 'user', file_url: fileUrl, file_type: fileType });
 
-        // Auto-Reply Logic
         const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'enable_autoreply', 'autoreply_text', 'admin_nickname')");
         const settingsMap = {};
         settingsRes.rows.forEach(r => settingsMap[r.key] = r.value);
@@ -185,33 +182,42 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- Settings Bulk Update (ဒီနေရာမှာ Logic ပြင်ထားပါတယ်) ---
 app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     const settingsData = { ...req.body };
     const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`; 
 
     try {
+        // Avatar File ပါလာရင် base64 ပြောင်းပြီး သိမ်းမယ်
         if (req.file) {
             const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
             settingsData.admin_avatar = base64Image;
         }
 
-        for (const [key, value] of Object.entries(settingsData)) {
-            if (value !== undefined) {
+        // Object ထဲက setting တစ်ခုချင်းစီကို Database ထဲမှာ Update/Insert လုပ်မယ်
+        const keys = Object.keys(settingsData);
+        for (const key of keys) {
+            const val = settingsData[key];
+            if (val !== undefined) {
                 await pool.query(
-                    'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
-                    [key, value.toString()]
+                    'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+                    [key, val.toString()]
                 );
             }
         }
 
+        // Telegram Webhook Update
         if (settingsData.telegram_token) {
             try {
                 await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
             } catch (e) { console.error("Webhook Update Error"); }
         }
 
-        res.json({ success: true, admin_avatar: settingsData.admin_avatar || null, admin_nickname: settingsData.admin_nickname || null });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+        res.json({ success: true, settings: settingsData });
+    } catch (err) { 
+        console.error("Bulk Save Error:", err.message);
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
 app.post('/api/upload', upload.single('file'), async (req, res) => {
