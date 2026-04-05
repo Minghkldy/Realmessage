@@ -12,9 +12,9 @@
             theme: {
                 extend: {
                     colors: {
-                        'pure-black': '#000000',
-                        'dark-gray': '#0a0a0a',
-                        'border-gray': '#1f1f1f',
+                        'pure-black': 'var(--bg-pure-black)',
+                        'dark-gray': 'var(--bg-dark-gray)',
+                        'border-gray': 'var(--border-color)',
                         'accent-blue': '#3B82F6',
                     }
                 }
@@ -22,15 +22,41 @@
         }
     </script>
     <style>
-        body { background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        /* Default Variables (Dark Mode Off ဖြစ်နေချိန် - Light/Gray Mode) */
+        :root {
+            --bg-pure-black: #ffffff;
+            --bg-dark-gray: #f3f4f6;
+            --border-color: #e5e7eb;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+        }
+
+        /* Dark Mode On ဖြစ်နေချိန် Variables */
+        body.dark-mode {
+            --bg-pure-black: #000000;
+            --bg-dark-gray: #0a0a0a;
+            --border-color: #1f1f1f;
+            --text-main: #ffffff;
+            --text-muted: #9ca3af;
+        }
+
+        body { 
+            background-color: var(--bg-pure-black); 
+            color: var(--text-main); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            transition: background-color 0.3s, color 0.3s;
+        }
+
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         
-        .active-contact { border-left: 3px solid #3B82F6; background-color: #0f0f0f; }
+        .active-contact { border-left: 3px solid #3B82F6; background-color: rgba(59, 130, 246, 0.1); }
         
         #left-sidebar { 
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
             width: 240px;
+            background-color: var(--bg-dark-gray);
+            border-right: 1px solid var(--border-color);
         }
         
         .sidebar-collapsed { width: 80px !important; }
@@ -38,46 +64,30 @@
         .sidebar-collapsed .dropdown-arrow,
         .sidebar-collapsed #messenger-dropdown { display: none !important; }
         .sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; }
-        .sidebar-collapsed .text-2xl { padding-left: 0; text-align: center; justify-content: center; }
 
         .nav-item { 
             display: flex; align-items: center; gap: 16px; width: 100%; 
-            padding: 12px 24px; cursor: pointer; transition: 0.2s; color: #6b7280;
+            padding: 12px 24px; cursor: pointer; transition: 0.2s; color: var(--text-muted);
         }
-        .nav-item:hover { color: white; background-color: rgba(255,255,255,0.05); }
+        .nav-item:hover { color: var(--text-main); background-color: rgba(255,255,255,0.05); }
         .nav-text { font-size: 14px; font-weight: 500; white-space: nowrap; }
         .active-nav { color: #3B82F6; background-color: rgba(59, 130, 246, 0.05); }
 
-        #messenger-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: rgba(0,0,0,0.1); }
+        #messenger-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
         #messenger-dropdown.show { max-height: 400px; }
-        .dropdown-item { padding-left: 64px; padding-top: 10px; padding-bottom: 10px; display: flex; align-items: center; gap: 12px; color: #6b7280; transition: 0.2s; cursor: pointer; }
-        .dropdown-item:hover { color: white; }
-        .dropdown-arrow { transition: transform 0.3s; margin-left: auto; font-size: 10px; }
-        .rotate-arrow { transform: rotate(180deg); }
-
-        .noti-badge { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
-
-        @keyframes ring {
-            0% { transform: rotate(0); }
-            10% { transform: rotate(15deg); }
-            20% { transform: rotate(-15deg); }
-            30% { transform: rotate(10deg); }
-            40% { transform: rotate(-10deg); }
-            50% { transform: rotate(5deg); }
-            60% { transform: rotate(-5deg); }
-            100% { transform: rotate(0); }
+        
+        #chat-list-container, #right-panel, .h-16 {
+            background-color: var(--bg-dark-gray);
+            border-color: var(--border-color);
         }
-        .ring-animation { display: inline-block; animation: ring 0.5s ease infinite; }
 
         #imagePreviewModal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; cursor: zoom-out;
+            background-color: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center;
         }
-        #imagePreviewModal img { max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px; cursor: default; }
     </style>
 </head>
-<body class="h-full flex overflow-hidden bg-pure-black">
+<body class="h-full flex overflow-hidden">
 
     <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
@@ -85,43 +95,24 @@
         <img id="previewImg" src="" onclick="event.stopPropagation()">
     </div>
 
-    <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray z-20">
+    <div id="left-sidebar" class="flex-shrink-0 flex flex-col py-6 z-20">
         <div class="text-2xl font-bold text-accent-blue px-6 mb-10 cursor-pointer flex items-center" onclick="toggleLeftSidebar()">
             <i class="fas fa-robot w-6 text-center"></i>
             <span class="nav-text ml-3">OmniBot</span>
         </div>
         
         <nav class="flex flex-col w-full flex-1">
-            <div class="w-full">
-                <div class="nav-item active-nav" id="inbox-nav" onclick="switchToInbox()">
-                    <i class="fas fa-th-large text-xl w-6 text-center"></i>
-                    <span class="nav-text">Inbox</span>
-                    <i id="arrow-icon" class="fas fa-chevron-down dropdown-arrow" onclick="event.stopPropagation(); toggleDropdown()"></i>
-                </div>
-                
-                <div id="messenger-dropdown" class="hidden flex-col">
-                    <div class="dropdown-item" onclick="filterContacts('messenger')">
-                        <i class="fab fa-facebook-messenger w-4 text-[#0084FF]"></i>
-                        <span class="text-xs">Messenger</span>
-                    </div>
-                    <div class="dropdown-item" onclick="filterContacts('instagram')">
-                        <i class="fab fa-instagram w-4 text-[#E4405F]"></i>
-                        <span class="text-xs">Instagram</span>
-                    </div>
-                    <div class="dropdown-item" onclick="filterContacts('telegram')">
-                        <i class="fab fa-telegram w-4 text-[#26A5E4]"></i>
-                        <span class="text-xs">Telegram</span>
-                    </div>
-                    <div class="dropdown-item" onclick="filterContacts('whatsapp')">
-                        <i class="fab fa-whatsapp w-4 text-[#25D366]"></i>
-                        <span class="text-xs">WhatsApp</span>
-                    </div>
-                    <div class="dropdown-item" onclick="filterContacts('viber')">
-                        <i class="fab fa-viber w-4 text-[#7360f2]"></i>
-                        <span class="text-xs">Viber</span>
-                    </div>
-                </div>
+            <div class="nav-item active-nav" id="inbox-nav" onclick="switchToInbox()">
+                <i class="fas fa-th-large text-xl w-6 text-center"></i>
+                <span class="nav-text">Inbox</span>
+                <i id="arrow-icon" class="fas fa-chevron-down dropdown-arrow" onclick="event.stopPropagation(); toggleDropdown()"></i>
             </div>
+            
+            <div id="messenger-dropdown" class="hidden flex-col">
+                <div class="dropdown-item p-3 pl-16 flex items-center gap-3 text-xs text-gray-500 hover:text-white cursor-pointer" onclick="filterContacts('telegram')">
+                    <i class="fab fa-telegram w-4 text-[#26A5E4]"></i> Telegram
+                </div>
+                </div>
 
             <div id="bot-config-nav" class="nav-item" onclick="loadBotSettings()">
                 <i class="fas fa-robot text-xl w-6 text-center"></i>
@@ -138,420 +129,213 @@
     </div>
 
     <div id="main-dashboard-content" class="flex flex-1 flex-col min-w-0">
-        <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between bg-dark-gray z-10">
+        <div class="h-16 border-b flex items-center px-6 justify-between z-10">
             <div class="flex items-center gap-4">
-                <button onclick="toggleLeftSidebar()" class="text-gray-500 hover:text-white transition lg:hidden">
-                    <i class="fas fa-bars"></i>
-                </button>
+                <button onclick="toggleLeftSidebar()" class="text-gray-500 hover:text-white lg:hidden"><i class="fas fa-bars"></i></button>
             </div>
             
             <div class="flex items-center space-x-3 cursor-pointer group">
                 <div class="text-right hidden md:block">
-                    <p id="top-admin-name" class="text-sm font-medium text-white">Admin</p>
+                    <p id="top-admin-name" class="text-sm font-medium">Admin</p>
                     <p class="text-[10px] text-gray-500 uppercase tracking-widest">System Admin</p>
                 </div>
                 <div class="relative">
-                    <img id="top-admin-avatar" src="https://ui-avatars.com/api/?name=Admin&background=random" 
-                         class="w-9 h-9 rounded-full border border-white/10 object-cover">
-                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-pure-black rounded-full"></div>
+                    <img id="top-admin-avatar" src="https://ui-avatars.com/api/?name=Admin" class="w-9 h-9 rounded-full border border-white/10 object-cover">
+                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-black rounded-full"></div>
                 </div>
             </div>
         </div>
 
         <div class="flex flex-1 overflow-hidden">
-            <div id="chat-list-container" class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black hidden md:flex">
-                <div class="p-6 border-b border-border-gray flex justify-between items-center">
-                    <div class="flex items-center gap-3">
-                        <h2 id="inbox-title" class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
-                        <i id="noti-bell" class="fas fa-bell text-gray-500 hidden text-xs"></i>
-                    </div>
-                    <span id="global-msg-count" class="hidden bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white noti-badge font-bold">0</span>
+            <div id="chat-list-container" class="w-80 flex-shrink-0 flex flex-col border-r hidden md:flex">
+                <div class="p-6 border-b flex justify-between items-center">
+                    <h2 id="inbox-title" class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
+                    <span id="global-msg-count" class="hidden bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white font-bold">0</span>
                 </div>
                 <div id="contact-list" class="flex-1 overflow-y-auto p-2">
                     <div id="contacts-container" class="space-y-1"></div>
                 </div>
             </div>
 
-            <div class="flex-1 flex flex-col bg-pure-black relative min-w-0">
-                <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between bg-pure-black">
+            <div class="flex-1 flex flex-col relative min-w-0" style="background-color: var(--bg-pure-black);">
+                <div class="h-16 border-b flex items-center px-6 justify-between">
                     <div class="flex items-center gap-3 overflow-hidden">
                         <div id="header-avatar-container" class="flex-shrink-0">
-                            <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden border border-border-gray object-cover" src="">
-                            <div id="header-avatar-text" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs uppercase text-white">?</div>
+                            <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden border object-cover">
+                            <div id="header-avatar-text" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs text-white">?</div>
                         </div>
                         <div class="truncate">
                             <h3 id="chat-header-name" class="text-sm font-bold truncate">Select a chat</h3>
-                            <p id="chat-status" class="text-[10px] text-gray-600 uppercase">System Ready</p>
+                            <p id="chat-status" class="text-[10px] text-gray-500 uppercase">Ready</p>
                         </div>
                     </div>
-                    <button onclick="toggleRightPanel()" class="text-gray-500 hover:text-white transition p-2 flex-shrink-0">
-                        <i class="fas fa-user-circle text-xl"></i>
-                    </button>
+                    <button onclick="toggleRightPanel()" class="text-gray-500 hover:text-white p-2"><i class="fas fa-user-circle text-xl"></i></button>
                 </div>
 
                 <div id="chat-window" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 flex flex-col scroll-smooth"></div>
 
-                <div class="p-4 md:p-6 border-t border-border-gray bg-pure-black">
-                    <div class="flex items-center gap-4 bg-dark-gray border border-border-gray rounded-2xl px-5 py-3 focus-within:border-accent-blue transition">
-                        <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)" accept="image/*,video/*,audio/*">
-                        <i class="fas fa-paperclip text-gray-500 cursor-pointer hover:text-white" onclick="document.getElementById('file-input').click()"></i>
-                        <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Reply here..." class="bg-transparent flex-1 outline-none text-sm text-white min-w-0">
-                        <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition flex-shrink-0">
-                            <i class="fas fa-paper-plane text-lg"></i>
-                        </button>
+                <div class="p-4 md:p-6 border-t">
+                    <div class="flex items-center gap-4 bg-black/20 border border-gray-800 rounded-2xl px-5 py-3">
+                        <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)">
+                        <i class="fas fa-paperclip text-gray-500 cursor-pointer" onclick="document.getElementById('file-input').click()"></i>
+                        <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Reply here..." class="bg-transparent flex-1 outline-none text-sm">
+                        <button onclick="sendMessage()" class="text-accent-blue"><i class="fas fa-paper-plane text-lg"></i></button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="bot-settings-area" class="hidden flex-1 flex flex-col bg-pure-black overflow-hidden">
+    <div id="bot-settings-area" class="hidden flex-1 flex flex-col overflow-hidden">
         <iframe src="bot-config.html" id="settings-frame" class="w-full h-full border-none"></iframe>
     </div>
 
-    <div id="right-panel" class="hidden w-80 border-l border-border-gray bg-dark-gray flex flex-col p-6 space-y-8 overflow-y-auto z-10">
+    <div id="right-panel" class="hidden w-80 border-l flex flex-col p-6 space-y-8 overflow-y-auto z-10">
         <div class="text-center space-y-4 pt-4">
-            <div class="relative inline-block">
-                <div id="side-avatar-text" class="w-24 h-24 bg-accent-blue rounded-full mx-auto flex items-center justify-center text-3xl font-bold border-4 border-pure-black uppercase">?</div>
-                <img id="side-avatar-img" class="w-24 h-24 rounded-full mx-auto border-4 border-pure-black hidden object-cover" src="">
-            </div>
-            <div>
-                <input type="text" id="edit-nickname" onblur="updateNickname()" class="bg-transparent text-center font-bold text-lg outline-none focus:border-b border-accent-blue w-full p-1" placeholder="Nickname">
-                <p id="side-platform" class="text-[10px] text-gray-500 uppercase tracking-widest mt-2">Platform: -</p>
-            </div>
+            <div id="side-avatar-text" class="w-24 h-24 bg-accent-blue rounded-full mx-auto flex items-center justify-center text-3xl font-bold">?</div>
+            <img id="side-avatar-img" class="w-24 h-24 rounded-full mx-auto hidden object-cover border-4 border-black">
+            <input type="text" id="edit-nickname" onblur="updateNickname()" class="bg-transparent text-center font-bold text-lg outline-none w-full" placeholder="Nickname">
         </div>
-
-        <div class="space-y-6">
-            <div class="space-y-3">
-                <label class="text-[10px] text-gray-500 uppercase font-bold tracking-widest flex items-center gap-2">
-                    <i class="fas fa-sticky-note text-accent-blue"></i> Internal Notes
-                </label>
-                <textarea id="contact-note" onblur="saveNote()" class="w-full h-32 bg-pure-black border border-border-gray rounded-xl p-4 text-xs outline-none focus:border-accent-blue resize-none text-gray-300" placeholder="Add private details..."></textarea>
-            </div>
-
-            <div class="pt-6 border-t border-border-gray space-y-3">
-                <button onclick="toggleBlock()" class="w-full py-3 bg-red-900/10 text-red-500 rounded-xl text-[11px] font-bold hover:bg-red-900/30 transition flex items-center justify-center gap-2">
-                    <i class="fas fa-ban"></i> BLOCK CUSTOMER
-                </button>
-                <button onclick="deleteContact()" class="w-full py-3 border border-border-gray text-gray-500 rounded-xl text-[11px] font-bold hover:bg-white/5 hover:text-red-400 transition flex items-center justify-center gap-2">
-                    <i class="fas fa-trash-alt"></i> DELETE CONVERSATION
-                </button>
-            </div>
-        </div>
+        <textarea id="contact-note" onblur="saveNote()" class="w-full h-32 bg-black/40 border border-gray-800 rounded-xl p-4 text-xs outline-none" placeholder="Notes..."></textarea>
     </div>
 
     <script>
         const socket = io();
         let currentChatId = "";
         let allMessages = [];
-        let unreadCounts = {};
-        let cachedContacts = []; 
+        let cachedContacts = [];
+
+        // ၁။ Appearance & Dark Mode Logic (New)
+        async function applyAppearanceSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                const settings = await res.json();
+                
+                if (settings.dark_mode_enabled === 'true') {
+                    document.body.classList.add('dark-mode');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                }
+            } catch (e) { console.error("Appearance load error:", e); }
+        }
 
         async function loadSystemSettings() {
             try {
-                // (FIX) API မှ Profile ကို တိုက်ရိုက်ဆွဲယူရန် ပြင်ဆင်ခြင်း
                 const res = await fetch('/api/admin/profile');
                 const data = await res.json();
-                
-                if (data.nickname) {
-                    document.getElementById('top-admin-name').innerText = data.nickname;
+                if (data.nickname) document.getElementById('top-admin-name').innerText = data.nickname;
+                if (data.avatar) {
+                    const url = (data.avatar.startsWith('data') || data.avatar.startsWith('http')) ? data.avatar : `/uploads/${data.avatar}`;
+                    document.getElementById('top-admin-avatar').src = url;
                 }
-                
-                const el = document.getElementById('top-admin-avatar');
-                if (el && data.avatar) {
-                    // Base64 သို့မဟုတ် URL အပြည့်အစုံဆိုလျှင် တိုက်ရိုက်ပြ၊ မဟုတ်လျှင် uploads ထဲတွင် ရှာရန်
-                    if (data.avatar.startsWith('data:image') || data.avatar.startsWith('http')) {
-                        el.src = data.avatar;
-                    } else {
-                        el.src = `/uploads/${data.avatar}`;
-                    }
-                }
-            } catch (e) { console.error("Error loading settings:", e); }
+            } catch (e) { console.error("Profile load error:", e); }
         }
 
-        function toggleLeftSidebar() { 
-            const sidebar = document.getElementById('left-sidebar');
-            sidebar.classList.toggle('sidebar-collapsed'); 
-            if(sidebar.classList.contains('sidebar-collapsed')) {
-                const dropdown = document.getElementById('messenger-dropdown');
-                dropdown.classList.remove('show');
-                setTimeout(() => dropdown.classList.add('hidden'), 300);
-                document.getElementById('arrow-icon').classList.remove('rotate-arrow');
-            }
-        }
+        // Sidebar & UI Handlers
+        function toggleLeftSidebar() { document.getElementById('left-sidebar').classList.toggle('sidebar-collapsed'); }
+        function toggleRightPanel() { document.getElementById('right-panel').classList.toggle('hidden'); }
         
-        function toggleRightPanel() { 
-            document.getElementById('right-panel').classList.toggle('hidden'); 
-        }
-        
-        function toggleDropdown() {
-            const sidebar = document.getElementById('left-sidebar');
-            if(sidebar.classList.contains('sidebar-collapsed')) toggleLeftSidebar();
-            const dropdown = document.getElementById('messenger-dropdown');
-            const arrow = document.getElementById('arrow-icon');
-            if (dropdown.classList.contains('hidden')) {
-                dropdown.classList.remove('hidden');
-                dropdown.classList.add('flex');
-                setTimeout(() => dropdown.classList.add('show'), 10);
-            } else {
-                dropdown.classList.remove('show');
-                setTimeout(() => {
-                    dropdown.classList.remove('flex');
-                    dropdown.classList.add('hidden');
-                }, 300);
-            }
-            arrow.classList.toggle('rotate-arrow');
-        }
-
         function switchToInbox() {
             document.getElementById('main-dashboard-content').classList.remove('hidden');
             document.getElementById('bot-settings-area').classList.add('hidden');
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
             document.getElementById('inbox-nav').classList.add('active-nav');
-            document.getElementById('bot-config-nav').classList.remove('active-nav');
-            document.getElementById('sidebar-settings').classList.remove('active-nav');
-            filterContacts('all');
         }
 
         function loadBotSettings() {
             document.getElementById('main-dashboard-content').classList.add('hidden');
             document.getElementById('bot-settings-area').classList.remove('hidden');
-            document.getElementById('right-panel').classList.add('hidden');
-            document.getElementById('inbox-nav').classList.remove('active-nav');
-            document.getElementById('sidebar-settings').classList.remove('active-nav');
-            document.getElementById('bot-config-nav').classList.add('active-nav');
             document.getElementById('settings-frame').src = "bot-config.html";
         }
 
         function loadGeneralSettings() {
             document.getElementById('main-dashboard-content').classList.add('hidden');
             document.getElementById('bot-settings-area').classList.remove('hidden');
-            document.getElementById('right-panel').classList.add('hidden');
-            document.getElementById('inbox-nav').classList.remove('active-nav');
-            document.getElementById('bot-config-nav').classList.remove('active-nav');
-            document.getElementById('sidebar-settings').classList.add('active-nav');
             document.getElementById('settings-frame').src = "general-settings.html";
         }
 
-        function showImagePreview(url) {
-            const modal = document.getElementById('imagePreviewModal');
-            document.getElementById('previewImg').src = url;
-            modal.style.display = 'flex';
-        }
-
-        function closeImagePreview() {
-            document.getElementById('imagePreviewModal').style.display = 'none';
-        }
-
+        // Messaging Logic
         async function loadContacts() {
-            try {
-                const res = await fetch('/api/contacts');
-                cachedContacts = await res.json();
-                renderContacts(cachedContacts);
-            } catch (err) { console.error(err); }
-        }
-
-        function filterContacts(platform) {
-            let filtered;
-            const title = document.getElementById('inbox-title');
-            if (platform === 'all') {
-                filtered = cachedContacts;
-                title.innerText = "Inbox";
-            } else {
-                filtered = cachedContacts.filter(c => c.platform.toLowerCase() === platform.toLowerCase());
-                title.innerText = platform.toUpperCase();
-            }
-            renderContacts(filtered);
+            const res = await fetch('/api/contacts');
+            cachedContacts = await res.json();
+            renderContacts(cachedContacts);
         }
 
         function renderContacts(contacts) {
             const container = document.getElementById('contacts-container');
             container.innerHTML = '';
             contacts.forEach(c => {
-                const count = unreadCounts[c.chat_id] || 0;
                 const item = document.createElement('div');
-                item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
+                item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition ${currentChatId === c.chat_id ? 'active-contact' : 'hover:bg-black/20'}`;
                 item.onclick = () => selectContact(c);
-                const avatar = c.profile_pic ? `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` : `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray uppercase">${(c.nickname || c.first_name || "?").charAt(0)}</div>`;
                 item.innerHTML = `
-                    ${avatar}
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-bold truncate ${count > 0 ? 'text-white' : 'text-gray-400'}">${c.nickname || c.first_name}</p>
-                        <p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p>
+                    <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold uppercase overflow-hidden">
+                        ${c.profile_pic ? `<img src="${c.profile_pic}" class="w-full h-full object-cover">` : (c.nickname || "?").charAt(0)}
                     </div>
-                    ${count > 0 ? `<span class="bg-accent-blue text-[10px] w-5 h-5 flex items-center justify-center rounded-full text-white noti-badge font-bold">${count}</span>` : ''}
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold truncate">${c.nickname || c.first_name}</p>
+                        <p class="text-[10px] text-gray-500 uppercase">${c.platform}</p>
+                    </div>
                 `;
                 container.appendChild(item);
             });
-            updateGlobalBadge();
         }
 
         function selectContact(contact) {
             currentChatId = contact.chat_id;
-            unreadCounts[currentChatId] = 0; 
-            const displayName = contact.nickname || contact.first_name;
-            document.getElementById('chat-header-name').innerText = displayName;
-            document.getElementById('edit-nickname').value = displayName;
+            document.getElementById('chat-header-name').innerText = contact.nickname || contact.first_name;
+            document.getElementById('edit-nickname').value = contact.nickname || contact.first_name;
             document.getElementById('contact-note').value = contact.notes || "";
-            document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
-            
-            const hImg = document.getElementById('header-avatar-img');
-            const hTxt = document.getElementById('header-avatar-text');
-            const sImg = document.getElementById('side-avatar-img');
-            const sTxt = document.getElementById('side-avatar-text');
-            
-            if(contact.profile_pic) {
-                hImg.src = contact.profile_pic; hImg.classList.remove('hidden'); hTxt.classList.add('hidden');
-                sImg.src = contact.profile_pic; sImg.classList.remove('hidden'); sTxt.classList.add('hidden');
-            } else {
-                const initial = (displayName || "?").charAt(0);
-                hTxt.innerText = initial; hTxt.classList.remove('hidden'); hImg.classList.add('hidden');
-                sTxt.innerText = initial; sTxt.classList.remove('hidden'); sImg.classList.add('hidden');
-            }
-            
-            document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
-            document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase font-bold";
-            
-            renderContacts(cachedContacts); 
             renderMessages();
-        }
-
-        function updateGlobalBadge() {
-            const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
-            const badge = document.getElementById('global-msg-count');
-            const bell = document.getElementById('noti-bell');
-            if (total > 0) {
-                badge.innerText = total; badge.classList.remove('hidden');
-                bell.classList.remove('hidden'); bell.classList.add('ring-animation', 'text-yellow-400');
-            } else {
-                badge.classList.add('hidden'); bell.classList.add('hidden');
-                bell.classList.remove('ring-animation', 'text-yellow-400');
-            }
+            renderContacts(cachedContacts);
         }
 
         async function loadHistory() {
-            try {
-                const response = await fetch('/api/messages');
-                allMessages = await response.json();
-                if(currentChatId) renderMessages();
-            } catch (err) { console.error(err); }
+            const res = await fetch('/api/messages');
+            allMessages = await res.json();
+            if(currentChatId) renderMessages();
         }
 
         function renderMessages() {
             const win = document.getElementById('chat-window');
             win.innerHTML = "";
-            const filtered = allMessages.filter(m => m.chat_id === currentChatId);
-            filtered.forEach(msg => appendMessage(msg, msg.sender_type === 'bot'));
-            win.scrollTo({ top: win.scrollHeight, behavior: 'auto' });
-        }
-
-        function appendMessage(data, isBot) {
-            const win = document.getElementById('chat-window');
-            let contentHtml = data.text || "";
-            let mediaUrl = data.file_url || data.fileUrl;
-            const mediaType = data.file_type || data.fileType || "";
-
-            // (FIX) Chat Window ထဲတွင် Image URL များ မှန်ကန်စွာ ပေါ်စေရန်
-            if (mediaUrl) {
-                // Base64 မဟုတ်ခဲ့ရင် uploads path ထည့်ပေးဖို့ စစ်ဆေးခြင်း
-                if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) {
-                    mediaUrl = `/uploads/${mediaUrl}`;
-                }
-
-                if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
-                    contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md hover:opacity-80 transition" onclick="showImagePreview('${mediaUrl}')" onerror="this.src='https://placehold.co/200x200?text=Image+Not+Found'">`;
-                } else if (mediaType.includes('video')) {
-                    contentHtml = `<video controls class="max-w-xs rounded-lg mt-2 border border-border-gray shadow-md"><source src="${mediaUrl}"></video>`;
-                } else if (mediaType.includes('audio')) {
-                    contentHtml = `<audio controls class="mt-2 w-full max-w-[240px]"><source src="${mediaUrl}"></audio>`;
-                }
-                if(data.text && !data.text.includes("Sent an image")) contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
-            }
-
-            const msgHtml = isBot ? `
-                <div class="self-end max-w-[75%]">
-                    <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
-                    <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
-                </div>
-            ` : `
-                <div class="flex items-start gap-3 max-w-[75%]">
-                    <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-border-gray bg-gray-900 flex items-center justify-center text-[10px]">
-                        ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover">` : `<i class="fas fa-user text-gray-500"></i>`}
+            allMessages.filter(m => m.chat_id === currentChatId).forEach(msg => {
+                const isBot = msg.sender_type === 'bot';
+                const msgHtml = `
+                    <div class="${isBot ? 'self-end bg-accent-blue' : 'self-start bg-gray-800'} p-3 rounded-2xl max-w-[75%] text-sm">
+                        ${msg.text || ''}
+                        ${msg.file_url ? `<img src="/uploads/${msg.file_url}" class="mt-2 rounded-lg max-w-full">` : ''}
                     </div>
-                    <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
-                        <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>${contentHtml}
-                    </div>
-                </div>
-            `;
-            win.insertAdjacentHTML('beforeend', msgHtml);
-            win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' });
+                `;
+                win.insertAdjacentHTML('beforeend', msgHtml);
+            });
+            win.scrollTop = win.scrollHeight;
         }
-
-        async function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file || !currentChatId) return alert("Select a chat first!");
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('chatId', currentChatId);
-            try {
-                const response = await fetch('/api/upload', { method: 'POST', body: formData });
-                if (response.ok) event.target.value = ""; else alert("Upload failed!");
-            } catch (err) { alert("Error connecting to server."); }
-        }
-
-        socket.on('new_message', (data) => {
-            const senderId = data.chat_id || data.chatId;
-            // id မပါရင်လည်း update ဖြစ်အောင် စစ်ဆေးမှု လျှော့ချထားသည်
-            allMessages.push(data);
-            if (currentChatId === senderId) {
-                appendMessage(data, data.sender_type === 'bot');
-            } else {
-                unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-                document.getElementById('notif-sound').play().catch(() => {});
-                renderContacts(cachedContacts);
-            }
-        });
 
         function sendMessage() {
             const input = document.getElementById('user-input');
-            const text = input.value.trim();
-            if(text !== "" && currentChatId !== "") {
-                socket.emit('send_reply', { chatId: currentChatId, text: text });
-                input.value = ""; 
-                unreadCounts[currentChatId] = 0;
-            } else if (!currentChatId) alert("Please select a contact first.");
+            if(input.value.trim() && currentChatId) {
+                socket.emit('send_reply', { chatId: currentChatId, text: input.value });
+                input.value = "";
+            }
         }
 
-        async function updateNickname() {
-            if (!currentChatId) return;
-            const newName = document.getElementById('edit-nickname').value;
-            await fetch('/api/contacts/nickname', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, nickname: newName }) });
+        socket.on('new_message', (data) => {
+            allMessages.push(data);
+            if(data.chat_id === currentChatId) renderMessages();
+            else {
+                document.getElementById('notif-sound').play().catch(()=>{});
+                loadContacts();
+            }
+        });
+
+        function handleKeyPress(e) { if(e.key === 'Enter') sendMessage(); }
+
+        window.onload = () => {
+            applyAppearanceSettings(); // Dark mode check
+            loadSystemSettings();
             loadContacts();
-        }
-
-        async function saveNote() {
-            if (!currentChatId) return;
-            const noteValue = document.getElementById('contact-note').value;
-            await fetch('/api/contacts/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, note: noteValue }) });
-        }
-
-        async function toggleBlock() {
-            if (!currentChatId || !confirm("Block this customer?")) return;
-            await fetch('/api/contacts/block', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId }) });
-            location.reload();
-        }
-
-        async function deleteContact() {
-            if (!currentChatId || !confirm("Delete this conversation?")) return;
-            await fetch(`/api/contacts/${currentChatId}`, { method: 'DELETE' });
-            location.reload();
-        }
-
-        function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
-        
-        window.onload = () => { 
-            loadSystemSettings(); 
-            loadContacts(); 
-            loadHistory(); 
+            loadHistory();
         };
     </script>
 </body>
