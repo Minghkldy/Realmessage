@@ -256,12 +256,20 @@
             try {
                 const res = await fetch('/api/admin/profile');
                 const data = await res.json();
-                if (data.nickname) document.getElementById('top-admin-name').innerText = data.nickname;
+                
+                if (data.nickname) {
+                    document.getElementById('top-admin-name').innerText = data.nickname;
+                }
+                
                 const el = document.getElementById('top-admin-avatar');
                 if (el && data.avatar) {
-                    el.src = (data.avatar.startsWith('data:') || data.avatar.startsWith('http')) ? data.avatar : `/uploads/${data.avatar}`;
+                    if (data.avatar.startsWith('data:image') || data.avatar.startsWith('http')) {
+                        el.src = data.avatar;
+                    } else {
+                        el.src = `/uploads/${data.avatar}`;
+                    }
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Error loading settings:", e); }
         }
 
         function toggleLeftSidebar() { 
@@ -275,7 +283,9 @@
             }
         }
         
-        function toggleRightPanel() { document.getElementById('right-panel').classList.toggle('hidden'); }
+        function toggleRightPanel() { 
+            document.getElementById('right-panel').classList.toggle('hidden'); 
+        }
         
         function toggleDropdown() {
             const sidebar = document.getElementById('left-sidebar');
@@ -283,11 +293,15 @@
             const dropdown = document.getElementById('messenger-dropdown');
             const arrow = document.getElementById('arrow-icon');
             if (dropdown.classList.contains('hidden')) {
-                dropdown.classList.remove('hidden'); dropdown.classList.add('flex');
+                dropdown.classList.remove('hidden');
+                dropdown.classList.add('flex');
                 setTimeout(() => dropdown.classList.add('show'), 10);
             } else {
                 dropdown.classList.remove('show');
-                setTimeout(() => { dropdown.classList.remove('flex'); dropdown.classList.add('hidden'); }, 300);
+                setTimeout(() => {
+                    dropdown.classList.remove('flex');
+                    dropdown.classList.add('hidden');
+                }, 300);
             }
             arrow.classList.toggle('rotate-arrow');
         }
@@ -296,29 +310,54 @@
             document.getElementById('main-dashboard-content').classList.remove('hidden');
             document.getElementById('bot-settings-area').classList.add('hidden');
             document.getElementById('inbox-nav').classList.add('active-nav');
-            ['bot-config-nav', 'broadcast-nav', 'sidebar-settings'].forEach(id => document.getElementById(id).classList.remove('active-nav'));
+            document.getElementById('bot-config-nav').classList.remove('active-nav');
+            document.getElementById('broadcast-nav').classList.remove('active-nav');
+            document.getElementById('sidebar-settings').classList.remove('active-nav');
             filterContacts('all');
         }
 
-        function loadBotSettings() { setupFrame("bot-config.html", 'bot-config-nav'); }
-        function loadBroadcastSettings() { setupFrame("broadcast.html", 'broadcast-nav'); }
-        function loadGeneralSettings() { setupFrame("general-settings.html", 'sidebar-settings'); }
-
-        function setupFrame(url, navId) {
+        function loadBotSettings() {
             document.getElementById('main-dashboard-content').classList.add('hidden');
             document.getElementById('bot-settings-area').classList.remove('hidden');
             document.getElementById('right-panel').classList.add('hidden');
-            ['inbox-nav', 'bot-config-nav', 'broadcast-nav', 'sidebar-settings'].forEach(id => {
-                document.getElementById(id).classList.toggle('active-nav', id === navId);
-            });
-            document.getElementById('settings-frame').src = url;
+            document.getElementById('inbox-nav').classList.remove('active-nav');
+            document.getElementById('sidebar-settings').classList.remove('active-nav');
+            document.getElementById('broadcast-nav').classList.remove('active-nav');
+            document.getElementById('bot-config-nav').classList.add('active-nav');
+            document.getElementById('settings-frame').src = "bot-config.html";
+        }
+
+        function loadBroadcastSettings() {
+            document.getElementById('main-dashboard-content').classList.add('hidden');
+            document.getElementById('bot-settings-area').classList.remove('hidden');
+            document.getElementById('right-panel').classList.add('hidden');
+            document.getElementById('inbox-nav').classList.remove('active-nav');
+            document.getElementById('sidebar-settings').classList.remove('active-nav');
+            document.getElementById('bot-config-nav').classList.remove('active-nav');
+            document.getElementById('broadcast-nav').classList.add('active-nav');
+            document.getElementById('settings-frame').src = "broadcast.html";
+        }
+
+        function loadGeneralSettings() {
+            document.getElementById('main-dashboard-content').classList.add('hidden');
+            document.getElementById('bot-settings-area').classList.remove('hidden');
+            document.getElementById('right-panel').classList.add('hidden');
+            document.getElementById('inbox-nav').classList.remove('active-nav');
+            document.getElementById('bot-config-nav').classList.remove('active-nav');
+            document.getElementById('broadcast-nav').classList.remove('active-nav');
+            document.getElementById('sidebar-settings').classList.add('active-nav');
+            document.getElementById('settings-frame').src = "general-settings.html";
         }
 
         function showImagePreview(url) {
+            const modal = document.getElementById('imagePreviewModal');
             document.getElementById('previewImg').src = url;
-            document.getElementById('imagePreviewModal').style.display = 'flex';
+            modal.style.display = 'flex';
         }
-        function closeImagePreview() { document.getElementById('imagePreviewModal').style.display = 'none'; }
+
+        function closeImagePreview() {
+            document.getElementById('imagePreviewModal').style.display = 'none';
+        }
 
         async function loadContacts() {
             try {
@@ -329,9 +368,15 @@
         }
 
         function filterContacts(platform) {
+            let filtered;
             const title = document.getElementById('inbox-title');
-            let filtered = (platform === 'all') ? cachedContacts : cachedContacts.filter(c => c.platform.toLowerCase() === platform.toLowerCase());
-            title.innerText = (platform === 'all') ? "Inbox" : platform.toUpperCase();
+            if (platform === 'all') {
+                filtered = cachedContacts;
+                title.innerText = "Inbox";
+            } else {
+                filtered = cachedContacts.filter(c => c.platform.toLowerCase() === platform.toLowerCase());
+                title.innerText = platform.toUpperCase();
+            }
             renderContacts(filtered);
         }
 
@@ -339,10 +384,9 @@
             const container = document.getElementById('contacts-container');
             container.innerHTML = '';
             contacts.forEach(c => {
-                const cid = String(c.chat_id);
-                const count = unreadCounts[cid] || 0;
+                const count = unreadCounts[c.chat_id] || 0;
                 const item = document.createElement('div');
-                item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${String(currentChatId) === cid ? 'active-contact' : ''}`;
+                item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
                 item.onclick = () => selectContact(c);
                 const avatar = c.profile_pic ? `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` : `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray uppercase">${(c.nickname || c.first_name || "?").charAt(0)}</div>`;
                 item.innerHTML = `
@@ -359,7 +403,7 @@
         }
 
         function selectContact(contact) {
-            currentChatId = String(contact.chat_id);
+            currentChatId = contact.chat_id;
             unreadCounts[currentChatId] = 0; 
             const displayName = contact.nickname || contact.first_name;
             document.getElementById('chat-header-name').innerText = displayName;
@@ -381,9 +425,8 @@
                 sTxt.innerText = initial; sTxt.classList.remove('hidden'); sImg.classList.add('hidden');
             }
             
-            const status = document.getElementById('chat-status');
-            status.innerText = `${contact.platform} ACTIVE`;
-            status.className = "text-[10px] text-green-500 uppercase font-bold";
+            document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
+            document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase font-bold";
             
             renderContacts(cachedContacts); 
             renderMessages();
@@ -413,7 +456,7 @@
         function renderMessages() {
             const win = document.getElementById('chat-window');
             win.innerHTML = "";
-            const filtered = allMessages.filter(m => String(m.chat_id) === String(currentChatId));
+            const filtered = allMessages.filter(m => m.chat_id === currentChatId);
             filtered.forEach(msg => appendMessage(msg, msg.sender_type === 'bot'));
             win.scrollTo({ top: win.scrollHeight, behavior: 'auto' });
         }
@@ -425,7 +468,10 @@
             const mediaType = data.file_type || data.fileType || "";
 
             if (mediaUrl) {
-                if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) mediaUrl = `/uploads/${mediaUrl}`;
+                if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) {
+                    mediaUrl = `/uploads/${mediaUrl}`;
+                }
+
                 if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
                     contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md hover:opacity-80 transition" onclick="showImagePreview('${mediaUrl}')" onerror="this.src='https://placehold.co/200x200?text=Image+Not+Found'">`;
                 } else if (mediaType.includes('video')) {
@@ -468,9 +514,9 @@
         }
 
         socket.on('new_message', (data) => {
-            const senderId = String(data.chat_id || data.chatId);
+            const senderId = data.chat_id || data.chatId;
             allMessages.push(data);
-            if (String(currentChatId) === senderId) {
+            if (currentChatId === senderId) {
                 appendMessage(data, data.sender_type === 'bot');
             } else {
                 unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
@@ -484,7 +530,8 @@
             const text = input.value.trim();
             if(text !== "" && currentChatId !== "") {
                 socket.emit('send_reply', { chatId: currentChatId, text: text });
-                input.value = ""; unreadCounts[currentChatId] = 0;
+                input.value = ""; 
+                unreadCounts[currentChatId] = 0;
             } else if (!currentChatId) alert("Please select a contact first.");
         }
 
