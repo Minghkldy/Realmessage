@@ -85,13 +85,13 @@
         <img id="previewImg" src="" onclick="event.stopPropagation()">
     </div>
 
-    <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray">
+    <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray z-20">
         <div class="text-2xl font-bold text-accent-blue px-6 mb-10 cursor-pointer flex items-center" onclick="toggleLeftSidebar()">
             <i class="fas fa-robot w-6 text-center"></i>
             <span class="nav-text ml-3">OmniBot</span>
         </div>
         
-        <nav class="flex flex-col w-full">
+        <nav class="flex flex-col w-full flex-1">
             <div class="w-full">
                 <div class="nav-item active-nav" id="inbox-nav" onclick="switchToInbox()">
                     <i class="fas fa-th-large text-xl w-6 text-center"></i>
@@ -137,10 +137,10 @@
         </div>
     </div>
 
-    <div id="main-dashboard-content" class="flex flex-1 flex-col">
-        <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between bg-dark-gray">
+    <div id="main-dashboard-content" class="flex flex-1 flex-col min-w-0">
+        <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between bg-dark-gray z-10">
             <div class="flex items-center gap-4">
-                <button onclick="toggleLeftSidebar()" class="text-gray-500 hover:text-white transition md:hidden">
+                <button onclick="toggleLeftSidebar()" class="text-gray-500 hover:text-white transition lg:hidden">
                     <i class="fas fa-bars"></i>
                 </button>
             </div>
@@ -153,52 +153,50 @@
                 <div class="relative">
                     <img id="top-admin-avatar" src="https://ui-avatars.com/api/?name=Admin&background=random" 
                          class="w-9 h-9 rounded-full border border-white/10 object-cover">
-                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-[#000] rounded-full"></div>
+                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-pure-black rounded-full"></div>
                 </div>
             </div>
         </div>
 
         <div class="flex flex-1 overflow-hidden">
-            <div id="chat-list-container" class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black">
+            <div id="chat-list-container" class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black hidden md:flex">
                 <div class="p-6 border-b border-border-gray flex justify-between items-center">
                     <div class="flex items-center gap-3">
-                        <div class="flex items-center gap-2">
-                            <h2 id="inbox-title" class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
-                            <i id="noti-bell" class="fas fa-bell text-gray-500 hidden text-xs"></i>
-                        </div>
+                        <h2 id="inbox-title" class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
+                        <i id="noti-bell" class="fas fa-bell text-gray-500 hidden text-xs"></i>
                     </div>
-                    <span id="global-msg-count" class="hidden bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white noti-badge">0</span>
+                    <span id="global-msg-count" class="hidden bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white noti-badge font-bold">0</span>
                 </div>
                 <div id="contact-list" class="flex-1 overflow-y-auto p-2">
                     <div id="contacts-container" class="space-y-1"></div>
                 </div>
             </div>
 
-            <div class="flex-1 flex flex-col bg-pure-black relative">
+            <div class="flex-1 flex flex-col bg-pure-black relative min-w-0">
                 <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between bg-pure-black">
-                    <div class="flex items-center gap-3">
-                        <div id="header-avatar-container">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div id="header-avatar-container" class="flex-shrink-0">
                             <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden border border-border-gray object-cover" src="">
                             <div id="header-avatar-text" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs uppercase text-white">?</div>
                         </div>
-                        <div>
-                            <h3 id="chat-header-name" class="text-sm font-bold">Select a chat</h3>
+                        <div class="truncate">
+                            <h3 id="chat-header-name" class="text-sm font-bold truncate">Select a chat</h3>
                             <p id="chat-status" class="text-[10px] text-gray-600 uppercase">System Ready</p>
                         </div>
                     </div>
-                    <button onclick="toggleRightPanel()" class="text-gray-500 hover:text-white transition p-2">
+                    <button onclick="toggleRightPanel()" class="text-gray-500 hover:text-white transition p-2 flex-shrink-0">
                         <i class="fas fa-user-circle text-xl"></i>
                     </button>
                 </div>
 
-                <div id="chat-window" class="flex-1 overflow-y-auto p-8 space-y-6 flex flex-col"></div>
+                <div id="chat-window" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 flex flex-col scroll-smooth"></div>
 
-                <div class="p-6 border-t border-border-gray bg-pure-black">
+                <div class="p-4 md:p-6 border-t border-border-gray bg-pure-black">
                     <div class="flex items-center gap-4 bg-dark-gray border border-border-gray rounded-2xl px-5 py-3 focus-within:border-accent-blue transition">
                         <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)" accept="image/*,video/*,audio/*">
                         <i class="fas fa-paperclip text-gray-500 cursor-pointer hover:text-white" onclick="document.getElementById('file-input').click()"></i>
-                        <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Reply here..." class="bg-transparent flex-1 outline-none text-sm text-white">
-                        <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition">
+                        <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Reply here..." class="bg-transparent flex-1 outline-none text-sm text-white min-w-0">
+                        <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition flex-shrink-0">
                             <i class="fas fa-paper-plane text-lg"></i>
                         </button>
                     </div>
@@ -211,7 +209,7 @@
         <iframe src="bot-config.html" id="settings-frame" class="w-full h-full border-none"></iframe>
     </div>
 
-    <div id="right-panel" class="hidden w-80 border-l border-border-gray bg-dark-gray flex flex-col p-6 space-y-8 overflow-y-auto">
+    <div id="right-panel" class="hidden w-80 border-l border-border-gray bg-dark-gray flex flex-col p-6 space-y-8 overflow-y-auto z-10">
         <div class="text-center space-y-4 pt-4">
             <div class="relative inline-block">
                 <div id="side-avatar-text" class="w-24 h-24 bg-accent-blue rounded-full mx-auto flex items-center justify-center text-3xl font-bold border-4 border-pure-black uppercase">?</div>
@@ -249,32 +247,22 @@
         let unreadCounts = {};
         let cachedContacts = []; 
 
-        // Admin Profile ကို Database မှ ခေါ်ယူပြသရန် (Header သီးသန့်)
         async function loadSystemSettings() {
             try {
                 const res = await fetch('/api/settings');
                 const data = await res.json();
-                
-                // Website Name (ညာဘက် Header Admin Name နေရာတွင်ပဲ ပြောင်းမည်)
-                if (data.site_name) {
-                    document.getElementById('top-admin-name').innerText = data.site_name;
-                }
-                
-                // Admin Avatar (ညာဘက် Header Admin Image)
+                if (data.site_name) document.getElementById('top-admin-name').innerText = data.site_name;
                 if (data.admin_avatar_url) {
                     document.getElementById('top-admin-avatar').src = data.admin_avatar_url;
                 } else if (data.site_name) {
                     document.getElementById('top-admin-avatar').src = `https://ui-avatars.com/api/?name=${data.site_name}&background=random`;
                 }
-            } catch (e) {
-                console.error("Error loading settings:", e);
-            }
+            } catch (e) { console.error("Error loading settings:", e); }
         }
 
         function toggleLeftSidebar() { 
             const sidebar = document.getElementById('left-sidebar');
             sidebar.classList.toggle('sidebar-collapsed'); 
-            
             if(sidebar.classList.contains('sidebar-collapsed')) {
                 const dropdown = document.getElementById('messenger-dropdown');
                 dropdown.classList.remove('show');
@@ -284,19 +272,14 @@
         }
         
         function toggleRightPanel() { 
-            const panel = document.getElementById('right-panel');
-            panel.classList.toggle('hidden'); 
+            document.getElementById('right-panel').classList.toggle('hidden'); 
         }
         
         function toggleDropdown() {
             const sidebar = document.getElementById('left-sidebar');
-            if(sidebar.classList.contains('sidebar-collapsed')) {
-                toggleLeftSidebar();
-            }
-
+            if(sidebar.classList.contains('sidebar-collapsed')) toggleLeftSidebar();
             const dropdown = document.getElementById('messenger-dropdown');
             const arrow = document.getElementById('arrow-icon');
-
             if (dropdown.classList.contains('hidden')) {
                 dropdown.classList.remove('hidden');
                 dropdown.classList.add('flex');
@@ -342,8 +325,7 @@
 
         function showImagePreview(url) {
             const modal = document.getElementById('imagePreviewModal');
-            const img = document.getElementById('previewImg');
-            img.src = url;
+            document.getElementById('previewImg').src = url;
             modal.style.display = 'flex';
         }
 
