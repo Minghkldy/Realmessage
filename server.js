@@ -62,7 +62,6 @@ const initDb = async () => {
             )
         `);
 
-        // table ရှိပြီးသားဖြစ်နေရင် is_read column တိုးပေးရန်
         await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false`);
 
         await pool.query(`
@@ -72,7 +71,7 @@ const initDb = async () => {
             )
         `);
         
-        console.log("✅ Database structure is ready with Read Status support.");
+        console.log("✅ Database structure ready with Time & Read Status support.");
     } catch (err) {
         console.error("❌ DB Init Error:", err.message);
     }
@@ -92,12 +91,13 @@ async function getTelegramProfilePic(userId, token) {
     return `https://ui-avatars.com/api/?name=User&background=random`;
 }
 
-// ၃။ Unified Message Handler
+// ၃။ Unified Message Handler (Viber-style logic ပါဝင်သည်)
 async function handleIncomingMessage(payload) {
     const { sender, text, platform, chatId, profilePic, fileUrl, fileType } = payload;
     try {
+        // User ဆီက စာဝင်လာရင် Admin ပို့ထားသမျှစာတွေကို Read (Seen) ဖြစ်အောင်လုပ်မယ်
         await pool.query("UPDATE messages SET is_read = true WHERE chat_id = $1 AND sender_type = 'bot'", [chatId]);
-        io.emit('messages_read', { chatId });
+        io.emit('messages_read', { chatId, role: 'bot' });
 
         await pool.query(`
             INSERT INTO contacts (chat_id, first_name, profile_pic, platform) 
@@ -106,8 +106,9 @@ async function handleIncomingMessage(payload) {
             [chatId, sender, profilePic, platform]
         );
 
+        // စာဝင်ချိန်ကို HH:MI AM format အဖြစ် သိမ်းဆည်းပြီး socket မှတစ်ဆင့် ပို့ဆောင်ပေးခြင်း
         const msgRes = await pool.query(
-            "INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time",
+            "INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time",
             [sender, text, platform, chatId, 'user', fileUrl, fileType]
         );
 
@@ -152,7 +153,6 @@ app.get('/api/admin/profile', async (req, res) => {
 
 app.get('/api/messages', async (req, res) => {
     try {
-        // ID နဲ့ သေချာ Sort လုပ်ထားခြင်းဖြင့် Dashboard ပေါ်မှာ စဉ်စီလျက်ပြပါလိမ့်မယ်
         const result = await pool.query("SELECT *, TO_CHAR(created_at, 'HH12:MI AM') as time FROM messages ORDER BY id ASC");
         res.json(result.rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -168,8 +168,9 @@ app.get('/api/contacts', async (req, res) => {
 app.post('/api/messages/read', async (req, res) => {
     const { chatId } = req.body;
     try {
-        await pool.query("UPDATE messages SET is_read = true WHERE chat_id = $1 AND sender_type = 'bot'", [chatId]);
-        io.emit('messages_read', { chatId });
+        // Admin က API ကနေတစ်ဆင့် ဖတ်လိုက်ရင် 'Seen' လုပ်ပေးခြင်း
+        await pool.query("UPDATE messages SET is_read = true WHERE chat_id = $1 AND sender_type = 'user'", [chatId]);
+        io.emit('messages_read', { chatId, role: 'user' });
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -246,6 +247,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'admin_nickname'");
         const adminName = settingsRes.rows[0]?.value || 'OmniBot';
 
+        // Image ပို့ချိန်မှာလည်း format ပါအောင်ယူမယ်
         const msgRes = await pool.query(
             "INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time",
             [adminName, `Sent an image`, platform, chatId, 'bot', base64File, 'image']
@@ -346,8 +348,17 @@ app.post('/webhook/telegram', async (req, res) => {
     res.sendStatus(200);
 });
 
-// --- Socket.io Logic ---
+// --- Socket.io Logic (Viber System Updates) ---
 io.on('connection', (socket) => {
+    // Admin ဘက်က Chat တစ်ခုဖွင့်လိုက်ရင် အဲဒီ user ဆီကစာတွေကို 'Seen' လို့ပြောင်းမယ်
+    socket.on('mark_as_read', async (data) => {
+        try {
+            const { chatId } = data;
+            await pool.query("UPDATE messages SET is_read = true WHERE chat_id = $1 AND sender_type = 'user'", [chatId]);
+            io.emit('messages_read', { chatId, role: 'user' });
+        } catch (e) { console.error("Socket Read Error"); }
+    });
+
     socket.on('send_reply', async (data) => {
         try {
             const contactRes = await pool.query('SELECT platform FROM contacts WHERE chat_id = $1', [data.chatId]);
@@ -363,6 +374,7 @@ io.on('connection', (socket) => {
                 await axios.post(`https://api.telegram.org/bot${tokens.telegram_token}/sendMessage`, { chat_id: data.chatId, text: data.text });
             }
 
+            // စာပို့ချိန်ကို HH:MI AM နဲ့ယူပြီး 'Sent' (false) အဖြစ်အရင်သိမ်းမယ်
             const msgRes = await pool.query("INSERT INTO messages (sender, text, platform, chat_id, sender_type, is_read) VALUES ($1, $2, $3, $4, $5, false) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time", 
                 [adminName, data.text, platform, data.chatId, 'bot']);
 
@@ -372,4 +384,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Viber-style Server running on port ${PORT}`));
