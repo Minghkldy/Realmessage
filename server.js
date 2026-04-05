@@ -106,9 +106,9 @@ async function handleIncomingMessage(payload) {
             [chatId, sender, profilePic, platform]
         );
 
-        // စာဝင်ချိန်ကို HH:MI AM format အဖြစ် သိမ်းဆည်းပြီး socket မှတစ်ဆင့် ပို့ဆောင်ပေးခြင်း
+        // စာဝင်ချိန်ကို Asia/Yangon timezone ပြောင်းပြီးမှ HH:MI AM format နဲ့ ယူခြင်း
         const msgRes = await pool.query(
-            "INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time",
+            "INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time",
             [sender, text, platform, chatId, 'user', fileUrl, fileType]
         );
 
@@ -126,7 +126,7 @@ async function handleIncomingMessage(payload) {
                 await axios.post(`https://api.telegram.org/bot${settingsMap['telegram_token']}/sendMessage`, { chat_id: chatId, text: replyText });
             }
 
-            const autoMsg = await pool.query("INSERT INTO messages (sender, text, platform, chat_id, sender_type, is_read) VALUES ($1, $2, $3, $4, $5, false) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time", 
+            const autoMsg = await pool.query("INSERT INTO messages (sender, text, platform, chat_id, sender_type, is_read) VALUES ($1, $2, $3, $4, $5, false) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time", 
                 [adminName, replyText, platform, chatId, 'bot']);
             
             io.emit('new_message', autoMsg.rows[0]);
@@ -153,7 +153,7 @@ app.get('/api/admin/profile', async (req, res) => {
 
 app.get('/api/messages', async (req, res) => {
     try {
-        const result = await pool.query("SELECT *, TO_CHAR(created_at, 'HH12:MI AM') as time FROM messages ORDER BY id ASC");
+        const result = await pool.query("SELECT *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time FROM messages ORDER BY id ASC");
         res.json(result.rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -168,7 +168,6 @@ app.get('/api/contacts', async (req, res) => {
 app.post('/api/messages/read', async (req, res) => {
     const { chatId } = req.body;
     try {
-        // Admin က API ကနေတစ်ဆင့် ဖတ်လိုက်ရင် 'Seen' လုပ်ပေးခြင်း
         await pool.query("UPDATE messages SET is_read = true WHERE chat_id = $1 AND sender_type = 'user'", [chatId]);
         io.emit('messages_read', { chatId, role: 'user' });
         res.json({ success: true });
@@ -247,9 +246,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'admin_nickname'");
         const adminName = settingsRes.rows[0]?.value || 'OmniBot';
 
-        // Image ပို့ချိန်မှာလည်း format ပါအောင်ယူမယ်
         const msgRes = await pool.query(
-            "INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time",
+            "INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time",
             [adminName, `Sent an image`, platform, chatId, 'bot', base64File, 'image']
         );
 
@@ -300,7 +298,7 @@ app.post('/api/broadcast', upload.single('file'), async (req, res) => {
                     }
                 }
 
-                const msgRes = await pool.query("INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time",
+                const msgRes = await pool.query("INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time",
                     [adminName, text || "Sent an image", contact.platform, contact.chat_id, 'bot', base64File, file ? 'image' : null]);
 
                 io.emit('new_message', msgRes.rows[0]);
@@ -348,9 +346,8 @@ app.post('/webhook/telegram', async (req, res) => {
     res.sendStatus(200);
 });
 
-// --- Socket.io Logic (Viber System Updates) ---
+// --- Socket.io Logic ---
 io.on('connection', (socket) => {
-    // Admin ဘက်က Chat တစ်ခုဖွင့်လိုက်ရင် အဲဒီ user ဆီကစာတွေကို 'Seen' လို့ပြောင်းမယ်
     socket.on('mark_as_read', async (data) => {
         try {
             const { chatId } = data;
@@ -374,8 +371,7 @@ io.on('connection', (socket) => {
                 await axios.post(`https://api.telegram.org/bot${tokens.telegram_token}/sendMessage`, { chat_id: data.chatId, text: data.text });
             }
 
-            // စာပို့ချိန်ကို HH:MI AM နဲ့ယူပြီး 'Sent' (false) အဖြစ်အရင်သိမ်းမယ်
-            const msgRes = await pool.query("INSERT INTO messages (sender, text, platform, chat_id, sender_type, is_read) VALUES ($1, $2, $3, $4, $5, false) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time", 
+            const msgRes = await pool.query("INSERT INTO messages (sender, text, platform, chat_id, sender_type, is_read) VALUES ($1, $2, $3, $4, $5, false) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time", 
                 [adminName, data.text, platform, data.chatId, 'bot']);
 
             io.emit('new_message', msgRes.rows[0]);
@@ -384,4 +380,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 Viber-style Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
