@@ -3,96 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bot Settings</title>
+    <title>General Settings</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background-color: #050505; color: white; }
+        body { background-color: #050505; color: white; font-family: 'Inter', sans-serif; }
         .glass-card {
             background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            border-radius: 16px;
         }
+        .ios-switch:checked ~ .dot { transform: translateX(100%); background-color: #3b82f6; }
     </style>
 </head>
-<body class="flex min-h-screen">
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">Website Settings</h1>
 
-    <div class="flex-1 p-8">
-        <div class="flex items-center mb-8">
-            <button onclick="window.history.back()" class="p-2 bg-gray-900 rounded-full mr-4 hover:bg-gray-800">
-                <i class="fas fa-arrow-left"></i>
+        <div class="space-y-6">
+            <div class="glass-card p-6">
+                <h2 class="text-lg font-semibold mb-4 text-blue-400"><i class="fas fa-globe mr-2"></i> Site Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Website Name</label>
+                        <input type="text" id="site_name" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none focus:border-blue-500" placeholder="e.g. OmniBot Dashboard">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Admin Nickname</label>
+                        <input type="text" id="admin_nickname" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Your Nickname">
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-6">
+                <h2 class="text-lg font-semibold mb-4 text-purple-400"><i class="fas fa-paint-brush mr-2"></i> Appearance</h2>
+                <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                    <span>Dark Mode Always On</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked class="sr-only ios-switch">
+                        <div class="w-11 h-6 bg-gray-700 rounded-full dot-bg"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="glass-card p-6">
+                <h2 class="text-lg font-semibold mb-4 text-yellow-400"><i class="fas fa-bell mr-2"></i> Notifications</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-300">Sound Notification for New Messages</span>
+                        <input type="checkbox" id="notif_sound" class="w-5 h-5 accent-blue-500">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-300">Auto-Refresh Dashboard Data</span>
+                        <input type="checkbox" id="auto_refresh" class="w-5 h-5 accent-blue-500">
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="saveSettings()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-500/20">
+                SAVE ALL SETTINGS
             </button>
-            <h1 class="text-2xl font-bold">Bot Settings</h1>
-            <span class="ml-auto text-xs text-gray-500 bg-gray-900 px-3 py-1 rounded-full border border-gray-800">V1.2 STABLE</span>
-        </div>
-
-        <div class="max-w-4xl space-y-6">
-            <div class="glass-card p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="bg-blue-600/20 p-3 rounded-full text-blue-500">
-                            <i class="fab fa-telegram-plane text-xl"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-semibold">Telegram Connection</h3>
-                            <p class="text-xs text-gray-400">Manage your Telegram Bot API Integration</p>
-                        </div>
-                    </div>
-                    <button class="bg-white text-black px-4 py-1 rounded-md text-sm font-bold hover:bg-gray-200">SAVE</button>
-                </div>
-                <div class="mt-4">
-                    <label class="text-xs text-gray-500 uppercase tracking-wider">Telegram Bot Token</label>
-                    <div class="relative mt-2">
-                        <input type="password" value="••••••••••••••••••••••••••••••••••••••••••••" 
-                               class="w-full bg-black border border-gray-800 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500">
-                        <i class="far fa-eye absolute right-3 top-3.5 text-gray-600 cursor-pointer"></i>
-                    </div>
-                    <p class="text-[10px] text-gray-600 mt-2 italic">* You can get this from @BotFather</p>
-                </div>
-            </div>
-
-            <div class="glass-card p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="bg-purple-600/20 p-3 rounded-full text-purple-500">
-                            <i class="fab fa-viber text-xl"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-semibold">Viber Business API</h3>
-                            <p class="text-xs text-gray-400">Connect your Viber Partner/Chatbot Account</p>
-                        </div>
-                    </div>
-                    <button class="bg-white text-black px-4 py-1 rounded-md text-sm font-bold hover:bg-gray-200">SAVE</button>
-                </div>
-                <div class="mt-4">
-                    <label class="text-xs text-gray-500 uppercase tracking-wider">Viber Auth Token</label>
-                    <div class="relative mt-2">
-                        <input type="text" placeholder="Enter Viber Auth Token" 
-                               class="w-full bg-black border border-gray-800 rounded-lg p-3 text-sm focus:outline-none focus:border-purple-500">
-                        <i class="far fa-eye absolute right-3 top-3.5 text-gray-600 cursor-pointer"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="glass-card p-6">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="bg-pink-600/20 p-3 rounded-full text-pink-500">
-                            <i class="fab fa-facebook-messenger text-xl"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-semibold">Meta Integration</h3>
-                            <p class="text-xs text-gray-400">Facebook Page & Instagram Business Access</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="px-4 py-1 border border-gray-700 rounded-md text-xs font-bold hover:bg-gray-800 uppercase">Token</button>
-                        <button class="px-4 py-1 border border-gray-700 rounded-md text-xs font-bold hover:bg-gray-800 uppercase">Verify</button>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
+
+    <script>
+        async function saveSettings() {
+            const settings = {
+                site_name: document.getElementById('site_name').value,
+                admin_nickname: document.getElementById('admin_nickname').value,
+                notif_sound: document.getElementById('notif_sound').checked,
+                auto_refresh: document.getElementById('auto_refresh').checked
+            };
+            
+            const response = await fetch('/api/settings/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings)
+            });
+
+            if (response.ok) alert("Settings saved successfully!");
+        }
+
+        // Load current settings on start
+        window.onload = async () => {
+            const res = await fetch('/api/settings');
+            const data = await res.json();
+            if(data.site_name) document.getElementById('site_name').value = data.site_name;
+            if(data.admin_nickname) document.getElementById('admin_nickname').value = data.admin_nickname;
+        };
+    </script>
 </body>
 </html>
