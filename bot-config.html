@@ -39,9 +39,38 @@
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
             background-color: #050505;
         }
+
+        /* Toast Animation */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 12px;
+            padding: 16px;
+            position: fixed;
+            z-index: 50;
+            left: 50%;
+            bottom: 30px;
+            font-size: 14px;
+            border: 1px solid #3B82F6;
+        }
+        #toast.show {
+            visibility: visible;
+            -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+        @-webkit-keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @-webkit-keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
     </style>
 </head>
-<body class="min-h-screen bg-pure-black p-4 md:p-6">
+<body class="min-h-screen bg-pure-black p-4 md:p-6 text-slate-200">
+
+    <div id="toast">Message goes here</div>
 
     <div class="w-full max-w-2xl mx-auto space-y-8 my-6">
         <div class="flex items-center justify-between sticky top-0 bg-pure-black/80 backdrop-blur-md py-4 z-10 border-b border-border-gray/50 mb-4">
@@ -168,9 +197,18 @@
     </div>
 
     <script>
+        // Use showToast for better UI feedback instead of alerts
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.innerText = message;
+            toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
         async function loadSettings() {
             try {
                 const res = await fetch('/api/settings');
+                if (!res.ok) throw new Error("Load failed");
                 const data = await res.json();
                 const inputs = document.querySelectorAll('.setting-input');
                 inputs.forEach(input => {
@@ -205,12 +243,12 @@
                     body: JSON.stringify({ key, value })
                 });
                 if (res.ok) {
-                    showToast(`✅ ${key.replace(/_/g, ' ')} saved!`);
+                    showToast(`✅ ${key.replace(/_/g, ' ').toUpperCase()} saved!`);
                 } else {
-                    alert("❌ Failed to save setting.");
+                    showToast("❌ Failed to save setting.");
                 }
             } catch (err) {
-                alert("❌ Error: " + err.message);
+                showToast("❌ Error: " + err.message);
             }
         }
 
@@ -223,6 +261,7 @@
                 settingsData[input.id] = input.value;
             });
 
+            const originalBtnContent = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
             btn.disabled = true;
 
@@ -234,24 +273,18 @@
                 });
 
                 if (res.ok) {
-                    alert("✅ All settings saved and Webhooks updated!");
+                    showToast("✅ All settings saved & Webhooks updated!");
                 } else {
                     const errData = await res.json();
                     throw new Error(errData.error || "Failed to save");
                 }
             } catch (err) {
                 console.error("Save Error:", err);
-                alert("❌ Error: " + err.message);
+                showToast("❌ Error: " + err.message);
             } finally {
-                btn.innerHTML = '<i class="fas fa-save"></i> Save All Changes';
+                btn.innerHTML = originalBtnContent;
                 btn.disabled = false;
             }
-        }
-
-        // Simple Toast Notification
-        function showToast(message) {
-            console.log(message); // You can implement a real toast UI here if needed
-            alert(message);
         }
 
         window.onload = loadSettings;
