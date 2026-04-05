@@ -277,15 +277,14 @@
                 const res = await fetch('/api/settings');
                 const settings = await res.json();
                 
-                // Dark Mode အဖွင့်အပိတ်ကို Database ထဲက key (dark_mode_always_on) နဲ့ ကိုက်အောင် စစ်ဆေးမယ်
-                const isDark = settings.dark_mode_always_on === 'true';
-                if (isDark) {
+                // ၁။ Dark Mode အဖွင့်အပိတ်ကို Database ထဲက key နဲ့ စစ်ဆေးပြီး Body မှာ Class ထည့်မယ်
+                if (settings.dark_mode_always_on === 'true') {
                     document.body.classList.add('dark-mode');
                 } else {
                     document.body.classList.remove('dark-mode');
                 }
 
-                // Load Admin Profile
+                // ၂။ Admin Profile Load လုပ်ခြင်း
                 const profileRes = await fetch('/api/admin/profile');
                 const data = await profileRes.json();
                 
@@ -304,7 +303,18 @@
             } catch (e) { console.error("Error loading settings:", e); }
         }
 
-        // Child frame (Settings page) ထဲက Switch နှိပ်လိုက်ရင် Dashboard မှာပါ ချက်ချင်းပြောင်းဖို့ Logic
+        // ၃။ Real-time Socket ကနေ Setting Update လာရင်လည်း ချက်ချင်းအရောင်ပြောင်းပေးမယ်
+        socket.on('settings_updated', (data) => {
+            if (data.dark_mode_always_on !== undefined) {
+                if (data.dark_mode_always_on === 'true') {
+                    document.body.classList.add('dark-mode');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                }
+            }
+        });
+
+        // Child frame ထဲကနေ Theme ပြောင်းလိုက်ရင် Dashboard မှာပါ လိုက်ပြောင်းဖို့
         window.addEventListener('message', function(event) {
             if (event.data.type === 'THEME_CHANGE') {
                 if (event.data.isDark) {
