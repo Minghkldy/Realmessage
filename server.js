@@ -17,11 +17,12 @@ const io = new Server(server);
 app.use(bodyParser.json({ limit: '50mb' })); 
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname)));
-// (FIX) 404 Error အတွက် uploads folder ကို static အဖြစ်သတ်မှတ်ခြင်း
+
+// Uploads folder setup
 if (!fs.existsSync('./uploads')) fs.mkdirSync('./uploads');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --- Multer Setup ---
+// --- Multer Setup (Memory for Base64 processing) ---
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
@@ -93,7 +94,7 @@ async function getTelegramProfilePic(userId, token) {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/settings', (req, res) => res.sendFile(path.join(__dirname, 'general-settings.html')));
 
-// --- Admin Data API (For Header Sync) ---
+// --- Admin Data API ---
 app.get('/api/admin/profile', async (req, res) => {
     try {
         const result = await pool.query("SELECT key, value FROM settings WHERE key IN ('admin_nickname', 'admin_avatar')");
@@ -147,13 +148,12 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Bulk Update for Settings & Admin Profile
+// Bulk Update for Settings
 app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     const settingsData = { ...req.body };
     const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`; 
 
     try {
-        // ပုံပါလာရင် base64 ပြောင်းပြီး database မှာသိမ်းမယ်
         if (req.file) {
             const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
             settingsData.admin_avatar = base64Image;
@@ -168,7 +168,6 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
             }
         }
 
-        // Telegram Webhook Sync
         if (settingsData.telegram_token) {
             try {
                 await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
@@ -186,7 +185,7 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     }
 });
 
-// Dashboard Chat Upload Image
+// Dashboard Image Upload
 app.post('/api/upload', upload.single('file'), async (req, res) => {
     const { chatId } = req.body;
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
@@ -281,7 +280,7 @@ app.post('/webhook/telegram', async (req, res) => {
     res.sendStatus(200);
 });
 
-// --- Dashboard Reply Logic ---
+// --- Socket.io Logic ---
 io.on('connection', (socket) => {
     socket.on('send_reply', async (data) => {
         try {
@@ -289,7 +288,7 @@ io.on('connection', (socket) => {
             const platform = contactRes.rows[0]?.platform;
             if (!platform) return;
 
-            const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'viber_auth_token', 'meta_page_access_token', 'admin_nickname')");
+            const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'admin_nickname')");
             const tokens = {};
             settingsRes.rows.forEach(row => tokens[row.key] = row.value);
             const adminName = tokens['admin_nickname'] || 'OmniBot';
