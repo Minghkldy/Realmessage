@@ -36,25 +36,13 @@
         .sidebar-collapsed { width: 70px !important; }
         .sidebar-collapsed .nav-text, .sidebar-collapsed .dropdown-arrow { display: none; }
 
-        .sidebar-collapsed .nav-item, 
-        .sidebar-collapsed #messenger-dropdown {
-            pointer-events: none;
-            opacity: 0.6;
-        }
-
-        #left-sidebar:not(.sidebar-collapsed) .nav-item,
-        #left-sidebar:not(.sidebar-collapsed) #messenger-dropdown {
-            pointer-events: auto;
-            opacity: 1;
-        }
-
         .nav-item { 
             display: flex; align-items: center; gap: 16px; width: 100%; 
             padding: 12px 24px; cursor: pointer; transition: 0.2s; color: #6b7280;
         }
         .nav-item:hover { color: white; background-color: rgba(255,255,255,0.05); }
         .nav-text { font-size: 14px; font-weight: 500; white-space: nowrap; }
-        .active-nav { color: #3B82F6; }
+        .active-nav { color: #3B82F6; background-color: rgba(59, 130, 246, 0.05); }
 
         #messenger-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: rgba(0,0,0,0.1); }
         #messenger-dropdown.show { max-height: 400px; }
@@ -117,7 +105,7 @@
         <img id="previewImg" src="" onclick="event.stopPropagation()">
     </div>
 
-    <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray sidebar-collapsed">
+    <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray">
         
         <div class="text-2xl font-bold text-accent-blue px-6 mb-10 cursor-pointer" onclick="toggleLeftSidebar()">
             <i class="fas fa-robot"></i>
@@ -126,10 +114,10 @@
         
         <nav class="flex flex-col w-full">
             <div>
-                <div class="nav-item active-nav" id="inbox-nav" onclick="toggleDropdown()">
+                <div class="nav-item active-nav" id="inbox-nav" onclick="switchToInbox()">
                     <i class="fas fa-th-large text-xl w-6"></i>
                     <span class="nav-text">Inbox</span>
-                    <i id="arrow-icon" class="fas fa-chevron-down dropdown-arrow"></i>
+                    <i id="arrow-icon" class="fas fa-chevron-down dropdown-arrow" onclick="event.stopPropagation(); toggleDropdown()"></i>
                 </div>
                 
                 <div id="messenger-dropdown" class="hidden flex-col">
@@ -211,10 +199,9 @@
                 <div class="flex items-center gap-4 bg-dark-gray border border-border-gray rounded-2xl px-5 py-3 focus-within:border-accent-blue transition">
                     <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)" accept="image/*,video/*,audio/*">
                     <i class="fas fa-paperclip text-gray-500 cursor-pointer hover:text-white" onclick="document.getElementById('file-input').click()"></i>
-                    
                     <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Reply here..." class="bg-transparent flex-1 outline-none text-sm text-white">
                     <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition">
-                        <i class="fas fa-paper-plane text-lg"></i>
+                        <i class="fas fa-paper-plane text text-lg"></i>
                     </button>
                 </div>
             </div>
@@ -222,7 +209,7 @@
     </div>
 
     <div id="bot-settings-area" class="hidden flex-1 flex flex-col bg-pure-black overflow-hidden">
-        <iframe src="settings.html" class="w-full h-full border-none"></iframe>
+        <iframe src="settings.html" id="settings-frame" class="w-full h-full border-none"></iframe>
     </div>
 
     <div id="right-panel" class="hidden w-80 border-l border-border-gray bg-dark-gray flex flex-col p-6 space-y-8 overflow-y-auto">
@@ -283,9 +270,6 @@
 
             const dropdown = document.getElementById('messenger-dropdown');
             const arrow = document.getElementById('arrow-icon');
-            
-            // UI Switch back to Dashboard from Settings if needed
-            closeBotSettings();
 
             if (dropdown.classList.contains('hidden')) {
                 dropdown.classList.remove('hidden');
@@ -298,16 +282,18 @@
                     dropdown.classList.add('hidden');
                 }, 300);
             }
-            
             arrow.classList.toggle('rotate-arrow');
+        }
+
+        function switchToInbox() {
+            document.getElementById('main-dashboard-content').classList.remove('hidden');
+            document.getElementById('bot-settings-area').classList.add('hidden');
+            document.getElementById('inbox-nav').classList.add('active-nav');
+            document.getElementById('bot-config-nav').classList.remove('active-nav');
             filterContacts('all');
         }
 
-        // Settings ကို ဖွင့်ရန်
         function loadBotSettings() {
-            const sidebar = document.getElementById('left-sidebar');
-            if(sidebar.classList.contains('sidebar-collapsed')) return;
-
             document.getElementById('main-dashboard-content').classList.add('hidden');
             document.getElementById('bot-settings-area').classList.remove('hidden');
             document.getElementById('right-panel').classList.add('hidden');
@@ -315,18 +301,10 @@
             document.getElementById('inbox-nav').classList.remove('active-nav');
             document.getElementById('bot-config-nav').classList.add('active-nav');
             
+            // Sidebar auto-collapse on mobile or clean up
             const dropdown = document.getElementById('messenger-dropdown');
             dropdown.classList.remove('show');
             dropdown.classList.add('hidden');
-        }
-
-        // Settings ကနေ Dashboard ကို ပြန်သွားရန် (For Back Arrow in iframe)
-        function closeBotSettings() {
-            document.getElementById('main-dashboard-content').classList.remove('hidden');
-            document.getElementById('bot-settings-area').classList.add('hidden');
-            
-            document.getElementById('inbox-nav').classList.add('active-nav');
-            document.getElementById('bot-config-nav').classList.remove('active-nav');
         }
 
         function showImagePreview(url) {
