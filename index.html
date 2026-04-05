@@ -251,20 +251,12 @@
             try {
                 const res = await fetch('/api/settings');
                 const data = await res.json();
-                
-                if (data.site_name) {
-                    document.getElementById('top-admin-name').innerText = data.site_name;
-                }
-
+                if (data.site_name) document.getElementById('top-admin-name').innerText = data.site_name;
                 const localAvatar = localStorage.getItem('admin_avatar_url');
                 const finalAvatar = localAvatar || data.admin_avatar_url || `https://ui-avatars.com/api/?name=${data.site_name || 'Admin'}&background=random`;
-
                 const el = document.getElementById('top-admin-avatar');
                 if (el) el.src = finalAvatar;
-
-            } catch (e) { 
-                console.error("Error loading settings:", e); 
-            }
+            } catch (e) { console.error("Error loading settings:", e); }
         }
 
         function toggleLeftSidebar() { 
