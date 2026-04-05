@@ -336,7 +336,7 @@
                 const item = document.createElement('div');
                 item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
                 item.onclick = () => selectContact(c);
-                const avatar = c.profile_pic ? `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` : `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray uppercase">${(c.nickname || c.first_name).charAt(0)}</div>`;
+                const avatar = c.profile_pic ? `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` : `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray uppercase">${(c.nickname || c.first_name || "?").charAt(0)}</div>`;
                 item.innerHTML = `
                     ${avatar}
                     <div class="flex-1 min-w-0">
@@ -368,7 +368,7 @@
                 hImg.src = contact.profile_pic; hImg.classList.remove('hidden'); hTxt.classList.add('hidden');
                 sImg.src = contact.profile_pic; sImg.classList.remove('hidden'); sTxt.classList.add('hidden');
             } else {
-                const initial = displayName.charAt(0);
+                const initial = (displayName || "?").charAt(0);
                 hTxt.innerText = initial; hTxt.classList.remove('hidden'); hImg.classList.add('hidden');
                 sTxt.innerText = initial; sTxt.classList.remove('hidden'); sImg.classList.add('hidden');
             }
@@ -458,10 +458,12 @@
 
         socket.on('new_message', (data) => {
             const senderId = data.chat_id || data.chatId;
+            // Check if message already exists
             if (!allMessages.some(m => m.id === data.id && data.id !== undefined)) {
                 allMessages.push(data);
-                if (currentChatId === senderId) appendMessage(data, data.sender_type === 'bot');
-                else {
+                if (currentChatId === senderId) {
+                    appendMessage(data, data.sender_type === 'bot');
+                } else {
                     unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
                     document.getElementById('notif-sound').play().catch(() => {});
                     renderContacts(cachedContacts);
