@@ -30,7 +30,7 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// ၁။ Database Tables Initialization (is_read column ထည့်သွင်းထားသည်)
+// ၁။ Database Tables Initialization
 const initDb = async () => {
     try {
         await pool.query(`
@@ -62,6 +62,9 @@ const initDb = async () => {
             )
         `);
 
+        // table ရှိပြီးသားဖြစ်နေရင် is_read column တိုးပေးရန်
+        await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false`);
+
         await pool.query(`
             CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY,
@@ -89,11 +92,10 @@ async function getTelegramProfilePic(userId, token) {
     return `https://ui-avatars.com/api/?name=User&background=random`;
 }
 
-// ၃။ Unified Message Handler (is_read logic ထည့်သွင်းထားသည်)
+// ၃။ Unified Message Handler
 async function handleIncomingMessage(payload) {
     const { sender, text, platform, chatId, profilePic, fileUrl, fileType } = payload;
     try {
-        // User ဆီက စာဝင်လာရင် Admin ပို့ထားသမျှစာတွေကို 'See' (is_read=true) ဖြစ်အောင် အရင်လုပ်သည်
         await pool.query("UPDATE messages SET is_read = true WHERE chat_id = $1 AND sender_type = 'bot'", [chatId]);
         io.emit('messages_read', { chatId });
 
@@ -150,7 +152,8 @@ app.get('/api/admin/profile', async (req, res) => {
 
 app.get('/api/messages', async (req, res) => {
     try {
-        const result = await pool.query("SELECT *, TO_CHAR(created_at, 'HH12:MI AM') as time FROM messages ORDER BY created_at ASC");
+        // ID နဲ့ သေချာ Sort လုပ်ထားခြင်းဖြင့် Dashboard ပေါ်မှာ စဉ်စီလျက်ပြပါလိမ့်မယ်
+        const result = await pool.query("SELECT *, TO_CHAR(created_at, 'HH12:MI AM') as time FROM messages ORDER BY id ASC");
         res.json(result.rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -162,7 +165,6 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// API to mark messages as read manually
 app.post('/api/messages/read', async (req, res) => {
     const { chatId } = req.body;
     try {
@@ -198,7 +200,6 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Settings Bulk Update ---
 app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     const settingsData = { ...req.body };
     const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`; 
@@ -265,7 +266,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Bulk Messaging (Broadcast) API ---
 app.post('/api/broadcast', upload.single('file'), async (req, res) => {
     try {
         const { text } = req.body;
@@ -315,7 +315,6 @@ app.post('/api/broadcast', upload.single('file'), async (req, res) => {
     }
 });
 
-// --- Telegram Webhook ---
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (!update.message) return res.sendStatus(200);
