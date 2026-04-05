@@ -1,1 +1,120 @@
+<body class="p-4 md:p-8 bg-pure-black text-slate-200">
 
+    <div class="max-w-4xl mx-auto space-y-8 pb-20">
+        
+        <div class="flex items-center justify-between border-b border-border-gray pb-6">
+            <div class="flex items-center gap-4">
+                <button onclick="window.parent.switchToInbox()" class="w-10 h-10 rounded-full border border-border-gray flex items-center justify-center hover:bg-dark-gray transition">
+                    <i class="fas fa-arrow-left text-gray-400"></i>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold">System Settings</h1>
+                    <p class="text-xs text-gray-500">Configure your bot and dashboard behavior</p>
+                </div>
+            </div>
+            <button onclick="saveAllSettings()" class="bg-accent-blue px-6 py-2 rounded-xl font-bold text-sm hover:opacity-90 transition">
+                SAVE ALL
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="space-y-2">
+                <button class="w-full text-left p-4 rounded-xl bg-dark-gray border border-accent-blue/30 text-accent-blue text-sm font-bold">
+                    <i class="fas fa-cog mr-3"></i> General
+                </button>
+                <button class="w-full text-left p-4 rounded-xl hover:bg-dark-gray text-gray-500 text-sm transition">
+                    <i class="fas fa-robot mr-3"></i> Bot Logic
+                </button>
+                <button class="w-full text-left p-4 rounded-xl hover:bg-dark-gray text-gray-500 text-sm transition text-red-500">
+                    <i class="fas fa-exclamation-triangle mr-3"></i> Danger Zone
+                </button>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+
+                <div class="bg-dark-gray border border-border-gray rounded-2xl p-6 space-y-4">
+                    <div class="flex items-center gap-3 border-b border-border-gray pb-3">
+                        <i class="fas fa-reply text-green-500"></i>
+                        <h2 class="font-bold text-sm uppercase tracking-wider">Auto-Response Setup</h2>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-3 bg-pure-black rounded-xl border border-border-gray">
+                            <div>
+                                <p class="text-sm font-medium">Welcome Message</p>
+                                <p class="text-[10px] text-gray-500">Send automatic reply to new users</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="welcome_status" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] text-gray-500 uppercase">Default Reply Text</label>
+                            <textarea id="welcome_msg" rows="3" class="w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-green-500 transition" placeholder="မင်္ဂလာပါ... ဘာများကူညီပေးရမလဲခင်ဗျာ။"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-dark-gray border border-border-gray rounded-2xl p-6 space-y-4">
+                    <div class="flex items-center gap-3 border-b border-border-gray pb-3">
+                        <i class="fas fa-tools text-yellow-500"></i>
+                        <h2 class="font-bold text-sm uppercase tracking-wider">System Control</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="text-[10px] text-gray-500 uppercase font-bold">Maintenance Mode</label>
+                            <select id="maint_mode" class="w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-yellow-500">
+                                <option value="off">Live / Online</option>
+                                <option value="on">Maintenance Mode (Bot Off)</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] text-gray-500 uppercase font-bold">Server Region</label>
+                            <input type="text" value="Myanmar (Myawaddy)" disabled class="w-full bg-pure-black/50 border border-border-gray rounded-xl p-4 text-sm text-gray-500 cursor-not-allowed">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-dark-gray border border-border-gray rounded-2xl p-6 space-y-4">
+                    <div class="flex items-center gap-3 border-b border-border-gray pb-3">
+                        <i class="fas fa-shield-alt text-red-500"></i>
+                        <h2 class="font-bold text-sm uppercase tracking-wider">Access Control</h2>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="space-y-2">
+                            <label class="text-[10px] text-gray-500 uppercase">Dashboard Password</label>
+                            <div class="relative">
+                                <input type="password" id="admin_pass" class="w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-red-500" placeholder="••••••••">
+                                <i class="fas fa-lock absolute right-4 top-4 text-gray-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-accent-blue text-white px-8 py-4 rounded-2xl shadow-2xl opacity-0 transition-all pointer-events-none z-50">
+        <span id="toast-msg">Settings Updated!</span>
+    </div>
+
+    <script>
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            t.classList.remove('opacity-0');
+            t.classList.add('bottom-12');
+            setTimeout(() => {
+                t.classList.add('opacity-0');
+                t.classList.remove('bottom-12');
+            }, 3000);
+        }
+
+        function saveAllSettings() {
+            // မင်းရဲ့ API နဲ့ ချိတ်ဖို့ ဒီနေရာမှာ fetch သုံးနိုင်ပါတယ်
+            showToast("✅ Settings များအားလုံးကို သိမ်းဆည်းပြီးပါပြီ။");
+        }
+    </script>
+</body>
