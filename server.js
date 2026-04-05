@@ -114,14 +114,29 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- ထပ်ပေါင်းထည့်လိုက်သော အပိုင်း (404 Error ရှင်းရန်) ---
+// --- ManyChat ပုံစံမျိုး Token ပြောင်းတာနဲ့ Webhook ပါ တစ်ခါတည်း Update လုပ်ပေးမည့် API ---
 app.post('/api/settings/single', async (req, res) => {
     const { key, value } = req.body;
+    const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`;
+
     try {
+        // ၁။ Database မှာ အရင်သိမ်းမယ်
         await pool.query(
             'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
             [key, value]
         );
+
+        // ၂။ အကယ်၍ သိမ်းလိုက်တာက telegram_token ဖြစ်ရင် Webhook ပါ တစ်ခါတည်း ချိတ်မယ်
+        if (key === 'telegram_token' && value) {
+            try {
+                await axios.get(`https://api.telegram.org/bot${value}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
+                console.log(`✅ Webhook updated for new token: ${value}`);
+            } catch (webhookErr) {
+                console.error("❌ Webhook Update Error:", webhookErr.message);
+                // Token မှားနေရင်တောင် settings သိမ်းတာကို success ပေးနိုင်အောင် error မပစ်ပါဘူး
+            }
+        }
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -141,8 +156,8 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
         for (const [key, value] of Object.entries(settingsData)) {
             if (value !== undefined) {
                 await pool.query(
-                    'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $3',
-                    [key, value.toString(), value.toString()]
+                    'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
+                    [key, value.toString()]
                 );
             }
         }
