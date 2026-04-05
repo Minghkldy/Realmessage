@@ -255,8 +255,10 @@ app.post('/api/broadcast', upload.single('file'), async (req, res) => {
     try {
         const { text } = req.body;
         const file = req.file;
+        
+        // Frontend အတွက် Base64 image data ပြင်ဆင်ခြင်း
+        const base64File = file ? `data:${file.mimetype};base64,${file.buffer.toString('base64')}` : null;
 
-        // Settings များ ရယူခြင်း
         const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'admin_nickname')");
         const settingsMap = {};
         settingsRes.rows.forEach(r => settingsMap[r.key] = r.value);
@@ -266,7 +268,6 @@ app.post('/api/broadcast', upload.single('file'), async (req, res) => {
 
         if (!token) return res.status(400).json({ success: false, error: "Telegram Token not found!" });
 
-        // Contact အားလုံးကို ဆွဲထုတ်ခြင်း
         const contacts = await pool.query("SELECT chat_id, platform FROM contacts WHERE status = 'active'");
         let count = 0;
 
@@ -284,12 +285,22 @@ app.post('/api/broadcast', upload.single('file'), async (req, res) => {
                     }
                 }
 
-                // DB ထဲမှာ သိမ်းဆည်းခြင်း
+                // DB ထဲမှာ သိမ်းဆည်းခြင်း (base64 လမ်းကြောင်းကိုပါ ထည့်သိမ်းသည်)
                 await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-                    [adminName, text || "Sent an image", contact.platform, contact.chat_id, 'bot', file ? 'broadcast_file' : null, file ? 'image' : null]);
+                    [adminName, text || "Sent an image", contact.platform, contact.chat_id, 'bot', base64File, file ? 'image' : null]);
+
+                // Socket ကနေ Admin Screen ဆီ ပုံချက်ချင်းပြနိုင်အောင် ပို့ပေးခြင်း
+                io.emit('new_message', { 
+                    sender: adminName, 
+                    text: text || "Sent an image", 
+                    chatId: contact.chat_id, 
+                    file_url: base64File, 
+                    file_type: file ? 'image' : null, 
+                    platform: contact.platform, 
+                    sender_type: 'bot' 
+                });
 
                 count++;
-                // Spam မဖြစ်စေရန် 200ms စောင့်ခြင်း
                 await new Promise(resolve => setTimeout(resolve, 200));
             } catch (e) { console.error(`Failed to send to ${contact.chat_id}:`, e.message); }
         }
