@@ -88,7 +88,7 @@
     <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray">
         <div class="text-2xl font-bold text-accent-blue px-6 mb-10 cursor-pointer flex items-center" onclick="toggleLeftSidebar()">
             <i class="fas fa-robot w-6 text-center"></i>
-            <span id="brand-name" class="nav-text ml-3">OmniBot</span>
+            <span class="nav-text ml-3">OmniBot</span>
         </div>
         
         <nav class="flex flex-col w-full">
@@ -249,21 +249,22 @@
         let unreadCounts = {};
         let cachedContacts = []; 
 
-        // Website Name နှင့် Admin Profile ကို Database မှ ခေါ်ယူပြသရန်
+        // Admin Profile ကို Database မှ ခေါ်ယူပြသရန် (Header သီးသန့်)
         async function loadSystemSettings() {
             try {
                 const res = await fetch('/api/settings');
                 const data = await res.json();
                 
-                // Website Name ပြောင်းလဲခြင်း
+                // Website Name (ညာဘက် Header Admin Name နေရာတွင်ပဲ ပြောင်းမည်)
                 if (data.site_name) {
-                    document.getElementById('brand-name').innerText = data.site_name;
+                    document.getElementById('top-admin-name').innerText = data.site_name;
                 }
                 
-                // Admin Profile ပြောင်းလဲခြင်း
-                if (data.admin_nickname) {
-                    document.getElementById('top-admin-name').innerText = data.admin_nickname;
-                    document.getElementById('top-admin-avatar').src = `https://ui-avatars.com/api/?name=${data.admin_nickname}&background=random`;
+                // Admin Avatar (ညာဘက် Header Admin Image)
+                if (data.admin_avatar_url) {
+                    document.getElementById('top-admin-avatar').src = data.admin_avatar_url;
+                } else if (data.site_name) {
+                    document.getElementById('top-admin-avatar').src = `https://ui-avatars.com/api/?name=${data.site_name}&background=random`;
                 }
             } catch (e) {
                 console.error("Error loading settings:", e);
@@ -552,7 +553,7 @@
         function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
         
         window.onload = () => { 
-            loadSystemSettings(); // System settings အရင် load လုပ်မယ်
+            loadSystemSettings(); 
             loadContacts(); 
             loadHistory(); 
         };
