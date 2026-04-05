@@ -136,11 +136,12 @@
             }
         }
 
+        // Settings များကို သိမ်းဆည်းရန်
         async function saveSettings() {
-            // Password matching check
             const pass = document.getElementById('new_password').value;
             const confirm = document.getElementById('confirm_password').value;
-            if (pass !== confirm) {
+            
+            if (pass && pass !== confirm) {
                 return alert("❌ Passwords do not match!");
             }
 
@@ -151,10 +152,13 @@
                 enable_autoreply: document.getElementById('enable_autoreply').checked,
                 autoreply_text: document.getElementById('autoreply_text').value,
                 notif_sound: document.getElementById('notif_sound').checked,
-                auto_refresh: document.getElementById('auto_refresh').checked,
-                // Password ကို server မှာ encrypt လုပ်ဖို့ လိုအပ်ပါမယ်
-                new_password: pass 
+                auto_refresh: document.getElementById('auto_refresh').checked
             };
+
+            // Password ပြောင်းလိုလျှင် ထည့်ပေါင်းမည်
+            if (pass) {
+                settings.admin_password = pass;
+            }
             
             try {
                 const response = await fetch('/api/settings/bulk', {
@@ -165,27 +169,43 @@
 
                 if (response.ok) {
                     alert("✅ Settings အားလုံးကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။");
+                    // Dashboard တစ်ခုလုံး Refresh ဖြစ်စေရန်
+                    if (window.parent) {
+                        window.parent.location.reload();
+                    }
+                } else {
+                    alert("❌ သိမ်းဆည်းရာတွင် အမှားအယွင်းရှိပါသည်။");
                 }
             } catch (err) {
-                alert("❌ Error saving settings!");
+                console.error("Save Error:", err);
+                alert("❌ Server နှင့် ချိတ်ဆက်၍မရပါ။");
             }
         }
 
-        // Load current settings on start
+        // စာမျက်နှာပွင့်လာလျှင် လက်ရှိ Settings များကို Database မှ ခေါ်ပြရန်
         window.onload = async () => {
             try {
                 const res = await fetch('/api/settings');
                 const data = await res.json();
                 
-                if(data.site_name) document.getElementById('site_name').value = data.site_name;
-                if(data.admin_nickname) document.getElementById('admin_nickname').value = data.admin_nickname;
-                if(data.admin_email) document.getElementById('admin_email').value = data.admin_email;
-                if(data.autoreply_text) document.getElementById('autoreply_text').value = data.autoreply_text;
+                if (data.site_name) document.getElementById('site_name').value = data.site_name;
+                if (data.admin_nickname) document.getElementById('admin_nickname').value = data.admin_nickname;
+                if (data.admin_email) document.getElementById('admin_email').value = data.admin_email;
+                if (data.autoreply_text) document.getElementById('autoreply_text').value = data.autoreply_text;
                 
-                document.getElementById('enable_autoreply').checked = data.enable_autoreply === "true" || data.enable_autoreply === true;
-                document.getElementById('notif_sound').checked = data.notif_sound === "true" || data.notif_sound === true;
-                document.getElementById('auto_refresh').checked = data.auto_refresh === "true" || data.auto_refresh === true;
-            } catch (e) { console.error("Load Settings Error"); }
+                // Boolean string များကို checkbox အဖြစ် ပြန်ပြောင်းရန်
+                document.getElementById('enable_autoreply').checked = (data.enable_autoreply === "true");
+                document.getElementById('notif_sound').checked = (data.notif_sound === "true");
+                document.getElementById('auto_refresh').checked = (data.auto_refresh === "true");
+
+                // UI Preview Update (optional)
+                if (data.admin_nickname) {
+                    document.getElementById('avatar_preview').src = `https://ui-avatars.com/api/?name=${data.admin_nickname}&background=random`;
+                }
+
+            } catch (e) { 
+                console.error("Load Settings Error:", e); 
+            }
         };
     </script>
 </body>
