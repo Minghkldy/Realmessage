@@ -7,6 +7,7 @@ const { Server } = require("socket.io");
 const { Pool } = require('pg');
 const multer = require('multer');
 const fs = require('fs');
+const FormData = require('form-data');
 require('dotenv').config();
 
 const app = express();
@@ -87,7 +88,7 @@ async function getTelegramProfilePic(userId, token) {
     return `https://ui-avatars.com/api/?name=User&background=random`;
 }
 
-// ၃။ Unified Message Handler (Inbox အားလုံးအတွက် Auto-Reply Logic)
+// ၃။ Unified Message Handler
 async function handleIncomingMessage(payload) {
     const { sender, text, platform, chatId, profilePic, fileUrl, fileType } = payload;
     try {
@@ -107,7 +108,7 @@ async function handleIncomingMessage(payload) {
 
         io.emit('new_message', { sender, text, chatId, profile_pic: profilePic, platform, sender_type: 'user', file_url: fileUrl, file_type: fileType });
 
-        // Auto-Reply Logic (ဗဟိုချက်)
+        // Auto-Reply Logic
         const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'enable_autoreply', 'autoreply_text', 'admin_nickname')");
         const settingsMap = {};
         settingsRes.rows.forEach(r => settingsMap[r.key] = r.value);
@@ -116,12 +117,10 @@ async function handleIncomingMessage(payload) {
             const replyText = settingsMap['autoreply_text'];
             const adminName = settingsMap['admin_nickname'] || 'OmniBot';
 
-            // Platform အလိုက် စာပြန်ပို့ခြင်း
             if (platform === 'Telegram' && settingsMap['telegram_token']) {
                 await axios.post(`https://api.telegram.org/bot${settingsMap['telegram_token']}/sendMessage`, { chat_id: chatId, text: replyText });
             }
 
-            // Bot ရဲ့ Auto-reply စာသားကို DB သိမ်းပြီး Dashboard ကို ပို့ခြင်း
             await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)', 
                 [adminName, replyText, platform, chatId, 'bot']);
             
@@ -234,7 +233,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
             const tokenRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
             const token = tokenRes.rows[0]?.value;
             if (token) {
-                const FormData = require('form-data');
                 const form = new FormData();
                 form.append('chat_id', chatId);
                 form.append('photo', req.file.buffer, { filename: req.file.originalname });
@@ -246,7 +244,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Telegram Webhook (Unified Logic ချိတ်ဆက်မှု) ---
+// --- Telegram Webhook ---
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (!update.message) return res.sendStatus(200);
@@ -272,8 +270,6 @@ app.post('/webhook/telegram', async (req, res) => {
                 if (!text) text = "Sent an image";
             }
             const profilePic = await getTelegramProfilePic(chatId, currentToken);
-
-            // ဗဟို Logic ကို လှမ်းခေါ်ခြင်း
             await handleIncomingMessage({ sender, text, platform: 'Telegram', chatId, profilePic, fileUrl, fileType });
         }
     } catch (err) { console.error("Webhook Error"); }
