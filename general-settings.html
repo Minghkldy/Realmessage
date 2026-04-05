@@ -131,7 +131,8 @@
         // နာမည်ရိုက်တာနဲ့ Avatar Preview ကို တခါတည်းပြောင်းပေးရန်
         function updateAvatarPreview(name) {
             const preview = document.getElementById('avatar_preview');
-            if (name.trim() !== "") {
+            // File ရွေးမထားမှသာ UI Avatar ကို ပြောင်းမယ်
+            if (name.trim() !== "" && !document.getElementById('avatar_input').files.length) {
                 preview.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
             }
         }
@@ -153,15 +154,21 @@
                 return alert("❌ Passwords do not match!");
             }
 
+            // Checkbox တွေကို String အနေနဲ့ သိမ်းရန် (Database sync ပိုကောင်းစေဖို့)
             const settings = {
                 site_name: document.getElementById('site_name').value,
                 admin_nickname: document.getElementById('admin_nickname').value,
                 admin_email: document.getElementById('admin_email').value,
-                enable_autoreply: document.getElementById('enable_autoreply').checked,
+                enable_autoreply: document.getElementById('enable_autoreply').checked.toString(),
                 autoreply_text: document.getElementById('autoreply_text').value,
-                notif_sound: document.getElementById('notif_sound').checked,
-                auto_refresh: document.getElementById('auto_refresh').checked
+                notif_sound: document.getElementById('notif_sound').checked.toString(),
+                auto_refresh: document.getElementById('auto_refresh').checked.toString()
             };
+
+            // အကယ်၍ ပုံအသစ်တင်ထားရင် Avatar URL ကိုပါ ထည့်သိမ်းရန် (UI Avatars Link ကို အခြေခံအဖြစ် သုံးထားပါတယ်)
+            if (!document.getElementById('avatar_input').files.length) {
+                settings.admin_avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(settings.admin_nickname)}&background=random&color=fff`;
+            }
 
             if (pass) {
                 settings.admin_password = pass;
@@ -176,8 +183,10 @@
 
                 if (response.ok) {
                     alert("✅ Settings အားလုံးကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။");
-                    if (window.parent) {
+                    if (window.parent && window.parent.location) {
                         window.parent.location.reload();
+                    } else {
+                        window.location.reload();
                     }
                 } else {
                     alert("❌ သိမ်းဆည်းရာတွင် အမှားအယွင်းရှိပါသည်။");
@@ -192,16 +201,20 @@
         window.onload = async () => {
             try {
                 const res = await fetch('/api/settings');
+                if (!res.ok) throw new Error('Failed to load settings');
+                
                 const data = await res.json();
                 
                 if (data.site_name) document.getElementById('site_name').value = data.site_name;
                 if (data.admin_nickname) {
                     document.getElementById('admin_nickname').value = data.admin_nickname;
-                    updateAvatarPreview(data.admin_nickname);
+                    // လက်ရှိသိမ်းထားတဲ့ Avatar မရှိရင် UI Avatar ပြရန်
+                    document.getElementById('avatar_preview').src = data.admin_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.admin_nickname)}&background=random&color=fff`;
                 }
                 if (data.admin_email) document.getElementById('admin_email').value = data.admin_email;
                 if (data.autoreply_text) document.getElementById('autoreply_text').value = data.autoreply_text;
                 
+                // Checkbox value များကို boolean အဖြစ် ပြန်စစ်ဆေးခြင်း
                 document.getElementById('enable_autoreply').checked = (data.enable_autoreply === "true" || data.enable_autoreply === true);
                 document.getElementById('notif_sound').checked = (data.notif_sound === "true" || data.notif_sound === true);
                 document.getElementById('auto_refresh').checked = (data.auto_refresh === "true" || data.auto_refresh === true);
