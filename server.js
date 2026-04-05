@@ -74,6 +74,7 @@ const initDb = async () => {
         await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url TEXT;`);
         await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_type TEXT;`);
 
+        // Settings Table ဆောက်ခြင်း
         await pool.query(`
             CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY,
@@ -120,6 +121,52 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- API: Settings Endpoints (အသစ်ထည့်ထားသောအပိုင်း) ---
+app.get('/api/settings', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM settings');
+        const settings = {};
+        result.rows.forEach(row => settings[row.key] = row.value);
+        res.json(settings);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/settings/bulk', async (req, res) => {
+    const settingsData = req.body;
+    const RENDER_URL = "https://realmessage-live.onrender.com"; 
+
+    try {
+        for (const [key, value] of Object.entries(settingsData)) {
+            await pool.query(
+                'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $3',
+                [key, value.toString(), value.toString()]
+            );
+        }
+
+        if (settingsData.telegram_token) {
+            await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
+        }
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/settings/single', async (req, res) => {
+    const { key, value } = req.body;
+    const RENDER_URL = "https://realmessage-live.onrender.com"; 
+
+    try {
+        await pool.query(
+            'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $3',
+            [key, value.toString(), value.toString()]
+        );
+
+        if (key === 'telegram_token' && value) {
+            await axios.get(`https://api.telegram.org/bot${value}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
+        }
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // --- API: File Upload Route ---
 app.post('/api/upload', upload.single('file'), async (req, res) => {
     const { chatId } = req.body;
@@ -154,55 +201,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
-});
-
-app.get('/api/settings', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM settings');
-        const settings = {};
-        result.rows.forEach(row => settings[row.key] = row.value);
-        res.json(settings);
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/settings/single', async (req, res) => {
-    const { key, value } = req.body;
-    const RENDER_URL = "https://realmessage-live.onrender.com"; 
-
-    try {
-        const check = await pool.query('SELECT key FROM settings WHERE key = $1', [key]);
-        if (check.rows.length > 0) {
-            await pool.query('UPDATE settings SET value = $2 WHERE key = $1', [key, value]);
-        } else {
-            await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2)', [key, value]);
-        }
-
-        if (key === 'telegram_token' && value) {
-            await axios.get(`https://api.telegram.org/bot${value}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
-        }
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/settings/bulk', async (req, res) => {
-    const settingsData = req.body;
-    const RENDER_URL = "https://realmessage-live.onrender.com"; 
-
-    try {
-        for (const [key, value] of Object.entries(settingsData)) {
-            const check = await pool.query('SELECT key FROM settings WHERE key = $1', [key]);
-            if (check.rows.length > 0) {
-                await pool.query('UPDATE settings SET value = $2 WHERE key = $1', [key, value]);
-            } else {
-                await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2)', [key, value]);
-            }
-        }
-
-        if (settingsData.telegram_token) {
-            await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
-        }
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Telegram Webhook ---
@@ -276,22 +274,19 @@ app.post('/webhook/messenger', async (req, res) => {
     } else { res.sendStatus(404); }
 });
 
-// --- Dashboard Reply Logic (ပြင်ဆင်ထားသော အပိုင်း) ---
+// --- Dashboard Reply Logic ---
 io.on('connection', (socket) => {
     socket.on('send_reply', async (data) => {
         try {
-            // ၁။ Database မှ Platform ကို ရှာဖွေခြင်း
             const contactRes = await pool.query('SELECT platform FROM contacts WHERE chat_id = $1', [data.chatId]);
             const platform = contactRes.rows[0]?.platform;
 
             if (!platform) return console.error("Platform not found for ChatID:", data.chatId);
 
-            // ၂။ Token များကို ဆွဲထုတ်ခြင်း
             const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'viber_auth_token', 'meta_page_access_token')");
             const tokens = {};
             settingsRes.rows.forEach(row => tokens[row.key] = row.value);
 
-            // ၃။ သက်ဆိုင်ရာ Platform ဆီသို့ API ဖြင့် စာပို့ခြင်း
             if (platform === 'Telegram' && tokens.telegram_token) {
                 await axios.post(`https://api.telegram.org/bot${tokens.telegram_token}/sendMessage`, { chat_id: data.chatId, text: data.text });
             } else if (platform === 'Viber' && tokens.viber_auth_token) {
@@ -304,11 +299,9 @@ io.on('connection', (socket) => {
                 });
             }
 
-            // ၄။ Database ထဲတွင် Bot message အဖြစ် သိမ်းဆည်းခြင်း
             await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)', 
                 ['OmniBot', data.text, platform, data.chatId, 'bot']);
 
-            // ၅။ UI Update ဖြစ်စေရန် Socket.io ဖြင့် ပြန်လည်ထုတ်လွှင့်ခြင်း
             io.emit('new_message', { 
                 sender: 'OmniBot', 
                 text: data.text, 
