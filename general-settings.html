@@ -80,33 +80,6 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="glass-card p-6">
-                    <h2 class="text-lg font-semibold mb-4 text-purple-400"><i class="fas fa-paint-brush mr-2"></i> Appearance</h2>
-                    <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                        <span class="text-sm">Dark Mode Always On</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" checked class="sr-only ios-switch">
-                            <div class="w-11 h-6 bg-gray-700 rounded-full dot-bg"></div>
-                            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
-                        </label>
-                    </div>
-                </div>
-                <div class="glass-card p-6">
-                    <h2 class="text-lg font-semibold mb-4 text-yellow-400"><i class="fas fa-bell mr-2"></i> Notifications</h2>
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-300">Sound Notification</span>
-                            <input type="checkbox" id="notif_sound" class="w-5 h-5 accent-blue-500">
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-300">Auto-Refresh Data</span>
-                            <input type="checkbox" id="auto_refresh" class="w-5 h-5 accent-blue-500">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <div class="glass-card p-6 border-red-500/20">
                 <h2 class="text-lg font-semibold mb-4 text-red-400"><i class="fas fa-shield-alt mr-2"></i> Security</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -158,8 +131,11 @@
             formData.append('admin_email', document.getElementById('admin_email').value);
             formData.append('enable_autoreply', document.getElementById('enable_autoreply').checked);
             formData.append('autoreply_text', document.getElementById('autoreply_text').value);
-            formData.append('notif_sound', document.getElementById('notif_sound').checked);
-            formData.append('auto_refresh', document.getElementById('auto_refresh').checked);
+
+            // Appearance နှင့် Notifications section များကို ဖြုတ်လိုက်သော်လည်း 
+            // API compatibility အတွက် လိုအပ်ပါက default value များ ပို့ပေးနိုင်ပါသည်
+            // formData.append('notif_sound', false);
+            // formData.append('auto_refresh', false);
 
             if (pass) {
                 formData.append('admin_password', pass);
@@ -185,11 +161,9 @@
                     const result = await response.json();
                     const updatedAvatar = result.admin_avatar || finalAvatarUrl;
                     
-                    // LocalStorage တွင် သိမ်းဆည်းခြင်း
                     localStorage.setItem('admin_avatar', updatedAvatar);
                     localStorage.setItem('admin_nickname', nickname);
 
-                    // Parent window (index.html) သို့ Event လွှတ်ခြင်း
                     if (window.parent) {
                         const event = new CustomEvent('profileUpdate', { 
                             detail: { avatar: updatedAvatar, nickname: nickname } 
@@ -225,9 +199,9 @@
                 if (data.admin_email) document.getElementById('admin_email').value = data.admin_email;
                 if (data.autoreply_text) document.getElementById('autoreply_text').value = data.autoreply_text;
                 
-                document.getElementById('enable_autoreply').checked = (data.enable_autoreply === "true" || data.enable_autoreply === true);
-                document.getElementById('notif_sound').checked = (data.notif_sound === "true" || data.notif_sound === true);
-                document.getElementById('auto_refresh').checked = (data.auto_refresh === "true" || data.auto_refresh === true);
+                if(document.getElementById('enable_autoreply')) {
+                    document.getElementById('enable_autoreply').checked = (data.enable_autoreply === "true" || data.enable_autoreply === true);
+                }
 
             } catch (e) { 
                 console.error("Load Settings Error:", e); 
