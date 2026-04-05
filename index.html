@@ -431,6 +431,8 @@
             // Mark as read in server
             socket.emit('mark_as_read', { chatId: currentChatId });
 
+            // Clear unread visual immediately
+            updateGlobalBadge();
             renderContacts(cachedContacts); 
             renderMessages();
         }
@@ -471,6 +473,7 @@
             const mediaType = data.file_type || data.fileType || "";
             const msgTime = data.time || ""; 
             const readStatus = data.is_read ? 'SEEN' : 'SENT';
+            const statusColor = data.is_read ? 'text-accent-blue' : 'text-gray-500';
 
             if (mediaUrl) {
                 if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) {
@@ -492,7 +495,7 @@
                     <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
                     <div class="flex items-center justify-end gap-2 mt-1">
                         <span class="text-[9px] text-gray-500 uppercase">${msgTime}</span>
-                        <span class="text-[9px] text-gray-400 font-bold uppercase status-indicator" id="status-${data.id}">${readStatus}</span>
+                        <span class="text-[9px] font-bold uppercase status-indicator ${statusColor}" id="status-${data.id}">${readStatus}</span>
                     </div>
                 </div>
             ` : `
@@ -529,7 +532,6 @@
             allMessages.push(data);
             if (currentChatId === senderId) {
                 appendMessage(data, data.sender_type === 'bot');
-                // Automatically mark as read if chat is open
                 socket.emit('mark_as_read', { chatId: currentChatId });
             } else {
                 unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
@@ -538,12 +540,18 @@
             }
         });
 
-        // Listen for status updates (Sent -> Seen)
+        // Updated for real-time status changes
         socket.on('messages_read', (data) => {
             if (data.chatId === currentChatId) {
+                // Update UI indicators
                 document.querySelectorAll('.status-indicator').forEach(el => {
                     el.innerText = 'SEEN';
                     el.classList.add('text-accent-blue');
+                    el.classList.remove('text-gray-500');
+                });
+                // Update local memory
+                allMessages.forEach(m => {
+                    if(m.chat_id === data.chatId) m.is_read = true;
                 });
             }
         });
