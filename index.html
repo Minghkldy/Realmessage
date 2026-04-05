@@ -38,7 +38,7 @@
         .sidebar-collapsed .dropdown-arrow,
         .sidebar-collapsed #messenger-dropdown { display: none !important; }
         .sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; }
-        .sidebar-collapsed .text-2xl { padding-left: 0; text-align: center; }
+        .sidebar-collapsed .text-2xl { padding-left: 0; text-align: center; justify-content: center; }
 
         .nav-item { 
             display: flex; align-items: center; gap: 16px; width: 100%; 
@@ -159,8 +159,10 @@
         <div class="flex-1 flex flex-col bg-pure-black relative">
             <div class="h-16 border-b border-border-gray flex items-center px-6 justify-between bg-pure-black">
                 <div class="flex items-center gap-3">
-                    <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden border border-border-gray" src="">
-                    <div id="header-avatar-text" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs">?</div>
+                    <div id="header-avatar-container">
+                        <img id="header-avatar-img" class="w-9 h-9 rounded-full hidden border border-border-gray object-cover" src="">
+                        <div id="header-avatar-text" class="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center font-bold text-xs uppercase text-white">?</div>
+                    </div>
                     <div>
                         <h3 id="chat-header-name" class="text-sm font-bold">Select a chat</h3>
                         <p id="chat-status" class="text-[10px] text-gray-600 uppercase">System Ready</p>
@@ -193,7 +195,7 @@
     <div id="right-panel" class="hidden w-80 border-l border-border-gray bg-dark-gray flex flex-col p-6 space-y-8 overflow-y-auto">
         <div class="text-center space-y-4 pt-4">
             <div class="relative inline-block">
-                <div id="side-avatar-text" class="w-24 h-24 bg-accent-blue rounded-full mx-auto flex items-center justify-center text-3xl font-bold border-4 border-pure-black">?</div>
+                <div id="side-avatar-text" class="w-24 h-24 bg-accent-blue rounded-full mx-auto flex items-center justify-center text-3xl font-bold border-4 border-pure-black uppercase">?</div>
                 <img id="side-avatar-img" class="w-24 h-24 rounded-full mx-auto border-4 border-pure-black hidden object-cover" src="">
             </div>
             <div>
@@ -244,7 +246,9 @@
         
         function toggleDropdown() {
             const sidebar = document.getElementById('left-sidebar');
-            if(sidebar.classList.contains('sidebar-collapsed')) return;
+            if(sidebar.classList.contains('sidebar-collapsed')) {
+                toggleLeftSidebar();
+            }
 
             const dropdown = document.getElementById('messenger-dropdown');
             const arrow = document.getElementById('arrow-icon');
@@ -279,13 +283,7 @@
             document.getElementById('inbox-nav').classList.remove('active-nav');
             document.getElementById('sidebar-settings').classList.remove('active-nav');
             document.getElementById('bot-config-nav').classList.add('active-nav');
-            
-            // Bot Config အတွက် bot-config.html ကိုပြပါ
             document.getElementById('settings-frame').src = "bot-config.html";
-            
-            const dropdown = document.getElementById('messenger-dropdown');
-            dropdown.classList.remove('show');
-            dropdown.classList.add('hidden');
         }
 
         function loadGeneralSettings() {
@@ -295,8 +293,6 @@
             document.getElementById('inbox-nav').classList.remove('active-nav');
             document.getElementById('bot-config-nav').classList.remove('active-nav');
             document.getElementById('sidebar-settings').classList.add('active-nav');
-            
-            // Settings ခလုတ်အတွက် သီးသန့် page (ဥပမာ- general-settings.html) ကိုပြပါ
             document.getElementById('settings-frame').src = "general-settings.html";
         }
 
@@ -340,7 +336,7 @@
                 const item = document.createElement('div');
                 item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
                 item.onclick = () => selectContact(c);
-                const avatar = c.profile_pic ? `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` : `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray">${(c.nickname || c.first_name).charAt(0)}</div>`;
+                const avatar = c.profile_pic ? `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` : `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray uppercase">${(c.nickname || c.first_name).charAt(0)}</div>`;
                 item.innerHTML = `
                     ${avatar}
                     <div class="flex-1 min-w-0">
@@ -362,10 +358,12 @@
             document.getElementById('edit-nickname').value = displayName;
             document.getElementById('contact-note').value = contact.notes || "";
             document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
+            
             const hImg = document.getElementById('header-avatar-img');
             const hTxt = document.getElementById('header-avatar-text');
             const sImg = document.getElementById('side-avatar-img');
             const sTxt = document.getElementById('side-avatar-text');
+            
             if(contact.profile_pic) {
                 hImg.src = contact.profile_pic; hImg.classList.remove('hidden'); hTxt.classList.add('hidden');
                 sImg.src = contact.profile_pic; sImg.classList.remove('hidden'); sTxt.classList.add('hidden');
@@ -374,8 +372,10 @@
                 hTxt.innerText = initial; hTxt.classList.remove('hidden'); hImg.classList.add('hidden');
                 sTxt.innerText = initial; sTxt.classList.remove('hidden'); sImg.classList.add('hidden');
             }
+            
             document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
             document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase font-bold";
+            
             renderContacts(cachedContacts); 
             renderMessages();
         }
@@ -413,6 +413,7 @@
             let contentHtml = data.text || "";
             const mediaUrl = data.file_url || data.fileUrl;
             const mediaType = data.file_type || data.fileType || "";
+
             if (mediaUrl) {
                 if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
                     contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md" onclick="showImagePreview('${mediaUrl}')">`;
@@ -423,6 +424,7 @@
                 }
                 if(data.text && !data.text.includes("Sent a")) contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
             }
+
             const msgHtml = isBot ? `
                 <div class="self-end max-w-[70%]">
                     <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
@@ -472,7 +474,8 @@
             const text = input.value.trim();
             if(text !== "" && currentChatId !== "") {
                 socket.emit('send_reply', { chatId: currentChatId, text: text });
-                input.value = ""; unreadCounts[currentChatId] = 0;
+                input.value = ""; 
+                unreadCounts[currentChatId] = 0;
             } else if (!currentChatId) alert("Please select a contact first.");
         }
 
