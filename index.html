@@ -249,13 +249,23 @@
 
         async function loadSystemSettings() {
             try {
-                const res = await fetch('/api/settings');
+                // (FIX) API မှ Profile ကို တိုက်ရိုက်ဆွဲယူရန် ပြင်ဆင်ခြင်း
+                const res = await fetch('/api/admin/profile');
                 const data = await res.json();
-                if (data.site_name) document.getElementById('top-admin-name').innerText = data.site_name;
-                const localAvatar = localStorage.getItem('admin_avatar_url');
-                const finalAvatar = localAvatar || data.admin_avatar_url || `https://ui-avatars.com/api/?name=${data.site_name || 'Admin'}&background=random`;
+                
+                if (data.nickname) {
+                    document.getElementById('top-admin-name').innerText = data.nickname;
+                }
+                
                 const el = document.getElementById('top-admin-avatar');
-                if (el) el.src = finalAvatar;
+                if (el && data.avatar) {
+                    // Base64 သို့မဟုတ် URL အပြည့်အစုံဆိုလျှင် တိုက်ရိုက်ပြ၊ မဟုတ်လျှင် uploads ထဲတွင် ရှာရန်
+                    if (data.avatar.startsWith('data:image') || data.avatar.startsWith('http')) {
+                        el.src = data.avatar;
+                    } else {
+                        el.src = `/uploads/${data.avatar}`;
+                    }
+                }
             } catch (e) { console.error("Error loading settings:", e); }
         }
 
@@ -437,18 +447,24 @@
         function appendMessage(data, isBot) {
             const win = document.getElementById('chat-window');
             let contentHtml = data.text || "";
-            const mediaUrl = data.file_url || data.fileUrl;
+            let mediaUrl = data.file_url || data.fileUrl;
             const mediaType = data.file_type || data.fileType || "";
 
+            // (FIX) Chat Window ထဲတွင် Image URL များ မှန်ကန်စွာ ပေါ်စေရန်
             if (mediaUrl) {
+                // Base64 မဟုတ်ခဲ့ရင် uploads path ထည့်ပေးဖို့ စစ်ဆေးခြင်း
+                if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) {
+                    mediaUrl = `/uploads/${mediaUrl}`;
+                }
+
                 if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
-                    contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md hover:opacity-80 transition" onclick="showImagePreview('${mediaUrl}')">`;
+                    contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md hover:opacity-80 transition" onclick="showImagePreview('${mediaUrl}')" onerror="this.src='https://placehold.co/200x200?text=Image+Not+Found'">`;
                 } else if (mediaType.includes('video')) {
                     contentHtml = `<video controls class="max-w-xs rounded-lg mt-2 border border-border-gray shadow-md"><source src="${mediaUrl}"></video>`;
                 } else if (mediaType.includes('audio')) {
                     contentHtml = `<audio controls class="mt-2 w-full max-w-[240px]"><source src="${mediaUrl}"></audio>`;
                 }
-                if(data.text && !data.text.includes("Sent a")) contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
+                if(data.text && !data.text.includes("Sent an image")) contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
             }
 
             const msgHtml = isBot ? `
@@ -484,15 +500,14 @@
 
         socket.on('new_message', (data) => {
             const senderId = data.chat_id || data.chatId;
-            if (!allMessages.some(m => m.id === data.id && data.id !== undefined)) {
-                allMessages.push(data);
-                if (currentChatId === senderId) {
-                    appendMessage(data, data.sender_type === 'bot');
-                } else {
-                    unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-                    document.getElementById('notif-sound').play().catch(() => {});
-                    renderContacts(cachedContacts);
-                }
+            // id မပါရင်လည်း update ဖြစ်အောင် စစ်ဆေးမှု လျှော့ချထားသည်
+            allMessages.push(data);
+            if (currentChatId === senderId) {
+                appendMessage(data, data.sender_type === 'bot');
+            } else {
+                unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
+                document.getElementById('notif-sound').play().catch(() => {});
+                renderContacts(cachedContacts);
             }
         });
 
