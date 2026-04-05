@@ -248,30 +248,24 @@
         let cachedContacts = []; 
 
         async function loadSystemSettings() {
-    try {
-        const res = await fetch('/api/settings');
-        const data = await res.json();
-        
-        // ၁။ Database ကလာတဲ့ site_name ကို အရင်ပြမယ်
-        if (data.site_name) {
-            document.getElementById('top-admin-name').innerText = data.site_name;
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                
+                if (data.site_name) {
+                    document.getElementById('top-admin-name').innerText = data.site_name;
+                }
+
+                const localAvatar = localStorage.getItem('admin_avatar_url');
+                const finalAvatar = localAvatar || data.admin_avatar_url || `https://ui-avatars.com/api/?name=${data.site_name || 'Admin'}&background=random`;
+
+                const el = document.getElementById('top-admin-avatar');
+                if (el) el.src = finalAvatar;
+
+            } catch (e) { 
+                console.error("Error loading settings:", e); 
+            }
         }
-
-        // ၂။ LocalStorage မှာ ပုံအသစ်ရှိမရှိ အရင်စစ်မယ် (ဒါမှ ချက်ချင်းပြောင်းမှာပါ)
-        const localAvatar = localStorage.getItem('admin_avatar_url');
-        const finalAvatar = localAvatar || data.admin_avatar_url || `https://ui-avatars.com/api/?name=${data.site_name || 'Admin'}&background=random`;
-
-        // ၃။ ပုံရှိသမျှ နေရာတိုင်းမှာ Update လုပ်မယ်
-        const avatarElements = ['top-admin-avatar']; // တခြားနေရာမှာရှိတဲ့ profile id တွေပါ ထည့်လို့ရတယ်
-        avatarElements.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.src = finalAvatar;
-        });
-
-    } catch (e) { 
-        console.error("Error loading settings:", e); 
-    }
-}
 
         function toggleLeftSidebar() { 
             const sidebar = document.getElementById('left-sidebar');
