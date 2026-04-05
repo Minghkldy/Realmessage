@@ -36,14 +36,12 @@
         .sidebar-collapsed { width: 70px !important; }
         .sidebar-collapsed .nav-text, .sidebar-collapsed .dropdown-arrow { display: none; }
 
-        /* Sidebar ပိတ်ထားချိန်မှာ အတွင်းက item တွေကို နှိပ်မရအောင် လုပ်ခြင်း */
         .sidebar-collapsed .nav-item, 
         .sidebar-collapsed #messenger-dropdown {
             pointer-events: none;
             opacity: 0.6;
         }
 
-        /* Sidebar ပွင့်လာမှ ပြန်နှိပ်လို့ရအောင် လုပ်ခြင်း */
         #left-sidebar:not(.sidebar-collapsed) .nav-item,
         #left-sidebar:not(.sidebar-collapsed) #messenger-dropdown {
             pointer-events: auto;
@@ -165,10 +163,10 @@
         </nav>
 
         <div class="mt-auto w-full">
-            <a href="/settings" class="nav-item">
+            <div onclick="loadBotSettings()" class="nav-item" id="sidebar-settings">
                 <i class="fas fa-cog text-xl w-6"></i>
                 <span class="nav-text">Settings</span>
-            </a>
+            </div>
         </div>
     </div>
 
@@ -269,7 +267,6 @@
             const sidebar = document.getElementById('left-sidebar');
             sidebar.classList.toggle('sidebar-collapsed'); 
             
-            // Sidebar ပိတ်သွားရင် Dropdown ပါ အလိုအလျောက် ပိတ်ပေးရန်
             if(sidebar.classList.contains('sidebar-collapsed')) {
                 const dropdown = document.getElementById('messenger-dropdown');
                 dropdown.classList.remove('show');
@@ -282,12 +279,14 @@
         
         function toggleDropdown() {
             const sidebar = document.getElementById('left-sidebar');
-            // Sidebar ပိတ်ထားရင် ဘာမှလုပ်လို့မရအောင် တားထားခြင်း
             if(sidebar.classList.contains('sidebar-collapsed')) return;
 
             const dropdown = document.getElementById('messenger-dropdown');
             const arrow = document.getElementById('arrow-icon');
             
+            // UI Switch back to Dashboard from Settings if needed
+            closeBotSettings();
+
             if (dropdown.classList.contains('hidden')) {
                 dropdown.classList.remove('hidden');
                 dropdown.classList.add('flex');
@@ -301,14 +300,10 @@
             }
             
             arrow.classList.toggle('rotate-arrow');
-            
-            document.getElementById('main-dashboard-content').classList.remove('hidden');
-            document.getElementById('bot-settings-area').classList.add('hidden');
-            document.getElementById('inbox-nav').classList.add('active-nav');
-            document.getElementById('bot-config-nav').classList.remove('active-nav');
             filterContacts('all');
         }
 
+        // Settings ကို ဖွင့်ရန်
         function loadBotSettings() {
             const sidebar = document.getElementById('left-sidebar');
             if(sidebar.classList.contains('sidebar-collapsed')) return;
@@ -323,6 +318,15 @@
             const dropdown = document.getElementById('messenger-dropdown');
             dropdown.classList.remove('show');
             dropdown.classList.add('hidden');
+        }
+
+        // Settings ကနေ Dashboard ကို ပြန်သွားရန် (For Back Arrow in iframe)
+        function closeBotSettings() {
+            document.getElementById('main-dashboard-content').classList.remove('hidden');
+            document.getElementById('bot-settings-area').classList.add('hidden');
+            
+            document.getElementById('inbox-nav').classList.add('active-nav');
+            document.getElementById('bot-config-nav').classList.remove('active-nav');
         }
 
         function showImagePreview(url) {
@@ -360,7 +364,6 @@
 
         function renderContacts(contacts) {
             const container = document.getElementById('contacts-container');
-            // ပြဿနာကို ဒီနေရာမှာ ရှင်းလိုက်ပါတယ် - အသစ်မဆွဲခင် အဟောင်းကို ရှင်းထုတ်ခြင်း
             container.innerHTML = '';
             
             contacts.forEach(c => {
