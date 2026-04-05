@@ -13,7 +13,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Middleware
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true })); // Form data လက်ခံရန်
 app.use(express.static(path.join(__dirname)));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -21,7 +23,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadPath = path.join(__dirname, 'uploads');
-        if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath);
+        if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
         cb(null, uploadPath);
     },
     filename: function (req, file, cb) {
@@ -53,10 +55,6 @@ const initDb = async () => {
             )
         `);
 
-        await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';`);
-        await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS notes TEXT;`);
-        await pool.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS nickname TEXT;`);
-
         await pool.query(`
             CREATE TABLE IF NOT EXISTS messages (
                 id SERIAL PRIMARY KEY,
@@ -70,9 +68,6 @@ const initDb = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_type TEXT;`);
-        await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url TEXT;`);
-        await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_type TEXT;`);
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS settings (
@@ -130,11 +125,18 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/settings/bulk', async (req, res) => {
+// settings.html မှ FormData ဖြင့် ပို့လိုက်သော data များကို လက်ခံရန် ပြင်ဆင်ထားသည်
+app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     const settingsData = req.body;
-    const RENDER_URL = process.env.RENDER_EXTERNAL_URL || "https://realmessage-live.onrender.com"; 
+    const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`; 
 
     try {
+        // ၁။ ပုံအသစ်ပါလာလျှင် ၎င်း၏ URL ကို သိမ်းဆည်းရန်
+        if (req.file) {
+            settingsData.admin_avatar = `/uploads/${req.file.filename}`;
+        }
+
+        // ၂။ ကျန်တဲ့ settings အားလုံးကို loop ပတ်ပြီး DB ထဲ ထည့်သွင်း/ပြင်ဆင်ခြင်း
         for (const [key, value] of Object.entries(settingsData)) {
             if (value !== undefined) {
                 await pool.query(
@@ -144,37 +146,25 @@ app.post('/api/settings/bulk', async (req, res) => {
             }
         }
 
+        // ၃။ Telegram Token ပါလာလျှင် Webhook ချိတ်ခြင်း
         if (settingsData.telegram_token) {
             await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
         }
+
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) { 
+        console.error("Bulk Save Error:", err.message);
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
-app.post('/api/settings/single', async (req, res) => {
-    const { key, value } = req.body;
-    const RENDER_URL = process.env.RENDER_EXTERNAL_URL || "https://realmessage-live.onrender.com"; 
-
-    try {
-        await pool.query(
-            'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $3',
-            [key, value.toString(), value.toString()]
-        );
-
-        if (key === 'telegram_token' && value) {
-            await axios.get(`https://api.telegram.org/bot${value}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
-        }
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// --- API: File Upload Route ---
+// --- API: Dashboard မှ ပုံပို့ရန် Route ---
 app.post('/api/upload', upload.single('file'), async (req, res) => {
     const { chatId } = req.body;
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
     const fileUrl = `/uploads/${req.file.filename}`;
-    const fileType = req.file.mimetype;
+    const fullUrl = `${process.env.RENDER_EXTERNAL_URL || (req.protocol + '://' + req.get('host'))}${fileUrl}`;
 
     try {
         const contactRes = await pool.query('SELECT platform FROM contacts WHERE chat_id = $1', [chatId]);
@@ -192,7 +182,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
             const tokenRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
             const token = tokenRes.rows[0]?.value;
             if (token) {
-                const fullUrl = `${req.protocol}://${req.get('host')}${fileUrl}`;
                 await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, {
                     chat_id: chatId,
                     photo: fullUrl
