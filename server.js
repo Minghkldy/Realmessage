@@ -182,7 +182,7 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Settings Bulk Update (ဒီနေရာမှာ Logic ပြင်ထားပါတယ်) ---
+// --- Settings Bulk Update (Modified for Dark Mode sync) ---
 app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     const settingsData = { ...req.body };
     const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`; 
@@ -205,6 +205,10 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
                 );
             }
         }
+
+        // --- Socket.io Notification for Settings Sync ---
+        // အထူးသဖြင့် dark_mode_always_on ပြောင်းသွားရင် UI ကိုချက်ချင်းသိစေဖို့
+        io.emit('settings_updated', settingsData);
 
         // Telegram Webhook Update
         if (settingsData.telegram_token) {
