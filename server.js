@@ -6,6 +6,7 @@ const http = require('http');
 const { Server } = require("socket.io");
 const { Pool } = require('pg');
 const multer = require('multer');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -20,7 +21,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadPath = path.join(__dirname, 'uploads');
-        const fs = require('fs');
         if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath);
         cb(null, uploadPath);
     },
@@ -74,7 +74,6 @@ const initDb = async () => {
         await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url TEXT;`);
         await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_type TEXT;`);
 
-        // Settings Table ဆောက်ခြင်း
         await pool.query(`
             CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY,
@@ -121,7 +120,7 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- API: Settings Endpoints (အသစ်ထည့်ထားသောအပိုင်း) ---
+// --- API: Settings Endpoints ---
 app.get('/api/settings', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM settings');
@@ -133,14 +132,16 @@ app.get('/api/settings', async (req, res) => {
 
 app.post('/api/settings/bulk', async (req, res) => {
     const settingsData = req.body;
-    const RENDER_URL = "https://realmessage-live.onrender.com"; 
+    const RENDER_URL = process.env.RENDER_EXTERNAL_URL || "https://realmessage-live.onrender.com"; 
 
     try {
         for (const [key, value] of Object.entries(settingsData)) {
-            await pool.query(
-                'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $3',
-                [key, value.toString(), value.toString()]
-            );
+            if (value !== undefined) {
+                await pool.query(
+                    'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $3',
+                    [key, value.toString(), value.toString()]
+                );
+            }
         }
 
         if (settingsData.telegram_token) {
@@ -152,7 +153,7 @@ app.post('/api/settings/bulk', async (req, res) => {
 
 app.post('/api/settings/single', async (req, res) => {
     const { key, value } = req.body;
-    const RENDER_URL = "https://realmessage-live.onrender.com"; 
+    const RENDER_URL = process.env.RENDER_EXTERNAL_URL || "https://realmessage-live.onrender.com"; 
 
     try {
         await pool.query(
@@ -179,14 +180,17 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         const contactRes = await pool.query('SELECT platform FROM contacts WHERE chat_id = $1', [chatId]);
         const platform = contactRes.rows[0]?.platform || 'Unknown';
 
+        const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'admin_nickname'");
+        const adminName = settingsRes.rows[0]?.value || 'OmniBot';
+
         await pool.query(
             'INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-            ['OmniBot', `Sent an image`, platform, chatId, 'bot', fileUrl, 'image']
+            [adminName, `Sent an image`, platform, chatId, 'bot', fileUrl, 'image']
         );
 
         if (platform === 'Telegram') {
-            const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
-            const token = settingsRes.rows[0]?.value;
+            const tokenRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
+            const token = tokenRes.rows[0]?.value;
             if (token) {
                 const fullUrl = `${req.protocol}://${req.get('host')}${fileUrl}`;
                 await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, {
@@ -196,7 +200,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
             }
         }
 
-        io.emit('new_message', { sender: 'OmniBot', text: 'Sent an image', chatId, file_url: fileUrl, file_type: 'image', platform, sender_type: 'bot' });
+        io.emit('new_message', { sender: adminName, text: 'Sent an image', chatId, file_url: fileUrl, file_type: 'image', platform, sender_type: 'bot' });
         res.json({ success: true, fileUrl: fileUrl });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -213,8 +217,11 @@ app.post('/webhook/telegram', async (req, res) => {
         let fileUrl = null;
         let fileType = null;
 
-        const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
-        const currentToken = settingsRes.rows[0]?.value;
+        const settingsRes = await pool.query("SELECT value FROM settings WHERE key IN ('telegram_token', 'enable_autoreply', 'autoreply_text')");
+        const settingsMap = {};
+        settingsRes.rows.forEach(r => settingsMap[r.key] = r.value);
+
+        const currentToken = settingsMap['telegram_token'];
 
         if (currentToken) {
             if (update.message.photo) {
@@ -226,12 +233,7 @@ app.post('/webhook/telegram', async (req, res) => {
             }
 
             const profilePic = await getTelegramProfilePic(chatId, currentToken);
-            const check = await pool.query('SELECT chat_id FROM contacts WHERE chat_id = $1', [chatId]);
-            if (check.rows.length > 0) {
-                await pool.query('UPDATE contacts SET first_name = $2, profile_pic = $3 WHERE chat_id = $1', [chatId, sender, profilePic]);
-            } else {
-                await pool.query('INSERT INTO contacts (chat_id, first_name, profile_pic, platform) VALUES ($1, $2, $3, $4)', [chatId, sender, profilePic, 'Telegram']);
-            }
+            await pool.query('INSERT INTO contacts (chat_id, first_name, profile_pic, platform) VALUES ($1, $2, $3, $4) ON CONFLICT (chat_id) DO UPDATE SET first_name = $2, profile_pic = $3', [chatId, sender, profilePic, 'Telegram']);
 
             await pool.query(
                 'INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
@@ -239,6 +241,11 @@ app.post('/webhook/telegram', async (req, res) => {
             );
 
             io.emit('new_message', { sender, text, chatId, profile_pic: profilePic, platform: 'Telegram', sender_type: 'user', file_url: fileUrl, file_type: fileType });
+
+            // Auto-Reply Logic
+            if (settingsMap['enable_autoreply'] === 'true' && settingsMap['autoreply_text']) {
+                await axios.post(`https://api.telegram.org/bot${currentToken}/sendMessage`, { chat_id: chatId, text: settingsMap['autoreply_text'] });
+            }
         }
     }
     res.sendStatus(200);
@@ -283,15 +290,17 @@ io.on('connection', (socket) => {
 
             if (!platform) return console.error("Platform not found for ChatID:", data.chatId);
 
-            const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'viber_auth_token', 'meta_page_access_token')");
+            const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'viber_auth_token', 'meta_page_access_token', 'admin_nickname')");
             const tokens = {};
             settingsRes.rows.forEach(row => tokens[row.key] = row.value);
+
+            const adminName = tokens['admin_nickname'] || 'OmniBot';
 
             if (platform === 'Telegram' && tokens.telegram_token) {
                 await axios.post(`https://api.telegram.org/bot${tokens.telegram_token}/sendMessage`, { chat_id: data.chatId, text: data.text });
             } else if (platform === 'Viber' && tokens.viber_auth_token) {
                 await axios.post(`https://chatapi.viber.com/pa/send_message`, {
-                    receiver: data.chatId, type: "text", text: data.text, sender: { name: "OmniBot" }
+                    receiver: data.chatId, type: "text", text: data.text, sender: { name: adminName }
                 }, { headers: { 'X-Viber-Auth-Token': tokens.viber_auth_token } });
             } else if (platform === 'Messenger' && tokens.meta_page_access_token) {
                 await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${tokens.meta_page_access_token}`, {
@@ -300,10 +309,10 @@ io.on('connection', (socket) => {
             }
 
             await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)', 
-                ['OmniBot', data.text, platform, data.chatId, 'bot']);
+                [adminName, data.text, platform, data.chatId, 'bot']);
 
             io.emit('new_message', { 
-                sender: 'OmniBot', 
+                sender: adminName, 
                 text: data.text, 
                 chatId: data.chatId, 
                 platform: platform, 
