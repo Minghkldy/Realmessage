@@ -120,7 +120,7 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- API: File Upload Route (Dashboard ကနေ ပုံပို့လျှင် Telegram ဆီပါ ပို့ပေးရန် ပြင်ဆင်ထားသည်) ---
+// --- API: File Upload Route ---
 app.post('/api/upload', upload.single('file'), async (req, res) => {
     const { chatId } = req.body;
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
@@ -132,13 +132,11 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         const contactRes = await pool.query('SELECT platform FROM contacts WHERE chat_id = $1', [chatId]);
         const platform = contactRes.rows[0]?.platform || 'Unknown';
 
-        // Database ထဲသိမ်းရန်
         await pool.query(
             'INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
             ['OmniBot', `Sent an image`, platform, chatId, 'bot', fileUrl, 'image']
         );
 
-        // Telegram သမားဆိုရင် User ဆီ ပုံတန်းပို့ပေးရန်
         if (platform === 'Telegram') {
             const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
             const token = settingsRes.rows[0]?.value;
@@ -207,7 +205,7 @@ app.post('/api/settings/bulk', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Telegram Webhook (User ဆီက စာရော ပုံရော လက်ခံရန် ပြင်ဆင်ထားသည်) ---
+// --- Telegram Webhook ---
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (update.message) {
@@ -221,7 +219,6 @@ app.post('/webhook/telegram', async (req, res) => {
         const currentToken = settingsRes.rows[0]?.value;
 
         if (currentToken) {
-            // ပုံပါလာခဲ့လျှင်
             if (update.message.photo) {
                 const fileId = update.message.photo[update.message.photo.length - 1].file_id;
                 const fileRes = await axios.get(`https://api.telegram.org/bot${currentToken}/getFile?file_id=${fileId}`);
@@ -249,7 +246,7 @@ app.post('/webhook/telegram', async (req, res) => {
     res.sendStatus(200);
 });
 
-// --- Viber/Messenger Webhooks (Original logic kept) ---
+// --- Viber/Messenger Webhooks ---
 app.post('/webhook/viber', async (req, res) => {
     const update = req.body;
     if (update.event === 'message') {
@@ -279,26 +276,47 @@ app.post('/webhook/messenger', async (req, res) => {
     } else { res.sendStatus(404); }
 });
 
-// --- Dashboard Reply Logic ---
+// --- Dashboard Reply Logic (ပြင်ဆင်ထားသော အပိုင်း) ---
 io.on('connection', (socket) => {
     socket.on('send_reply', async (data) => {
         try {
+            // ၁။ Database မှ Platform ကို ရှာဖွေခြင်း
+            const contactRes = await pool.query('SELECT platform FROM contacts WHERE chat_id = $1', [data.chatId]);
+            const platform = contactRes.rows[0]?.platform;
+
+            if (!platform) return console.error("Platform not found for ChatID:", data.chatId);
+
+            // ၂။ Token များကို ဆွဲထုတ်ခြင်း
             const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'viber_auth_token', 'meta_page_access_token')");
             const tokens = {};
             settingsRes.rows.forEach(row => tokens[row.key] = row.value);
 
-            if (data.platform === 'Telegram' && tokens.telegram_token) {
+            // ၃။ သက်ဆိုင်ရာ Platform ဆီသို့ API ဖြင့် စာပို့ခြင်း
+            if (platform === 'Telegram' && tokens.telegram_token) {
                 await axios.post(`https://api.telegram.org/bot${tokens.telegram_token}/sendMessage`, { chat_id: data.chatId, text: data.text });
-            } else if (data.platform === 'Viber' && tokens.viber_auth_token) {
+            } else if (platform === 'Viber' && tokens.viber_auth_token) {
                 await axios.post(`https://chatapi.viber.com/pa/send_message`, {
                     receiver: data.chatId, type: "text", text: data.text, sender: { name: "OmniBot" }
                 }, { headers: { 'X-Viber-Auth-Token': tokens.viber_auth_token } });
-            } else if (data.platform === 'Messenger' && tokens.meta_page_access_token) {
+            } else if (platform === 'Messenger' && tokens.meta_page_access_token) {
                 await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${tokens.meta_page_access_token}`, {
                     recipient: { id: data.chatId }, message: { text: data.text }
                 });
             }
-            await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)', ['OmniBot', data.text, data.platform, data.chatId, 'bot']);
+
+            // ၄။ Database ထဲတွင် Bot message အဖြစ် သိမ်းဆည်းခြင်း
+            await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)', 
+                ['OmniBot', data.text, platform, data.chatId, 'bot']);
+
+            // ၅။ UI Update ဖြစ်စေရန် Socket.io ဖြင့် ပြန်လည်ထုတ်လွှင့်ခြင်း
+            io.emit('new_message', { 
+                sender: 'OmniBot', 
+                text: data.text, 
+                chatId: data.chatId, 
+                platform: platform, 
+                sender_type: 'bot' 
+            });
+
         } catch (e) { console.error("Reply Error:", e.message); }
     });
 });
