@@ -234,6 +234,7 @@
             const sidebar = document.getElementById('left-sidebar');
             sidebar.classList.toggle('sidebar-collapsed'); 
             
+            // Collapsed ဖြစ်သွားရင် Dropdown ပါ ပိတ်သွားအောင် လုပ်ခြင်း
             if(sidebar.classList.contains('sidebar-collapsed')) {
                 const dropdown = document.getElementById('messenger-dropdown');
                 dropdown.classList.remove('show');
@@ -242,10 +243,14 @@
             }
         }
         
-        function toggleRightPanel() { document.getElementById('right-panel').classList.toggle('hidden'); }
+        function toggleRightPanel() { 
+            const panel = document.getElementById('right-panel');
+            panel.classList.toggle('hidden'); 
+        }
         
         function toggleDropdown() {
             const sidebar = document.getElementById('left-sidebar');
+            // Sidebar ပိတ်ထားရင် Dropdown နှိပ်လိုက်တာနဲ့ အလိုအလျောက် ပွင့်လာစေဖို့
             if(sidebar.classList.contains('sidebar-collapsed')) {
                 toggleLeftSidebar();
             }
@@ -352,7 +357,7 @@
 
         function selectContact(contact) {
             currentChatId = contact.chat_id;
-            unreadCounts[currentChatId] = 0;
+            unreadCounts[currentChatId] = 0; // Clear unread on select
             const displayName = contact.nickname || contact.first_name;
             document.getElementById('chat-header-name').innerText = displayName;
             document.getElementById('edit-nickname').value = displayName;
@@ -406,6 +411,7 @@
             win.innerHTML = "";
             const filtered = allMessages.filter(m => m.chat_id === currentChatId);
             filtered.forEach(msg => appendMessage(msg, msg.sender_type === 'bot'));
+            win.scrollTo({ top: win.scrollHeight, behavior: 'auto' });
         }
 
         function appendMessage(data, isBot) {
@@ -416,22 +422,22 @@
 
             if (mediaUrl) {
                 if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
-                    contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md" onclick="showImagePreview('${mediaUrl}')">`;
+                    contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md hover:opacity-80 transition" onclick="showImagePreview('${mediaUrl}')">`;
                 } else if (mediaType.includes('video')) {
                     contentHtml = `<video controls class="max-w-xs rounded-lg mt-2 border border-border-gray shadow-md"><source src="${mediaUrl}"></video>`;
                 } else if (mediaType.includes('audio')) {
-                    contentHtml = `<audio controls class="mt-2 w-full max-w-[200px]"><source src="${mediaUrl}"></audio>`;
+                    contentHtml = `<audio controls class="mt-2 w-full max-w-[240px]"><source src="${mediaUrl}"></audio>`;
                 }
                 if(data.text && !data.text.includes("Sent a")) contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
             }
 
             const msgHtml = isBot ? `
-                <div class="self-end max-w-[70%]">
+                <div class="self-end max-w-[75%]">
                     <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
                     <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
                 </div>
             ` : `
-                <div class="flex items-start gap-3 max-w-[70%]">
+                <div class="flex items-start gap-3 max-w-[75%]">
                     <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-border-gray bg-gray-900 flex items-center justify-center text-[10px]">
                         ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover">` : `<i class="fas fa-user text-gray-500"></i>`}
                     </div>
@@ -458,7 +464,7 @@
 
         socket.on('new_message', (data) => {
             const senderId = data.chat_id || data.chatId;
-            // Check if message already exists
+            // Redundant messages မဖြစ်အောင် ID စစ်ခြင်း
             if (!allMessages.some(m => m.id === data.id && data.id !== undefined)) {
                 allMessages.push(data);
                 if (currentChatId === senderId) {
@@ -507,7 +513,10 @@
         }
 
         function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
-        window.onload = () => { loadContacts(); loadHistory(); };
+        window.onload = () => { 
+            loadContacts(); 
+            loadHistory(); 
+        };
     </script>
 </body>
 </html>
