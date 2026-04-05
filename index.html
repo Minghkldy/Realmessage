@@ -44,9 +44,10 @@
             transition: background-color 0.3s, color 0.3s;
         }
         
-        .bg-pure-black { background-color: var(--bg-main) !important; }
-        .bg-dark-gray { background-color: var(--bg-side) !important; }
-        .border-border-gray { border-color: var(--border-color) !important; }
+        /* Dark Mode Transitions for specific classes */
+        .bg-pure-black { background-color: var(--bg-main) !important; transition: background-color 0.3s; }
+        .bg-dark-gray { background-color: var(--bg-side) !important; transition: background-color 0.3s; }
+        .border-border-gray { border-color: var(--border-color) !important; transition: border-color 0.3s; }
 
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
@@ -102,7 +103,7 @@
         #imagePreviewModal img { max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px; cursor: default; }
     </style>
 </head>
-<body class="h-full flex overflow-hidden dark-mode"> <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
+<body class="h-full flex overflow-hidden"> <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
     <div id="imagePreviewModal" onclick="closeImagePreview()">
         <img id="previewImg" src="" onclick="event.stopPropagation()">
@@ -276,10 +277,11 @@
                 const res = await fetch('/api/settings');
                 const settings = await res.json();
                 
-                // (FIX) Appearance Logic - Dark Mode On/Off
-                if (settings.dark_mode_enabled === 'true') {
+                // Dark Mode အဖွင့်အပိတ်ကို Database ထဲက key (dark_mode_always_on) နဲ့ ကိုက်အောင် စစ်ဆေးမယ်
+                const isDark = settings.dark_mode_always_on === 'true';
+                if (isDark) {
                     document.body.classList.add('dark-mode');
-                } else if (settings.dark_mode_enabled === 'false') {
+                } else {
                     document.body.classList.remove('dark-mode');
                 }
 
@@ -301,6 +303,17 @@
                 }
             } catch (e) { console.error("Error loading settings:", e); }
         }
+
+        // Child frame (Settings page) ထဲက Switch နှိပ်လိုက်ရင် Dashboard မှာပါ ချက်ချင်းပြောင်းဖို့ Logic
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'THEME_CHANGE') {
+                if (event.data.isDark) {
+                    document.body.classList.add('dark-mode');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                }
+            }
+        });
 
         function toggleLeftSidebar() { 
             const sidebar = document.getElementById('left-sidebar');
