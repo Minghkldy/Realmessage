@@ -13,12 +13,15 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Middleware
+// --- Static Folders & Middleware ---
 app.use(bodyParser.json({ limit: '50mb' })); 
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname)));
+// (FIX) 404 Error အတွက် uploads folder ကို static အဖြစ်သတ်မှတ်ခြင်း
+if (!fs.existsSync('./uploads')) fs.mkdirSync('./uploads');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --- Multer Memory Storage Setup ---
+// --- Multer Setup ---
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
@@ -88,7 +91,20 @@ async function getTelegramProfilePic(userId, token) {
 
 // --- Routes ---
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/settings', (req, res) => res.sendFile(path.join(__dirname, 'settings.html')));
+app.get('/settings', (req, res) => res.sendFile(path.join(__dirname, 'general-settings.html')));
+
+// --- Admin Data API (For Header Sync) ---
+app.get('/api/admin/profile', async (req, res) => {
+    try {
+        const result = await pool.query("SELECT key, value FROM settings WHERE key IN ('admin_nickname', 'admin_avatar')");
+        const profile = {};
+        result.rows.forEach(row => profile[row.key] = row.value);
+        res.json({
+            nickname: profile.admin_nickname || 'OmniBot',
+            avatar: profile.admin_avatar || 'https://ui-avatars.com/api/?name=Admin'
+        });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // --- API Endpoints ---
 app.get('/api/messages', async (req, res) => {
@@ -105,7 +121,6 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- (NEW) DELETE CONTACT & MESSAGES API ---
 app.delete('/api/contacts/:chatId', async (req, res) => {
     const { chatId } = req.params;
     try {
@@ -115,9 +130,8 @@ app.delete('/api/contacts/:chatId', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- (NEW) BLOCK/STATUS UPDATE API ---
 app.post('/api/contacts/status', async (req, res) => {
-    const { chatId, status } = req.body; // status: 'active' သို့မဟုတ် 'blocked'
+    const { chatId, status } = req.body;
     try {
         await pool.query('UPDATE contacts SET status = $1 WHERE chat_id = $2', [status, chatId]);
         res.json({ success: true, status });
@@ -133,36 +147,13 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/settings/single', async (req, res) => {
-    const { key, value } = req.body;
-    const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`;
-
-    try {
-        await pool.query(
-            'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
-            [key, value]
-        );
-
-        if (key === 'telegram_token' && value) {
-            try {
-                await axios.get(`https://api.telegram.org/bot${value}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
-                console.log(`✅ Webhook updated for new token: ${value}`);
-            } catch (webhookErr) {
-                console.error("❌ Webhook Update Error:", webhookErr.message);
-            }
-        }
-
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
+// Bulk Update for Settings & Admin Profile
 app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
-    const settingsData = req.body;
+    const settingsData = { ...req.body };
     const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`; 
 
     try {
+        // ပုံပါလာရင် base64 ပြောင်းပြီး database မှာသိမ်းမယ်
         if (req.file) {
             const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
             settingsData.admin_avatar = base64Image;
@@ -177,17 +168,25 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
             }
         }
 
+        // Telegram Webhook Sync
         if (settingsData.telegram_token) {
-            await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
+            try {
+                await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
+            } catch (e) { console.error("Webhook Update Error"); }
         }
 
-        res.json({ success: true });
+        res.json({ 
+            success: true, 
+            admin_avatar: settingsData.admin_avatar || null,
+            admin_nickname: settingsData.admin_nickname || null
+        });
     } catch (err) { 
         console.error("Bulk Save Error:", err.message);
         res.status(500).json({ error: err.message }); 
     }
 });
 
+// Dashboard Chat Upload Image
 app.post('/api/upload', upload.single('file'), async (req, res) => {
     const { chatId } = req.body;
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
@@ -224,7 +223,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         io.emit('new_message', { sender: adminName, text: 'Sent an image', chatId, file_url: base64File, file_type: 'image', platform, sender_type: 'bot' });
         res.json({ success: true, fileUrl: base64File });
     } catch (err) {
-        console.error("Upload Error:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
@@ -241,17 +239,13 @@ app.post('/webhook/telegram', async (req, res) => {
     let fileType = null;
 
     try {
+        const contactCheck = await pool.query('SELECT status FROM contacts WHERE chat_id = $1', [chatId]);
+        if (contactCheck.rows[0]?.status === 'blocked') return res.sendStatus(200);
+
         const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'enable_autoreply', 'autoreply_text')");
         const settingsMap = {};
         settingsRes.rows.forEach(r => settingsMap[r.key] = r.value);
         const currentToken = settingsMap['telegram_token'];
-
-        // --- (ADDED) BLOCK CHECK ---
-        const contactCheck = await pool.query('SELECT status FROM contacts WHERE chat_id = $1', [chatId]);
-        if (contactCheck.rows[0]?.status === 'blocked') {
-            console.log(`🚫 Message from blocked user ignored: ${chatId}`);
-            return res.sendStatus(200);
-        }
 
         if (currentToken) {
             if (update.message.photo) {
@@ -283,40 +277,8 @@ app.post('/webhook/telegram', async (req, res) => {
                 await axios.post(`https://api.telegram.org/bot${currentToken}/sendMessage`, { chat_id: chatId, text: settingsMap['autoreply_text'] });
             }
         }
-    } catch (err) {
-        console.error("❌ Webhook Error:", err.message);
-    }
+    } catch (err) { console.error("Webhook Error"); }
     res.sendStatus(200);
-});
-
-// --- Viber/Messenger Webhooks ---
-app.post('/webhook/viber', async (req, res) => {
-    const update = req.body;
-    if (update.event === 'message') {
-        const chatId = update.sender.id;
-        const senderName = update.sender.name;
-        const text = update.message.text;
-        const profilePic = update.sender.avatar || `https://ui-avatars.com/api/?name=${senderName}&background=random`;
-        await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)', [senderName, text, 'Viber', chatId, 'user']);
-        io.emit('new_message', { sender: senderName, text, chatId, profile_pic: profilePic, platform: 'Viber', sender_type: 'user' });
-    }
-    res.sendStatus(200);
-});
-
-app.post('/webhook/messenger', async (req, res) => {
-    const body = req.body;
-    if (body.object === 'page') {
-        body.entry.forEach(async (entry) => {
-            const webhookEvent = entry.messaging[0];
-            const senderId = webhookEvent.sender.id;
-            if (webhookEvent.message && webhookEvent.message.text) {
-                const text = webhookEvent.message.text;
-                await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)', ['Messenger User', text, 'Messenger', senderId, 'user']);
-                io.emit('new_message', { sender: 'Messenger User', text, chatId: senderId, platform: 'Messenger', sender_type: 'user' });
-            }
-        });
-        res.status(200).send('EVENT_RECEIVED');
-    } else { res.sendStatus(404); }
 });
 
 // --- Dashboard Reply Logic ---
@@ -325,39 +287,22 @@ io.on('connection', (socket) => {
         try {
             const contactRes = await pool.query('SELECT platform FROM contacts WHERE chat_id = $1', [data.chatId]);
             const platform = contactRes.rows[0]?.platform;
-
-            if (!platform) return console.error("Platform not found for ChatID:", data.chatId);
+            if (!platform) return;
 
             const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'viber_auth_token', 'meta_page_access_token', 'admin_nickname')");
             const tokens = {};
             settingsRes.rows.forEach(row => tokens[row.key] = row.value);
-
             const adminName = tokens['admin_nickname'] || 'OmniBot';
 
             if (platform === 'Telegram' && tokens.telegram_token) {
                 await axios.post(`https://api.telegram.org/bot${tokens.telegram_token}/sendMessage`, { chat_id: data.chatId, text: data.text });
-            } else if (platform === 'Viber' && tokens.viber_auth_token) {
-                await axios.post(`https://chatapi.viber.com/pa/send_message`, {
-                    receiver: data.chatId, type: "text", text: data.text, sender: { name: adminName }
-                }, { headers: { 'X-Viber-Auth-Token': tokens.viber_auth_token } });
-            } else if (platform === 'Messenger' && tokens.meta_page_access_token) {
-                await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${tokens.meta_page_access_token}`, {
-                    recipient: { id: data.chatId }, message: { text: data.text }
-                });
             }
 
             await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)', 
                 [adminName, data.text, platform, data.chatId, 'bot']);
 
-            io.emit('new_message', { 
-                sender: adminName, 
-                text: data.text, 
-                chatId: data.chatId, 
-                platform: platform, 
-                sender_type: 'bot' 
-            });
-
-        } catch (e) { console.error("Reply Error:", e.message); }
+            io.emit('new_message', { sender: adminName, text: data.text, chatId: data.chatId, platform: platform, sender_type: 'bot' });
+        } catch (e) { console.error("Reply Error"); }
     });
 });
 
