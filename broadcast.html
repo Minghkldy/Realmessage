@@ -1,301 +1,199 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniBot - Settings</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Bulk Messaging - OmniBot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'pure-black': '#000000',
-                        'dark-gray': '#0a0a0a',
-                        'border-gray': '#1f1f1f',
-                        'accent-blue': '#3B82F6',
-                    }
-                }
-            }
-        }
-    </script>
     <style>
+        /* Background ကို အနက်ရောင်ပြောင်းထားသည့်အပိုင်း */
         body { 
-            background-color: #000000; 
-            color: #ffffff; 
-            margin: 0;
-            overflow-y: auto;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #1f1f1f; border-radius: 10px; }
-        
-        .setting-input {
-            transition: all 0.2s ease-in-out;
-            color: #ffffff !important;
-        }
-        .setting-input:focus {
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-            background-color: #050505;
+            background-color: #0b0e11; 
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            min-height: 100vh;
         }
 
-        /* Label စာသားများ မှိန်မနေစေရန် ပြင်ဆင်ချက် */
-        label {
-            color: #e5e7eb !important; /* text-gray-200 level */
-            text-shadow: none !important;
+        /* Card ကို Dark Look ပြောင်းထားသည့်အပိုင်း */
+        .broadcast-card { 
+            max-width: 700px; 
+            margin: 50px auto; 
+            border: 1px solid #333; 
+            border-radius: 15px; 
+            background-color: #161b22;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
         }
 
-        /* Toast Animation */
-        #toast {
-            visibility: hidden;
-            min-width: 250px;
-            margin-left: -125px;
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            border-radius: 12px;
-            padding: 16px;
-            position: fixed;
-            z-index: 50;
-            left: 50%;
-            bottom: 30px;
-            font-size: 14px;
-            border: 1px solid #3B82F6;
+        .card-header { 
+            background: #007bff; 
+            color: white; 
+            border-radius: 15px 15px 0 0 !important; 
+            padding: 20px; 
+            border-bottom: 1px solid #333;
         }
-        #toast.show {
-            visibility: visible;
-            -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
-            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+
+        /* Input fields များကို Dark Mode ပြောင်းခြင်း */
+        .form-control {
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            color: white;
         }
-        @-webkit-keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @-webkit-keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+        .form-control:focus {
+            background-color: #0d1117;
+            border-color: #58a6ff;
+            color: white;
+            box-shadow: none;
+        }
+
+        .preview-img { 
+            max-width: 100%; 
+            max-height: 300px; 
+            border-radius: 10px; 
+            display: none; 
+            margin-top: 15px; 
+            border: 1px solid #30363d; 
+        }
+
+        .status-log { 
+            max-height: 200px; 
+            overflow-y: auto; 
+            background: #000; 
+            color: #00ff41; 
+            padding: 10px; 
+            font-family: monospace; 
+            font-size: 13px; 
+            border-radius: 8px; 
+            display: none; 
+            border: 1px solid #333;
+        }
+
+        .btn-send { 
+            padding: 12px; 
+            font-weight: bold; 
+            font-size: 18px; 
+            border-radius: 10px; 
+            transition: 0.3s; 
+            background-color: #21262d;
+            border: 1px solid #f0f6fc1a;
+            color: #c9d1d9;
+        }
+
+        .btn-send:hover { 
+            background-color: #007bff;
+            color: white;
+            transform: translateY(-2px); 
+            box-shadow: 0 5px 15px rgba(0,123,255,0.4); 
+        }
+
+        .card-footer {
+            background-color: #161b22;
+            border-top: 1px solid #333;
+        }
     </style>
 </head>
-<body class="min-h-screen bg-pure-black p-4 md:p-6 text-slate-200">
+<body>
 
-    <div id="toast">Message goes here</div>
-
-    <div class="w-full max-w-2xl mx-auto space-y-8 my-6">
-        <div class="flex items-center justify-between sticky top-0 bg-pure-black/80 backdrop-blur-md py-4 z-10 border-b border-border-gray/50 mb-4">
-            <div class="flex items-center gap-4">
-                <button onclick="window.parent.switchToInbox()" class="w-10 h-10 rounded-full border border-border-gray flex items-center justify-center hover:bg-dark-gray transition active:scale-90">
-                 <i class="fas fa-arrow-left text-gray-400"></i>
-               </button>
-                <h1 class="text-xl md:text-2xl font-bold tracking-tight">Bot Settings</h1>
-            </div>
-            <div class="text-[10px] text-gray-300 uppercase tracking-widest bg-dark-gray px-3 py-1 rounded-full border border-border-gray">
-                v1.2 Stable
-            </div>
+<div class="container">
+    <div class="card broadcast-card">
+        <div class="card-header text-center">
+            <h3 class="mb-0"><i class="fas fa-bullhorn"></i> Bulk Messaging System</h3>
+            <small>Send messages to all inbox members</small>
         </div>
-
-        <div class="grid gap-6">
-            
-            <div class="bg-dark-gray border border-border-gray rounded-2xl p-6 md:p-8 space-y-6">
-                <div class="flex items-center justify-between border-b border-border-gray pb-4">
-                    <div class="flex items-center gap-3">
-                        <i class="fab fa-telegram text-2xl text-sky-500"></i>
-                        <div>
-                            <h2 class="font-bold text-sm text-white">Telegram Connection</h2>
-                            <p class="text-[11px] text-gray-400">Manage your Telegram Bot API Integration</p>
-                        </div>
-                    </div>
-                    <button onclick="saveSingle('telegram_token')" class="bg-pure-black border border-border-gray px-4 py-2 rounded-lg text-[10px] font-bold text-gray-200 hover:border-sky-500 hover:text-sky-500 transition uppercase active:scale-95">Save</button>
-                </div>
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-[10px] uppercase font-bold tracking-wider">Telegram Bot Token</label>
-                        <div class="relative mt-2">
-                            <input type="password" id="telegram_token" 
-                                   class="setting-input w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-accent-blue transition"
-                                   placeholder="123456789:ABCdefGHIjklMNOpqrSTU...">
-                            <i onclick="toggleVisibility('telegram_token', this)" class="fas fa-eye absolute right-4 top-4 text-gray-500 cursor-pointer hover:text-white transition"></i>
-                        </div>
-                        <p class="text-[10px] text-gray-500 mt-2 italic">* You can get this from @BotFather</p>
-                    </div>
-                </div>
+        <div class="card-body p-4">
+            <div class="mb-4">
+                <label class="form-label fw-bold">Message Text</label>
+                <textarea id="bcText" class="form-control" rows="5" placeholder="အားလုံးဆီ ပို့ချင်တဲ့ စာကို ဒီမှာရေးပါ..."></textarea>
             </div>
 
-            <div class="bg-dark-gray border border-border-gray rounded-2xl p-6 md:p-8 space-y-6">
-                <div class="flex items-center justify-between border-b border-border-gray pb-4">
-                    <div class="flex items-center gap-3">
-                        <i class="fab fa-viber text-2xl text-purple-500"></i>
-                        <div>
-                            <h2 class="font-bold text-sm text-white">Viber Business API</h2>
-                            <p class="text-[11px] text-gray-400">Connect your Viber Partner/Chatbot Account</p>
-                        </div>
-                    </div>
-                    <button onclick="saveSingle('viber_auth_token')" class="bg-pure-black border border-border-gray px-4 py-2 rounded-lg text-[10px] font-bold text-gray-200 hover:border-purple-500 hover:text-purple-500 transition uppercase active:scale-95">Save</button>
-                </div>
-                <div>
-                    <label class="text-[10px] uppercase font-bold tracking-wider">Viber Auth Token</label>
-                    <div class="relative mt-2">
-                        <input type="password" id="viber_auth_token" 
-                               class="setting-input w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-purple-500 transition"
-                               placeholder="Enter Viber Auth Token">
-                        <i onclick="toggleVisibility('viber_auth_token', this)" class="fas fa-eye absolute right-4 top-4 text-gray-500 cursor-pointer hover:text-white transition"></i>
-                    </div>
-                </div>
+            <div class="mb-4">
+                <label class="form-label fw-bold">Attachment (Optional Image)</label>
+                <input type="file" id="bcFile" class="form-control" accept="image/*" onchange="previewFile()">
+                <img id="imgPreview" class="preview-img">
             </div>
 
-            <div class="bg-dark-gray border border-border-gray rounded-2xl p-6 md:p-8 space-y-6">
-                <div class="flex items-center justify-between border-b border-border-gray pb-4">
-                    <div class="flex items-center gap-3">
-                        <i class="fab fa-facebook-messenger text-2xl text-pink-500"></i>
-                        <div>
-                            <h2 class="font-bold text-sm text-white">Meta Integration</h2>
-                            <p class="text-[11px] text-gray-400">Facebook Page & Instagram Business Access</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="saveSingle('meta_page_access_token')" class="bg-pure-black border border-border-gray px-3 py-2 rounded-lg text-[9px] font-bold text-gray-200 hover:border-pink-500 hover:text-pink-500 transition uppercase active:scale-95">Token</button>
-                        <button onclick="saveSingle('meta_verify_token')" class="bg-pure-black border border-border-gray px-3 py-2 rounded-lg text-[9px] font-bold text-gray-200 hover:border-pink-500 hover:text-pink-500 transition uppercase active:scale-95">Verify</button>
-                    </div>
+            <div id="statusBox" class="mb-4">
+                <div class="progress mb-2" style="display: none; height: 10px; background-color: #30363d;">
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="space-y-2">
-                        <label class="text-[10px] uppercase font-bold tracking-wider">Page Access Token</label>
-                        <input type="password" id="meta_page_access_token" class="setting-input w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-pink-500 transition" placeholder="EAAB...">
-                    </div>
-                    <div class="space-y-2">
-                        <label class="text-[10px] uppercase font-bold tracking-wider">Verify Token (Webhook)</label>
-                        <input type="text" id="meta_verify_token" class="setting-input w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-pink-500 transition" placeholder="Any string you set">
-                    </div>
-                </div>
+                <div id="logArea" class="status-log"></div>
             </div>
 
-            <div class="bg-dark-gray border border-border-gray rounded-2xl p-6 md:p-8 space-y-6">
-                <div class="flex items-center justify-between border-b border-border-gray pb-4">
-                    <div class="flex items-center gap-3">
-                        <i class="fab fa-whatsapp text-2xl text-green-500"></i>
-                        <div>
-                            <h2 class="font-bold text-sm text-white">WhatsApp Cloud API</h2>
-                            <p class="text-[11px] text-gray-400">Meta WhatsApp Business API Access</p>
-                        </div>
-                    </div>
-                    <button id="save-btn" onclick="saveAllSettings()" class="bg-pure-black border border-border-gray px-4 py-2 rounded-lg text-[10px] font-bold text-gray-200 hover:border-green-500 hover:text-green-500 transition uppercase active:scale-95">Save All</button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="space-y-2">
-                        <label class="text-[10px] uppercase font-bold tracking-wider">Phone Number ID</label>
-                        <input type="text" id="wa_phone_id" class="setting-input w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-green-500 transition" placeholder="105...">
-                    </div>
-                    <div class="space-y-2">
-                        <label class="text-[10px] uppercase font-bold tracking-wider">WhatsApp Access Token</label>
-                        <input type="password" id="wa_token" class="setting-input w-full bg-pure-black border border-border-gray rounded-xl p-4 text-sm outline-none focus:border-green-500 transition" placeholder="EAAB...">
-                    </div>
-                </div>
-            </div>
-
-            <div class="pb-10">
-               <button onclick="window.parent.switchToInbox()" class="flex items-center gap-2 text-gray-400 hover:text-white transition">
-              <i class="fas fa-arrow-left"></i>
-              <span>Back to Inbox</span>
+            <button id="sendBtn" onclick="startBroadcast()" class="btn btn-primary w-100 btn-send">
+                <i class="fas fa-paper-plane"></i> START BROADCAST
             </button>
-            </div>
-
         </div>
-
-        <p class="text-center text-[11px] text-gray-500 uppercase tracking-widest pb-10">
-            Changes will take effect after server restart
-        </p>
+        <div class="card-footer text-center text-muted">
+            <small>Note: To avoid spam detection, we use a 200ms delay between messages.</small>
+        </div>
     </div>
+</div>
 
-    <script>
-        function showToast(message) {
-            const toast = document.getElementById("toast");
-            toast.innerText = message;
-            toast.className = "show";
-            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+<script>
+    function previewFile() {
+        const file = document.getElementById('bcFile').files[0];
+        const preview = document.getElementById('imgPreview');
+        const reader = new FileReader();
+
+        reader.onloadend = function () {
+            preview.src = reader.result;
+            preview.style.display = "block";
         }
 
-        async function loadSettings() {
-            try {
-                const res = await fetch('/api/settings');
-                if (!res.ok) throw new Error("Load failed");
-                const data = await res.json();
-                const inputs = document.querySelectorAll('.setting-input');
-                inputs.forEach(input => {
-                    if (data[input.id] !== undefined) {
-                        input.value = data[input.id];
-                    }
-                });
-            } catch (err) {
-                console.error("Failed to load settings:", err);
-            }
+        if (file) { reader.readAsDataURL(file); } 
+        else { preview.style.display = "none"; }
+    }
+
+    async function startBroadcast() {
+        const text = document.getElementById('bcText').value;
+        const fileInput = document.getElementById('bcFile');
+        const sendBtn = document.getElementById('sendBtn');
+        const logArea = document.getElementById('logArea');
+        const progress = document.querySelector('.progress');
+        const progressBar = document.getElementById('progressBar');
+
+        if (!text && !fileInput.files[0]) {
+            return alert("Please enter text or select an image!");
         }
 
-        function toggleVisibility(id, icon) {
-            const el = document.getElementById(id);
-            if (el.type === 'password') {
-                el.type = 'text';
-                icon.classList.replace('fa-eye', 'fa-eye-slash');
-            } else {
-                el.type = 'password';
-                icon.classList.replace('fa-eye-slash', 'fa-eye');
-            }
-        }
+        if (!confirm("Are you sure you want to send this to ALL members?")) return;
 
-        async function saveSingle(key) {
-            const input = document.getElementById(key);
-            const value = input.value;
-            
-            try {
-                const res = await fetch('/api/settings/single', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key, value })
-                });
-                if (res.ok) {
-                    showToast(`✅ ${key.replace(/_/g, ' ').toUpperCase()} saved!`);
-                } else {
-                    showToast("❌ Failed to save setting.");
-                }
-            } catch (err) {
-                showToast("❌ Error: " + err.message);
-            }
-        }
+        // UI Updates
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
+        logArea.style.display = "block";
+        progress.style.display = "flex";
+        logArea.innerHTML = "> Preparing broadcast...\n";
 
-        async function saveAllSettings() {
-            const btn = document.getElementById('save-btn');
-            const inputs = document.querySelectorAll('.setting-input');
-            const settingsData = {};
+        const formData = new FormData();
+        formData.append('text', text);
+        if (fileInput.files[0]) formData.append('file', fileInput.files[0]);
 
-            inputs.forEach(input => {
-                settingsData[input.id] = input.value;
+        try {
+            const response = await fetch('/api/broadcast', {
+                method: 'POST',
+                body: formData
             });
 
-            const originalBtnContent = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-            btn.disabled = true;
+            const result = await response.json();
 
-            try {
-                const res = await fetch('/api/settings/bulk', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(settingsData)
-                });
-
-                if (res.ok) {
-                    showToast("✅ All settings saved & Webhooks updated!");
-                } else {
-                    const errData = await res.json();
-                    throw new Error(errData.error || "Failed to save");
-                }
-            } catch (err) {
-                console.error("Save Error:", err);
-                showToast("❌ Error: " + err.message);
-            } finally {
-                btn.innerHTML = originalBtnContent;
-                btn.disabled = false;
+            if (result.success) {
+                logArea.innerHTML += `> Success! Sent to ${result.count} members.\n`;
+                progressBar.style.width = "100%";
+                progressBar.classList.replace('bg-primary', 'bg-success');
+                alert("Broadcast Completed Successfully!");
+            } else {
+                logArea.innerHTML += `> Error: ${result.error}\n`;
             }
+        } catch (err) {
+            logArea.innerHTML += `> System Error: ${err.message}\n`;
+        } finally {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> START BROADCAST';
         }
+    }
+</script>
 
-        window.onload = loadSettings;
-    </script>
 </body>
 </html>
