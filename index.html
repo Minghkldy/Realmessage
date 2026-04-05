@@ -30,11 +30,15 @@
         
         #left-sidebar { 
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            width: 220px;
+            width: 240px;
         }
         
-        .sidebar-collapsed { width: 70px !important; }
-        .sidebar-collapsed .nav-text, .sidebar-collapsed .dropdown-arrow { display: none; }
+        .sidebar-collapsed { width: 80px !important; }
+        .sidebar-collapsed .nav-text, 
+        .sidebar-collapsed .dropdown-arrow,
+        .sidebar-collapsed #messenger-dropdown { display: none !important; }
+        .sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; }
+        .sidebar-collapsed .text-2xl { padding-left: 0; text-align: center; }
 
         .nav-item { 
             display: flex; align-items: center; gap: 16px; width: 100%; 
@@ -46,18 +50,13 @@
 
         #messenger-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: rgba(0,0,0,0.1); }
         #messenger-dropdown.show { max-height: 400px; }
-        .dropdown-item { padding-left: 56px; padding-top: 12px; padding-bottom: 12px; display: flex; align-items: center; gap: 12px; color: #6b7280; transition: 0.2s; cursor: pointer; }
+        .dropdown-item { padding-left: 64px; padding-top: 10px; padding-bottom: 10px; display: flex; align-items: center; gap: 12px; color: #6b7280; transition: 0.2s; cursor: pointer; }
         .dropdown-item:hover { color: white; }
         .dropdown-arrow { transition: transform 0.3s; margin-left: auto; font-size: 10px; }
         .rotate-arrow { transform: rotate(180deg); }
 
-        .noti-badge {
-            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes pop {
-            0% { transform: scale(0); }
-            100% { transform: scale(1); }
-        }
+        .noti-badge { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
 
         @keyframes ring {
             0% { transform: rotate(0); }
@@ -69,32 +68,13 @@
             60% { transform: rotate(-5deg); }
             100% { transform: rotate(0); }
         }
-
-        .ring-animation {
-            display: inline-block;
-            animation: ring 0.5s ease;
-            animation-iteration-count: infinite;
-        }
+        .ring-animation { display: inline-block; animation: ring 0.5s ease infinite; }
 
         #imagePreviewModal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.9);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-            cursor: zoom-out;
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; cursor: zoom-out;
         }
-        #imagePreviewModal img {
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
-            border-radius: 8px;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
-            cursor: default;
-        }
+        #imagePreviewModal img { max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px; cursor: default; }
     </style>
 </head>
 <body class="h-full flex overflow-hidden bg-pure-black">
@@ -106,16 +86,15 @@
     </div>
 
     <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray">
-        
-        <div class="text-2xl font-bold text-accent-blue px-6 mb-10 cursor-pointer" onclick="toggleLeftSidebar()">
-            <i class="fas fa-robot"></i>
+        <div class="text-2xl font-bold text-accent-blue px-6 mb-10 cursor-pointer flex items-center" onclick="toggleLeftSidebar()">
+            <i class="fas fa-robot w-6 text-center"></i>
             <span class="nav-text ml-3">OmniBot</span>
         </div>
         
         <nav class="flex flex-col w-full">
-            <div>
+            <div class="w-full">
                 <div class="nav-item active-nav" id="inbox-nav" onclick="switchToInbox()">
-                    <i class="fas fa-th-large text-xl w-6"></i>
+                    <i class="fas fa-th-large text-xl w-6 text-center"></i>
                     <span class="nav-text">Inbox</span>
                     <i id="arrow-icon" class="fas fa-chevron-down dropdown-arrow" onclick="event.stopPropagation(); toggleDropdown()"></i>
                 </div>
@@ -145,21 +124,20 @@
             </div>
 
             <div id="bot-config-nav" class="nav-item" onclick="loadBotSettings()">
-                <i class="fas fa-robot text-xl w-6"></i>
+                <i class="fas fa-robot text-xl w-6 text-center"></i>
                 <span class="nav-text">Bot Config</span>
             </div>
         </nav>
 
         <div class="mt-auto w-full">
             <div onclick="loadBotSettings()" class="nav-item" id="sidebar-settings">
-                <i class="fas fa-cog text-xl w-6"></i>
+                <i class="fas fa-cog text-xl w-6 text-center"></i>
                 <span class="nav-text">Settings</span>
             </div>
         </div>
     </div>
 
     <div id="main-dashboard-content" class="flex flex-1">
-        
         <div id="chat-list-container" class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black">
             <div class="p-6 border-b border-border-gray flex justify-between items-center">
                 <div class="flex items-center gap-3">
@@ -168,7 +146,7 @@
                     </button>
                     <div class="flex items-center gap-2">
                         <h2 id="inbox-title" class="font-bold text-sm uppercase tracking-widest">Inbox</h2>
-                        <i id="noti-bell" class="fas fa-bell text-gray-500 hidden text-xs transition-colors duration-300"></i>
+                        <i id="noti-bell" class="fas fa-bell text-gray-500 hidden text-xs"></i>
                     </div>
                 </div>
                 <span id="global-msg-count" class="hidden bg-accent-blue text-[10px] px-2 py-0.5 rounded-full text-white noti-badge">0</span>
@@ -201,7 +179,7 @@
                     <i class="fas fa-paperclip text-gray-500 cursor-pointer hover:text-white" onclick="document.getElementById('file-input').click()"></i>
                     <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Reply here..." class="bg-transparent flex-1 outline-none text-sm text-white">
                     <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition">
-                        <i class="fas fa-paper-plane text text-lg"></i>
+                        <i class="fas fa-paper-plane text-lg"></i>
                     </button>
                 </div>
             </div>
@@ -229,7 +207,7 @@
                 <label class="text-[10px] text-gray-500 uppercase font-bold tracking-widest flex items-center gap-2">
                     <i class="fas fa-sticky-note text-accent-blue"></i> Internal Notes
                 </label>
-                <textarea id="contact-note" onblur="saveNote()" class="w-full h-32 bg-pure-black border border-border-gray rounded-xl p-4 text-xs outline-none focus:border-accent-blue resize-none text-gray-300 transition" placeholder="Add private details..."></textarea>
+                <textarea id="contact-note" onblur="saveNote()" class="w-full h-32 bg-pure-black border border-border-gray rounded-xl p-4 text-xs outline-none focus:border-accent-blue resize-none text-gray-300" placeholder="Add private details..."></textarea>
             </div>
 
             <div class="pt-6 border-t border-border-gray space-y-3">
@@ -297,11 +275,8 @@
             document.getElementById('main-dashboard-content').classList.add('hidden');
             document.getElementById('bot-settings-area').classList.remove('hidden');
             document.getElementById('right-panel').classList.add('hidden');
-            
             document.getElementById('inbox-nav').classList.remove('active-nav');
             document.getElementById('bot-config-nav').classList.add('active-nav');
-            
-            // Sidebar auto-collapse on mobile or clean up
             const dropdown = document.getElementById('messenger-dropdown');
             dropdown.classList.remove('show');
             dropdown.classList.add('hidden');
@@ -323,13 +298,12 @@
                 const res = await fetch('/api/contacts');
                 cachedContacts = await res.json();
                 renderContacts(cachedContacts);
-            } catch (err) { console.error("Load Contacts Error:", err); }
+            } catch (err) { console.error(err); }
         }
 
         function filterContacts(platform) {
             let filtered;
             const title = document.getElementById('inbox-title');
-            
             if (platform === 'all') {
                 filtered = cachedContacts;
                 title.innerText = "Inbox";
@@ -343,24 +317,19 @@
         function renderContacts(contacts) {
             const container = document.getElementById('contacts-container');
             container.innerHTML = '';
-            
             contacts.forEach(c => {
                 const count = unreadCounts[c.chat_id] || 0;
                 const item = document.createElement('div');
                 item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
                 item.onclick = () => selectContact(c);
-                
-                const avatarContent = c.profile_pic ? 
-                    `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` :
-                    `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray">${(c.nickname || c.first_name).charAt(0)}</div>`;
-
+                const avatar = c.profile_pic ? `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` : `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray">${(c.nickname || c.first_name).charAt(0)}</div>`;
                 item.innerHTML = `
-                    ${avatarContent}
+                    ${avatar}
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-bold truncate ${count > 0 ? 'text-white' : 'text-gray-400'}">${c.nickname || c.first_name}</p>
                         <p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p>
                     </div>
-                    ${count > 0 ? `<span class="bg-accent-blue text-[10px] w-5 h-5 flex items-center justify-center rounded-full text-white notif-badge font-bold">${count}</span>` : ''}
+                    ${count > 0 ? `<span class="bg-accent-blue text-[10px] w-5 h-5 flex items-center justify-center rounded-full text-white noti-badge font-bold">${count}</span>` : ''}
                 `;
                 container.appendChild(item);
             });
@@ -369,19 +338,16 @@
 
         function selectContact(contact) {
             currentChatId = contact.chat_id;
-            unreadCounts[currentChatId] = 0; 
-            
+            unreadCounts[currentChatId] = 0;
             const displayName = contact.nickname || contact.first_name;
             document.getElementById('chat-header-name').innerText = displayName;
             document.getElementById('edit-nickname').value = displayName;
             document.getElementById('contact-note').value = contact.notes || "";
             document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
-            
             const hImg = document.getElementById('header-avatar-img');
             const hTxt = document.getElementById('header-avatar-text');
             const sImg = document.getElementById('side-avatar-img');
             const sTxt = document.getElementById('side-avatar-text');
-
             if(contact.profile_pic) {
                 hImg.src = contact.profile_pic; hImg.classList.remove('hidden'); hTxt.classList.add('hidden');
                 sImg.src = contact.profile_pic; sImg.classList.remove('hidden'); sTxt.classList.add('hidden');
@@ -390,10 +356,8 @@
                 hTxt.innerText = initial; hTxt.classList.remove('hidden'); hImg.classList.add('hidden');
                 sTxt.innerText = initial; sTxt.classList.remove('hidden'); sImg.classList.add('hidden');
             }
-
             document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
             document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase font-bold";
-            
             renderContacts(cachedContacts); 
             renderMessages();
         }
@@ -402,15 +366,11 @@
             const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
             const badge = document.getElementById('global-msg-count');
             const bell = document.getElementById('noti-bell');
-
             if (total > 0) {
-                badge.innerText = total;
-                badge.classList.remove('hidden');
-                bell.classList.remove('hidden');
-                bell.classList.add('ring-animation', 'text-yellow-400');
+                badge.innerText = total; badge.classList.remove('hidden');
+                bell.classList.remove('hidden'); bell.classList.add('ring-animation', 'text-yellow-400');
             } else {
-                badge.classList.add('hidden');
-                bell.classList.add('hidden');
+                badge.classList.add('hidden'); bell.classList.add('hidden');
                 bell.classList.remove('ring-animation', 'text-yellow-400');
             }
         }
@@ -420,23 +380,21 @@
                 const response = await fetch('/api/messages');
                 allMessages = await response.json();
                 if(currentChatId) renderMessages();
-            } catch (err) { console.log("History Load Error:", err); }
+            } catch (err) { console.error(err); }
         }
 
         function renderMessages() {
-            const window = document.getElementById('chat-window');
-            window.innerHTML = "";
+            const win = document.getElementById('chat-window');
+            win.innerHTML = "";
             const filtered = allMessages.filter(m => m.chat_id === currentChatId);
             filtered.forEach(msg => appendMessage(msg, msg.sender_type === 'bot'));
         }
 
         function appendMessage(data, isBot) {
-            const window = document.getElementById('chat-window');
+            const win = document.getElementById('chat-window');
             let contentHtml = data.text || "";
-
             const mediaUrl = data.file_url || data.fileUrl;
             const mediaType = data.file_type || data.fileType || "";
-
             if (mediaUrl) {
                 if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
                     contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md" onclick="showImagePreview('${mediaUrl}')">`;
@@ -445,12 +403,8 @@
                 } else if (mediaType.includes('audio')) {
                     contentHtml = `<audio controls class="mt-2 w-full max-w-[200px]"><source src="${mediaUrl}"></audio>`;
                 }
-                
-                if(data.text && !data.text.includes("Sent a")) {
-                    contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
-                }
+                if(data.text && !data.text.includes("Sent a")) contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
             }
-
             const msgHtml = isBot ? `
                 <div class="self-end max-w-[70%]">
                     <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
@@ -466,53 +420,28 @@
                     </div>
                 </div>
             `;
-            window.insertAdjacentHTML('beforeend', msgHtml);
-            window.scrollTo({ top: window.scrollHeight, behavior: 'smooth' });
+            win.insertAdjacentHTML('beforeend', msgHtml);
+            win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' });
         }
 
         async function handleFileUpload(event) {
             const file = event.target.files[0];
-            if (!file || !currentChatId) {
-                alert("Please select a chat first!");
-                return;
-            }
-
+            if (!file || !currentChatId) return alert("Select a chat first!");
             const formData = new FormData();
             formData.append('file', file);
             formData.append('chatId', currentChatId);
-
             try {
-                const window = document.getElementById('chat-window');
-                const loadingId = "loading-" + Date.now();
-                window.insertAdjacentHTML('beforeend', `<div id="${loadingId}" class="self-end text-[10px] text-gray-500">Uploading ${file.name}...</div>`);
-
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                document.getElementById(loadingId).remove();
-
-                if (response.ok) {
-                    event.target.value = ""; 
-                } else {
-                    alert("Upload failed!");
-                }
-            } catch (err) {
-                console.error("Upload error:", err);
-                alert("Error connecting to server.");
-            }
+                const response = await fetch('/api/upload', { method: 'POST', body: formData });
+                if (response.ok) event.target.value = ""; else alert("Upload failed!");
+            } catch (err) { alert("Error connecting to server."); }
         }
 
         socket.on('new_message', (data) => {
-            const senderId = data.chat_id || data.chatId; 
-            
-            const isDuplicate = allMessages.some(m => m.id === data.id && data.id !== undefined);
-            if (!isDuplicate) {
+            const senderId = data.chat_id || data.chatId;
+            if (!allMessages.some(m => m.id === data.id && data.id !== undefined)) {
                 allMessages.push(data);
-                if (currentChatId === senderId) {
-                    appendMessage(data, data.sender_type === 'bot'); 
-                } else {
+                if (currentChatId === senderId) appendMessage(data, data.sender_type === 'bot');
+                else {
                     unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
                     document.getElementById('notif-sound').play().catch(() => {});
                     renderContacts(cachedContacts);
@@ -525,11 +454,8 @@
             const text = input.value.trim();
             if(text !== "" && currentChatId !== "") {
                 socket.emit('send_reply', { chatId: currentChatId, text: text });
-                input.value = "";
-                unreadCounts[currentChatId] = 0;
-            } else if (!currentChatId) {
-                alert("Please select a contact first.");
-            }
+                input.value = ""; unreadCounts[currentChatId] = 0;
+            } else if (!currentChatId) alert("Please select a contact first.");
         }
 
         async function updateNickname() {
@@ -546,11 +472,9 @@
         }
 
         async function toggleBlock() {
-            if (!currentChatId) return;
-            if (confirm("Block this customer?")) {
-                await fetch('/api/contacts/block', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId }) });
-                location.reload();
-            }
+            if (!currentChatId || !confirm("Block this customer?")) return;
+            await fetch('/api/contacts/block', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId }) });
+            location.reload();
         }
 
         async function deleteContact() {
@@ -560,11 +484,7 @@
         }
 
         function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
-        
-        window.onload = () => {
-            loadContacts();
-            loadHistory();
-        };
+        window.onload = () => { loadContacts(); loadHistory(); };
     </script>
 </body>
 </html>
