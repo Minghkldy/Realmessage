@@ -182,19 +182,17 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Settings Bulk Update (Modified for Dark Mode sync) ---
+// --- Settings Bulk Update ---
 app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     const settingsData = { ...req.body };
     const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`; 
 
     try {
-        // Avatar File ပါလာရင် base64 ပြောင်းပြီး သိမ်းမယ်
         if (req.file) {
             const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
             settingsData.admin_avatar = base64Image;
         }
 
-        // Object ထဲက setting တစ်ခုချင်းစီကို Database ထဲမှာ Update/Insert လုပ်မယ်
         const keys = Object.keys(settingsData);
         for (const key of keys) {
             const val = settingsData[key];
@@ -206,11 +204,8 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
             }
         }
 
-        // --- Socket.io Notification for Settings Sync ---
-        // အထူးသဖြင့် dark_mode_always_on ပြောင်းသွားရင် UI ကိုချက်ချင်းသိစေဖို့
         io.emit('settings_updated', settingsData);
 
-        // Telegram Webhook Update
         if (settingsData.telegram_token) {
             try {
                 await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
