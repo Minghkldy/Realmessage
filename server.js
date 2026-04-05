@@ -14,22 +14,13 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 // Middleware
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true })); // Form data လက်ခံရန်
+app.use(bodyParser.json({ limit: '50mb' })); // Base64 image တွေအတွက် limit တိုးထားပါတယ်
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname)));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --- Multer Setup ---
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const uploadPath = path.join(__dirname, 'uploads');
-        if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
-        cb(null, uploadPath);
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname);
-    }
-});
+// --- Multer Memory Storage Setup ---
+// Render Free Tier မှာ Disk သုံးမရလို့ Memory Storage ပြောင်းလိုက်ပါတယ်
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // Database Connection
@@ -115,7 +106,6 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- API: Settings Endpoints ---
 app.get('/api/settings', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM settings');
@@ -125,18 +115,18 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// settings.html မှ FormData ဖြင့် ပို့လိုက်သော data များကို လက်ခံရန် ပြင်ဆင်ထားသည်
+// Admin Profile သိမ်းတဲ့အပိုင်းကို Base64 သို့ ပြောင်းပြင်ထားသည်
 app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     const settingsData = req.body;
     const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`; 
 
     try {
-        // ၁။ ပုံအသစ်ပါလာလျှင် ၎င်း၏ URL ကို သိမ်းဆည်းရန်
         if (req.file) {
-            settingsData.admin_avatar = `/uploads/${req.file.filename}`;
+            // ပုံကို Base64 string အဖြစ်ပြောင်းလဲခြင်း
+            const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+            settingsData.admin_avatar = base64Image;
         }
 
-        // ၂။ ကျန်တဲ့ settings အားလုံးကို loop ပတ်ပြီး DB ထဲ ထည့်သွင်း/ပြင်ဆင်ခြင်း
         for (const [key, value] of Object.entries(settingsData)) {
             if (value !== undefined) {
                 await pool.query(
@@ -146,7 +136,6 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
             }
         }
 
-        // ၃။ Telegram Token ပါလာလျှင် Webhook ချိတ်ခြင်း
         if (settingsData.telegram_token) {
             await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
         }
@@ -158,13 +147,13 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     }
 });
 
-// --- API: Dashboard မှ ပုံပို့ရန် Route ---
+// Dashboard မှ ပုံပို့တဲ့အခါ Base64 ဖြင့် DB တွင် သိမ်းခြင်း
 app.post('/api/upload', upload.single('file'), async (req, res) => {
     const { chatId } = req.body;
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    const fileUrl = `/uploads/${req.file.filename}`;
-    const fullUrl = `${process.env.RENDER_EXTERNAL_URL || (req.protocol + '://' + req.get('host'))}${fileUrl}`;
+    // ပုံကို Base64 string အဖြစ်ပြောင်းလဲခြင်း
+    const base64File = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
 
     try {
         const contactRes = await pool.query('SELECT platform FROM contacts WHERE chat_id = $1', [chatId]);
@@ -175,23 +164,29 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
         await pool.query(
             'INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-            [adminName, `Sent an image`, platform, chatId, 'bot', fileUrl, 'image']
+            [adminName, `Sent an image`, platform, chatId, 'bot', base64File, 'image']
         );
 
         if (platform === 'Telegram') {
             const tokenRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
             const token = tokenRes.rows[0]?.value;
             if (token) {
-                await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, {
-                    chat_id: chatId,
-                    photo: fullUrl
+                // Telegram ကို ပို့တဲ့အခါ Buffer အဖြစ် တိုက်ရိုက်ပို့သည်
+                const FormData = require('form-data');
+                const form = new FormData();
+                form.append('chat_id', chatId);
+                form.append('photo', req.file.buffer, { filename: req.file.originalname });
+
+                await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, form, {
+                    headers: form.getHeaders()
                 });
             }
         }
 
-        io.emit('new_message', { sender: adminName, text: 'Sent an image', chatId, file_url: fileUrl, file_type: 'image', platform, sender_type: 'bot' });
-        res.json({ success: true, fileUrl: fileUrl });
+        io.emit('new_message', { sender: adminName, text: 'Sent an image', chatId, file_url: base64File, file_type: 'image', platform, sender_type: 'bot' });
+        res.json({ success: true, fileUrl: base64File });
     } catch (err) {
+        console.error("Upload Error:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
@@ -231,7 +226,6 @@ app.post('/webhook/telegram', async (req, res) => {
 
             io.emit('new_message', { sender, text, chatId, profile_pic: profilePic, platform: 'Telegram', sender_type: 'user', file_url: fileUrl, file_type: fileType });
 
-            // Auto-Reply Logic
             if (settingsMap['enable_autoreply'] === 'true' && settingsMap['autoreply_text']) {
                 await axios.post(`https://api.telegram.org/bot${currentToken}/sendMessage`, { chat_id: chatId, text: settingsMap['autoreply_text'] });
             }
