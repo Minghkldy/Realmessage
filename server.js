@@ -105,6 +105,25 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- (NEW) DELETE CONTACT & MESSAGES API ---
+app.delete('/api/contacts/:chatId', async (req, res) => {
+    const { chatId } = req.params;
+    try {
+        await pool.query('DELETE FROM messages WHERE chat_id = $1', [chatId]);
+        await pool.query('DELETE FROM contacts WHERE chat_id = $1', [chatId]);
+        res.json({ success: true, message: "Conversation deleted" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- (NEW) BLOCK/STATUS UPDATE API ---
+app.post('/api/contacts/status', async (req, res) => {
+    const { chatId, status } = req.body; // status: 'active' သို့မဟုတ် 'blocked'
+    try {
+        await pool.query('UPDATE contacts SET status = $1 WHERE chat_id = $2', [status, chatId]);
+        res.json({ success: true, status });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/settings', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM settings');
@@ -114,19 +133,16 @@ app.get('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- ManyChat ပုံစံမျိုး Token ပြောင်းတာနဲ့ Webhook ပါ တစ်ခါတည်း Update လုပ်ပေးမည့် API ---
 app.post('/api/settings/single', async (req, res) => {
     const { key, value } = req.body;
     const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`;
 
     try {
-        // ၁။ Database မှာ အရင်သိမ်းမယ်
         await pool.query(
             'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
             [key, value]
         );
 
-        // ၂။ အကယ်၍ သိမ်းလိုက်တာက telegram_token ဖြစ်ရင် Webhook ပါ တစ်ခါတည်း ချိတ်မယ်
         if (key === 'telegram_token' && value) {
             try {
                 await axios.get(`https://api.telegram.org/bot${value}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
@@ -213,7 +229,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     }
 });
 
-// --- Telegram Webhook (FIXED LOGIC) ---
+// --- Telegram Webhook ---
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (!update.message) return res.sendStatus(200);
@@ -230,6 +246,13 @@ app.post('/webhook/telegram', async (req, res) => {
         settingsRes.rows.forEach(r => settingsMap[r.key] = r.value);
         const currentToken = settingsMap['telegram_token'];
 
+        // --- (ADDED) BLOCK CHECK ---
+        const contactCheck = await pool.query('SELECT status FROM contacts WHERE chat_id = $1', [chatId]);
+        if (contactCheck.rows[0]?.status === 'blocked') {
+            console.log(`🚫 Message from blocked user ignored: ${chatId}`);
+            return res.sendStatus(200);
+        }
+
         if (currentToken) {
             if (update.message.photo) {
                 const fileId = update.message.photo[update.message.photo.length - 1].file_id;
@@ -241,7 +264,6 @@ app.post('/webhook/telegram', async (req, res) => {
 
             const profilePic = await getTelegramProfilePic(chatId, currentToken);
 
-            // ၁။ Contacts Table ကို အရင် Update လုပ်မယ် (Platform ပါအောင် EXCLUDED သုံးထားပါတယ်)
             await pool.query(`
                 INSERT INTO contacts (chat_id, first_name, profile_pic, platform) 
                 VALUES ($1, $2, $3, $4) 
@@ -250,13 +272,11 @@ app.post('/webhook/telegram', async (req, res) => {
                 [chatId, sender, profilePic, 'Telegram']
             );
 
-            // ၂။ Messages Table ထဲထည့်မယ်
             await pool.query(
                 'INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
                 [sender, text, 'Telegram', chatId, 'user', fileUrl, fileType]
             );
 
-            // ၃။ Real-time Dashboard ကို ပို့မယ်
             io.emit('new_message', { sender, text, chatId, profile_pic: profilePic, platform: 'Telegram', sender_type: 'user', file_url: fileUrl, file_type: fileType });
 
             if (settingsMap['enable_autoreply'] === 'true' && settingsMap['autoreply_text']) {
