@@ -30,7 +30,7 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// ၁။ Database Tables Initialization
+// ၁။ Database Tables Initialization (is_read column ထည့်သွင်းထားသည်)
 const initDb = async () => {
     try {
         await pool.query(`
@@ -57,6 +57,7 @@ const initDb = async () => {
                 sender_type TEXT,
                 file_url TEXT,
                 file_type TEXT,
+                is_read BOOLEAN DEFAULT false,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
@@ -68,7 +69,7 @@ const initDb = async () => {
             )
         `);
         
-        console.log("✅ Database structure is ready.");
+        console.log("✅ Database structure is ready with Read Status support.");
     } catch (err) {
         console.error("❌ DB Init Error:", err.message);
     }
@@ -88,10 +89,14 @@ async function getTelegramProfilePic(userId, token) {
     return `https://ui-avatars.com/api/?name=User&background=random`;
 }
 
-// ၃။ Unified Message Handler
+// ၃။ Unified Message Handler (is_read logic ထည့်သွင်းထားသည်)
 async function handleIncomingMessage(payload) {
     const { sender, text, platform, chatId, profilePic, fileUrl, fileType } = payload;
     try {
+        // User ဆီက စာဝင်လာရင် Admin ပို့ထားသမျှစာတွေကို 'See' (is_read=true) ဖြစ်အောင် အရင်လုပ်သည်
+        await pool.query("UPDATE messages SET is_read = true WHERE chat_id = $1 AND sender_type = 'bot'", [chatId]);
+        io.emit('messages_read', { chatId });
+
         await pool.query(`
             INSERT INTO contacts (chat_id, first_name, profile_pic, platform) 
             VALUES ($1, $2, $3, $4) 
@@ -99,12 +104,12 @@ async function handleIncomingMessage(payload) {
             [chatId, sender, profilePic, platform]
         );
 
-        await pool.query(
-            'INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        const msgRes = await pool.query(
+            "INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time",
             [sender, text, platform, chatId, 'user', fileUrl, fileType]
         );
 
-        io.emit('new_message', { sender, text, chatId, profile_pic: profilePic, platform, sender_type: 'user', file_url: fileUrl, file_type: fileType });
+        io.emit('new_message', msgRes.rows[0]);
 
         const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'enable_autoreply', 'autoreply_text', 'admin_nickname')");
         const settingsMap = {};
@@ -118,10 +123,10 @@ async function handleIncomingMessage(payload) {
                 await axios.post(`https://api.telegram.org/bot${settingsMap['telegram_token']}/sendMessage`, { chat_id: chatId, text: replyText });
             }
 
-            await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)', 
+            const autoMsg = await pool.query("INSERT INTO messages (sender, text, platform, chat_id, sender_type, is_read) VALUES ($1, $2, $3, $4, $5, false) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time", 
                 [adminName, replyText, platform, chatId, 'bot']);
             
-            io.emit('new_message', { sender: adminName, text: replyText, chatId, platform, sender_type: 'bot' });
+            io.emit('new_message', autoMsg.rows[0]);
         }
     } catch (err) { console.error("Unified Logic Error:", err.message); }
 }
@@ -145,7 +150,7 @@ app.get('/api/admin/profile', async (req, res) => {
 
 app.get('/api/messages', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM messages ORDER BY created_at ASC');
+        const result = await pool.query("SELECT *, TO_CHAR(created_at, 'HH12:MI AM') as time FROM messages ORDER BY created_at ASC");
         res.json(result.rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -154,6 +159,16 @@ app.get('/api/contacts', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM contacts ORDER BY created_at DESC');
         res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// API to mark messages as read manually
+app.post('/api/messages/read', async (req, res) => {
+    const { chatId } = req.body;
+    try {
+        await pool.query("UPDATE messages SET is_read = true WHERE chat_id = $1 AND sender_type = 'bot'", [chatId]);
+        io.emit('messages_read', { chatId });
+        res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -230,8 +245,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'admin_nickname'");
         const adminName = settingsRes.rows[0]?.value || 'OmniBot';
 
-        await pool.query(
-            'INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        const msgRes = await pool.query(
+            "INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time",
             [adminName, `Sent an image`, platform, chatId, 'bot', base64File, 'image']
         );
 
@@ -245,7 +260,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
                 await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, form, { headers: form.getHeaders() });
             }
         }
-        io.emit('new_message', { sender: adminName, text: 'Sent an image', chatId, file_url: base64File, file_type: 'image', platform, sender_type: 'bot' });
+        io.emit('new_message', msgRes.rows[0]);
         res.json({ success: true, fileUrl: base64File });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -255,8 +270,6 @@ app.post('/api/broadcast', upload.single('file'), async (req, res) => {
     try {
         const { text } = req.body;
         const file = req.file;
-        
-        // Frontend အတွက် Base64 image data ပြင်ဆင်ခြင်း
         const base64File = file ? `data:${file.mimetype};base64,${file.buffer.toString('base64')}` : null;
 
         const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'admin_nickname')");
@@ -285,20 +298,10 @@ app.post('/api/broadcast', upload.single('file'), async (req, res) => {
                     }
                 }
 
-                // DB ထဲမှာ သိမ်းဆည်းခြင်း (base64 လမ်းကြောင်းကိုပါ ထည့်သိမ်းသည်)
-                await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                const msgRes = await pool.query("INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time",
                     [adminName, text || "Sent an image", contact.platform, contact.chat_id, 'bot', base64File, file ? 'image' : null]);
 
-                // Socket ကနေ Admin Screen ဆီ ပုံချက်ချင်းပြနိုင်အောင် ပို့ပေးခြင်း
-                io.emit('new_message', { 
-                    sender: adminName, 
-                    text: text || "Sent an image", 
-                    chatId: contact.chat_id, 
-                    file_url: base64File, 
-                    file_type: file ? 'image' : null, 
-                    platform: contact.platform, 
-                    sender_type: 'bot' 
-                });
+                io.emit('new_message', msgRes.rows[0]);
 
                 count++;
                 await new Promise(resolve => setTimeout(resolve, 200));
@@ -361,10 +364,10 @@ io.on('connection', (socket) => {
                 await axios.post(`https://api.telegram.org/bot${tokens.telegram_token}/sendMessage`, { chat_id: data.chatId, text: data.text });
             }
 
-            await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)', 
+            const msgRes = await pool.query("INSERT INTO messages (sender, text, platform, chat_id, sender_type, is_read) VALUES ($1, $2, $3, $4, $5, false) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time", 
                 [adminName, data.text, platform, data.chatId, 'bot']);
 
-            io.emit('new_message', { sender: adminName, text: data.text, chatId: data.chatId, platform: platform, sender_type: 'bot' });
+            io.emit('new_message', msgRes.rows[0]);
         } catch (e) { console.error("Reply Error"); }
     });
 });
