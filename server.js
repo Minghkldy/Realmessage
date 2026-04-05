@@ -133,7 +133,6 @@ app.post('/api/settings/single', async (req, res) => {
                 console.log(`✅ Webhook updated for new token: ${value}`);
             } catch (webhookErr) {
                 console.error("❌ Webhook Update Error:", webhookErr.message);
-                // Token မှားနေရင်တောင် settings သိမ်းတာကို success ပေးနိုင်အောင် error မပစ်ပါဘူး
             }
         }
 
@@ -214,20 +213,21 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     }
 });
 
-// --- Telegram Webhook ---
+// --- Telegram Webhook (FIXED LOGIC) ---
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
-    if (update.message) {
-        const chatId = update.message.chat.id.toString();
-        const sender = `${update.message.from.first_name || ""} ${update.message.from.last_name || ""}`.trim() || "Unknown";
-        let text = update.message.text || update.message.caption || "";
-        let fileUrl = null;
-        let fileType = null;
+    if (!update.message) return res.sendStatus(200);
 
-        const settingsRes = await pool.query("SELECT value FROM settings WHERE key IN ('telegram_token', 'enable_autoreply', 'autoreply_text')");
+    const chatId = update.message.chat.id.toString();
+    const sender = `${update.message.from.first_name || ""} ${update.message.from.last_name || ""}`.trim() || "Unknown";
+    let text = update.message.text || update.message.caption || "";
+    let fileUrl = null;
+    let fileType = null;
+
+    try {
+        const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'enable_autoreply', 'autoreply_text')");
         const settingsMap = {};
         settingsRes.rows.forEach(r => settingsMap[r.key] = r.value);
-
         const currentToken = settingsMap['telegram_token'];
 
         if (currentToken) {
@@ -240,19 +240,31 @@ app.post('/webhook/telegram', async (req, res) => {
             }
 
             const profilePic = await getTelegramProfilePic(chatId, currentToken);
-            await pool.query('INSERT INTO contacts (chat_id, first_name, profile_pic, platform) VALUES ($1, $2, $3, $4) ON CONFLICT (chat_id) DO UPDATE SET first_name = $2, profile_pic = $3', [chatId, sender, profilePic, 'Telegram']);
 
+            // ၁။ Contacts Table ကို အရင် Update လုပ်မယ် (Platform ပါအောင် EXCLUDED သုံးထားပါတယ်)
+            await pool.query(`
+                INSERT INTO contacts (chat_id, first_name, profile_pic, platform) 
+                VALUES ($1, $2, $3, $4) 
+                ON CONFLICT (chat_id) 
+                DO UPDATE SET first_name = EXCLUDED.first_name, profile_pic = EXCLUDED.profile_pic, platform = EXCLUDED.platform`, 
+                [chatId, sender, profilePic, 'Telegram']
+            );
+
+            // ၂။ Messages Table ထဲထည့်မယ်
             await pool.query(
                 'INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
                 [sender, text, 'Telegram', chatId, 'user', fileUrl, fileType]
             );
 
+            // ၃။ Real-time Dashboard ကို ပို့မယ်
             io.emit('new_message', { sender, text, chatId, profile_pic: profilePic, platform: 'Telegram', sender_type: 'user', file_url: fileUrl, file_type: fileType });
 
             if (settingsMap['enable_autoreply'] === 'true' && settingsMap['autoreply_text']) {
                 await axios.post(`https://api.telegram.org/bot${currentToken}/sendMessage`, { chat_id: chatId, text: settingsMap['autoreply_text'] });
             }
         }
+    } catch (err) {
+        console.error("❌ Webhook Error:", err.message);
     }
     res.sendStatus(200);
 });
