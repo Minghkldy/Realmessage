@@ -171,7 +171,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
             const tokenRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
             const token = tokenRes.rows[0]?.value;
             if (token) {
-                // Telegram ကို ပို့တဲ့အခါ Buffer အဖြစ် တိုက်ရိုက်ပို့သည်
+                // Telegram ကို ပုံပို့ဖို့ FormData သုံးပြီး Buffer ကို တိုက်ရိုက်ပို့သည်
                 const FormData = require('form-data');
                 const form = new FormData();
                 form.append('chat_id', chatId);
