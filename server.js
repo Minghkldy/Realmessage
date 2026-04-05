@@ -129,6 +129,7 @@ async function handleIncomingMessage(payload) {
 // --- Routes ---
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/settings', (req, res) => res.sendFile(path.join(__dirname, 'general-settings.html')));
+app.get('/broadcast', (req, res) => res.sendFile(path.join(__dirname, 'broadcast.html')));
 
 app.get('/api/admin/profile', async (req, res) => {
     try {
@@ -247,6 +248,57 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         io.emit('new_message', { sender: adminName, text: 'Sent an image', chatId, file_url: base64File, file_type: 'image', platform, sender_type: 'bot' });
         res.json({ success: true, fileUrl: base64File });
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- Bulk Messaging (Broadcast) API ---
+app.post('/api/broadcast', upload.single('file'), async (req, res) => {
+    try {
+        const { text } = req.body;
+        const file = req.file;
+
+        // Settings များ ရယူခြင်း
+        const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'admin_nickname')");
+        const settingsMap = {};
+        settingsRes.rows.forEach(r => settingsMap[r.key] = r.value);
+        
+        const token = settingsMap['telegram_token'];
+        const adminName = settingsMap['admin_nickname'] || 'OmniBot';
+
+        if (!token) return res.status(400).json({ success: false, error: "Telegram Token not found!" });
+
+        // Contact အားလုံးကို ဆွဲထုတ်ခြင်း
+        const contacts = await pool.query("SELECT chat_id, platform FROM contacts WHERE status = 'active'");
+        let count = 0;
+
+        for (const contact of contacts.rows) {
+            try {
+                if (contact.platform === 'Telegram') {
+                    if (file) {
+                        const form = new FormData();
+                        form.append('chat_id', contact.chat_id);
+                        form.append('photo', file.buffer, { filename: 'broadcast_image.jpg' });
+                        if (text) form.append('caption', text);
+                        await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, form, { headers: form.getHeaders() });
+                    } else if (text) {
+                        await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, { chat_id: contact.chat_id, text: text });
+                    }
+                }
+
+                // DB ထဲမှာ သိမ်းဆည်းခြင်း
+                await pool.query('INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                    [adminName, text || "Sent an image", contact.platform, contact.chat_id, 'bot', file ? 'broadcast_file' : null, file ? 'image' : null]);
+
+                count++;
+                // Spam မဖြစ်စေရန် 200ms စောင့်ခြင်း
+                await new Promise(resolve => setTimeout(resolve, 200));
+            } catch (e) { console.error(`Failed to send to ${contact.chat_id}:`, e.message); }
+        }
+
+        res.json({ success: true, count: count });
+    } catch (err) {
+        console.error("Broadcast Error:", err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 // --- Telegram Webhook ---
