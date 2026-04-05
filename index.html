@@ -22,37 +22,11 @@
         }
     </script>
     <style>
-        /* CSS Variables for Appearance Switch */
-        :root {
-            --bg-main: #ffffff;
-            --bg-side: #f3f4f6;
-            --text-main: #111827;
-            --border-color: #e5e7eb;
-        }
-
-        body.dark-mode {
-            --bg-main: #000000;
-            --bg-side: #0a0a0a;
-            --text-main: #ffffff;
-            --border-color: #1f1f1f;
-        }
-
-        body { 
-            background-color: var(--bg-main); 
-            color: var(--text-main); 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            transition: background-color 0.3s, color 0.3s;
-        }
-        
-        /* Dark Mode Transitions for specific classes */
-        .bg-pure-black { background-color: var(--bg-main) !important; transition: background-color 0.3s; }
-        .bg-dark-gray { background-color: var(--bg-side) !important; transition: background-color 0.3s; }
-        .border-border-gray { border-color: var(--border-color) !important; transition: border-color 0.3s; }
-
+        body { background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         
-        .active-contact { border-left: 3px solid #3B82F6; background-color: rgba(59, 130, 246, 0.1); }
+        .active-contact { border-left: 3px solid #3B82F6; background-color: #0f0f0f; }
         
         #left-sidebar { 
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
@@ -70,14 +44,14 @@
             display: flex; align-items: center; gap: 16px; width: 100%; 
             padding: 12px 24px; cursor: pointer; transition: 0.2s; color: #6b7280;
         }
-        .nav-item:hover { color: var(--text-main); background-color: rgba(255,255,255,0.05); }
+        .nav-item:hover { color: white; background-color: rgba(255,255,255,0.05); }
         .nav-text { font-size: 14px; font-weight: 500; white-space: nowrap; }
         .active-nav { color: #3B82F6; background-color: rgba(59, 130, 246, 0.05); }
 
         #messenger-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: rgba(0,0,0,0.1); }
         #messenger-dropdown.show { max-height: 400px; }
         .dropdown-item { padding-left: 64px; padding-top: 10px; padding-bottom: 10px; display: flex; align-items: center; gap: 12px; color: #6b7280; transition: 0.2s; cursor: pointer; }
-        .dropdown-item:hover { color: var(--text-main); }
+        .dropdown-item:hover { color: white; }
         .dropdown-arrow { transition: transform 0.3s; margin-left: auto; font-size: 10px; }
         .rotate-arrow { transform: rotate(180deg); }
 
@@ -103,7 +77,9 @@
         #imagePreviewModal img { max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px; cursor: default; }
     </style>
 </head>
-<body class="h-full flex overflow-hidden"> <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
+<body class="h-full flex overflow-hidden bg-pure-black">
+
+    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
     <div id="imagePreviewModal" onclick="closeImagePreview()">
         <img id="previewImg" src="" onclick="event.stopPropagation()">
@@ -171,7 +147,7 @@
             
             <div class="flex items-center space-x-3 cursor-pointer group">
                 <div class="text-right hidden md:block">
-                    <p id="top-admin-name" class="text-sm font-medium">Admin</p>
+                    <p id="top-admin-name" class="text-sm font-medium text-white">Admin</p>
                     <p class="text-[10px] text-gray-500 uppercase tracking-widest">System Admin</p>
                 </div>
                 <div class="relative">
@@ -208,7 +184,7 @@
                             <p id="chat-status" class="text-[10px] text-gray-600 uppercase">System Ready</p>
                         </div>
                     </div>
-                    <button onclick="toggleRightPanel()" class="text-gray-500 hover:text-accent-blue transition p-2 flex-shrink-0">
+                    <button onclick="toggleRightPanel()" class="text-gray-500 hover:text-white transition p-2 flex-shrink-0">
                         <i class="fas fa-user-circle text-xl"></i>
                     </button>
                 </div>
@@ -219,7 +195,7 @@
                     <div class="flex items-center gap-4 bg-dark-gray border border-border-gray rounded-2xl px-5 py-3 focus-within:border-accent-blue transition">
                         <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)" accept="image/*,video/*,audio/*">
                         <i class="fas fa-paperclip text-gray-500 cursor-pointer hover:text-white" onclick="document.getElementById('file-input').click()"></i>
-                        <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Reply here..." class="bg-transparent flex-1 outline-none text-sm min-w-0">
+                        <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Reply here..." class="bg-transparent flex-1 outline-none text-sm text-white min-w-0">
                         <button onclick="sendMessage()" class="text-accent-blue hover:scale-110 transition flex-shrink-0">
                             <i class="fas fa-paper-plane text-lg"></i>
                         </button>
@@ -271,22 +247,11 @@
         let unreadCounts = {};
         let cachedContacts = []; 
 
-        // Load Appearance & Profile from Database
         async function loadSystemSettings() {
             try {
-                const res = await fetch('/api/settings');
-                const settings = await res.json();
-                
-                // ၁။ Dark Mode အဖွင့်အပိတ်ကို Database ထဲက key နဲ့ စစ်ဆေးပြီး Body မှာ Class ထည့်မယ်
-                if (settings.dark_mode_always_on === 'true') {
-                    document.body.classList.add('dark-mode');
-                } else {
-                    document.body.classList.remove('dark-mode');
-                }
-
-                // ၂။ Admin Profile Load လုပ်ခြင်း
-                const profileRes = await fetch('/api/admin/profile');
-                const data = await profileRes.json();
+                // (FIX) API မှ Profile ကို တိုက်ရိုက်ဆွဲယူရန် ပြင်ဆင်ခြင်း
+                const res = await fetch('/api/admin/profile');
+                const data = await res.json();
                 
                 if (data.nickname) {
                     document.getElementById('top-admin-name').innerText = data.nickname;
@@ -294,6 +259,7 @@
                 
                 const el = document.getElementById('top-admin-avatar');
                 if (el && data.avatar) {
+                    // Base64 သို့မဟုတ် URL အပြည့်အစုံဆိုလျှင် တိုက်ရိုက်ပြ၊ မဟုတ်လျှင် uploads ထဲတွင် ရှာရန်
                     if (data.avatar.startsWith('data:image') || data.avatar.startsWith('http')) {
                         el.src = data.avatar;
                     } else {
@@ -302,28 +268,6 @@
                 }
             } catch (e) { console.error("Error loading settings:", e); }
         }
-
-        // ၃။ Real-time Socket ကနေ Setting Update လာရင်လည်း ချက်ချင်းအရောင်ပြောင်းပေးမယ်
-        socket.on('settings_updated', (data) => {
-            if (data.dark_mode_always_on !== undefined) {
-                if (data.dark_mode_always_on === 'true') {
-                    document.body.classList.add('dark-mode');
-                } else {
-                    document.body.classList.remove('dark-mode');
-                }
-            }
-        });
-
-        // Child frame ထဲကနေ Theme ပြောင်းလိုက်ရင် Dashboard မှာပါ လိုက်ပြောင်းဖို့
-        window.addEventListener('message', function(event) {
-            if (event.data.type === 'THEME_CHANGE') {
-                if (event.data.isDark) {
-                    document.body.classList.add('dark-mode');
-                } else {
-                    document.body.classList.remove('dark-mode');
-                }
-            }
-        });
 
         function toggleLeftSidebar() { 
             const sidebar = document.getElementById('left-sidebar');
@@ -431,7 +375,7 @@
                 item.innerHTML = `
                     ${avatar}
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-bold truncate ${count > 0 ? 'text-accent-blue' : ''}">${c.nickname || c.first_name}</p>
+                        <p class="text-sm font-bold truncate ${count > 0 ? 'text-white' : 'text-gray-400'}">${c.nickname || c.first_name}</p>
                         <p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p>
                     </div>
                     ${count > 0 ? `<span class="bg-accent-blue text-[10px] w-5 h-5 flex items-center justify-center rounded-full text-white noti-badge font-bold">${count}</span>` : ''}
@@ -506,7 +450,9 @@
             let mediaUrl = data.file_url || data.fileUrl;
             const mediaType = data.file_type || data.fileType || "";
 
+            // (FIX) Chat Window ထဲတွင် Image URL များ မှန်ကန်စွာ ပေါ်စေရန်
             if (mediaUrl) {
+                // Base64 မဟုတ်ခဲ့ရင် uploads path ထည့်ပေးဖို့ စစ်ဆေးခြင်း
                 if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) {
                     mediaUrl = `/uploads/${mediaUrl}`;
                 }
@@ -523,8 +469,8 @@
 
             const msgHtml = isBot ? `
                 <div class="self-end max-w-[75%]">
-                    <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg text-white">${contentHtml}</div>
-                    <p class="text-[9px] text-gray-500 mt-2 text-right uppercase">Sent</p>
+                    <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
+                    <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
                 </div>
             ` : `
                 <div class="flex items-start gap-3 max-w-[75%]">
@@ -532,7 +478,7 @@
                         ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover">` : `<i class="fas fa-user text-gray-500"></i>`}
                     </div>
                     <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
-                        <p class="text-[10px] text-accent-blue mb-1 font-bold">${data.sender || 'User'}</p>${contentHtml}
+                        <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>${contentHtml}
                     </div>
                 </div>
             `;
@@ -554,6 +500,7 @@
 
         socket.on('new_message', (data) => {
             const senderId = data.chat_id || data.chatId;
+            // id မပါရင်လည်း update ဖြစ်အောင် စစ်ဆေးမှု လျှော့ချထားသည်
             allMessages.push(data);
             if (currentChatId === senderId) {
                 appendMessage(data, data.sender_type === 'bot');
