@@ -248,17 +248,30 @@
         let cachedContacts = []; 
 
         async function loadSystemSettings() {
-            try {
-                const res = await fetch('/api/settings');
-                const data = await res.json();
-                if (data.site_name) document.getElementById('top-admin-name').innerText = data.site_name;
-                if (data.admin_avatar_url) {
-                    document.getElementById('top-admin-avatar').src = data.admin_avatar_url;
-                } else if (data.site_name) {
-                    document.getElementById('top-admin-avatar').src = `https://ui-avatars.com/api/?name=${data.site_name}&background=random`;
-                }
-            } catch (e) { console.error("Error loading settings:", e); }
+    try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        
+        // ၁။ Database ကလာတဲ့ site_name ကို အရင်ပြမယ်
+        if (data.site_name) {
+            document.getElementById('top-admin-name').innerText = data.site_name;
         }
+
+        // ၂။ LocalStorage မှာ ပုံအသစ်ရှိမရှိ အရင်စစ်မယ် (ဒါမှ ချက်ချင်းပြောင်းမှာပါ)
+        const localAvatar = localStorage.getItem('admin_avatar_url');
+        const finalAvatar = localAvatar || data.admin_avatar_url || `https://ui-avatars.com/api/?name=${data.site_name || 'Admin'}&background=random`;
+
+        // ၃။ ပုံရှိသမျှ နေရာတိုင်းမှာ Update လုပ်မယ်
+        const avatarElements = ['top-admin-avatar']; // တခြားနေရာမှာရှိတဲ့ profile id တွေပါ ထည့်လို့ရတယ်
+        avatarElements.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.src = finalAvatar;
+        });
+
+    } catch (e) { 
+        console.error("Error loading settings:", e); 
+    }
+}
 
         function toggleLeftSidebar() { 
             const sidebar = document.getElementById('left-sidebar');
