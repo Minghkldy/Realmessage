@@ -249,7 +249,6 @@
 
         async function loadSystemSettings() {
             try {
-                // (FIX) API မှ Profile ကို တိုက်ရိုက်ဆွဲယူရန် ပြင်ဆင်ခြင်း
                 const res = await fetch('/api/admin/profile');
                 const data = await res.json();
                 
@@ -259,7 +258,6 @@
                 
                 const el = document.getElementById('top-admin-avatar');
                 if (el && data.avatar) {
-                    // Base64 သို့မဟုတ် URL အပြည့်အစုံဆိုလျှင် တိုက်ရိုက်ပြ၊ မဟုတ်လျှင် uploads ထဲတွင် ရှာရန်
                     if (data.avatar.startsWith('data:image') || data.avatar.startsWith('http')) {
                         el.src = data.avatar;
                     } else {
@@ -450,9 +448,7 @@
             let mediaUrl = data.file_url || data.fileUrl;
             const mediaType = data.file_type || data.fileType || "";
 
-            // (FIX) Chat Window ထဲတွင် Image URL များ မှန်ကန်စွာ ပေါ်စေရန်
             if (mediaUrl) {
-                // Base64 မဟုတ်ခဲ့ရင် uploads path ထည့်ပေးဖို့ စစ်ဆေးခြင်း
                 if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) {
                     mediaUrl = `/uploads/${mediaUrl}`;
                 }
@@ -500,7 +496,6 @@
 
         socket.on('new_message', (data) => {
             const senderId = data.chat_id || data.chatId;
-            // id မပါရင်လည်း update ဖြစ်အောင် စစ်ဆေးမှု လျှော့ချထားသည်
             allMessages.push(data);
             if (currentChatId === senderId) {
                 appendMessage(data, data.sender_type === 'bot');
