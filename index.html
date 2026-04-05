@@ -127,6 +127,11 @@
                 <i class="fas fa-robot text-xl w-6 text-center"></i>
                 <span class="nav-text">Bot Config</span>
             </div>
+
+            <div id="broadcast-nav" class="nav-item" onclick="loadBroadcastSettings()">
+                <i class="fas fa-bullhorn text-xl w-6 text-center"></i>
+                <span class="nav-text">Bulk Messaging</span>
+            </div>
         </nav>
 
         <div class="mt-auto w-full">
@@ -306,6 +311,7 @@
             document.getElementById('bot-settings-area').classList.add('hidden');
             document.getElementById('inbox-nav').classList.add('active-nav');
             document.getElementById('bot-config-nav').classList.remove('active-nav');
+            document.getElementById('broadcast-nav').classList.remove('active-nav');
             document.getElementById('sidebar-settings').classList.remove('active-nav');
             filterContacts('all');
         }
@@ -316,8 +322,20 @@
             document.getElementById('right-panel').classList.add('hidden');
             document.getElementById('inbox-nav').classList.remove('active-nav');
             document.getElementById('sidebar-settings').classList.remove('active-nav');
+            document.getElementById('broadcast-nav').classList.remove('active-nav');
             document.getElementById('bot-config-nav').classList.add('active-nav');
             document.getElementById('settings-frame').src = "bot-config.html";
+        }
+
+        function loadBroadcastSettings() {
+            document.getElementById('main-dashboard-content').classList.add('hidden');
+            document.getElementById('bot-settings-area').classList.remove('hidden');
+            document.getElementById('right-panel').classList.add('hidden');
+            document.getElementById('inbox-nav').classList.remove('active-nav');
+            document.getElementById('sidebar-settings').classList.remove('active-nav');
+            document.getElementById('bot-config-nav').classList.remove('active-nav');
+            document.getElementById('broadcast-nav').classList.add('active-nav');
+            document.getElementById('settings-frame').src = "broadcast.html";
         }
 
         function loadGeneralSettings() {
@@ -326,6 +344,7 @@
             document.getElementById('right-panel').classList.add('hidden');
             document.getElementById('inbox-nav').classList.remove('active-nav');
             document.getElementById('bot-config-nav').classList.remove('active-nav');
+            document.getElementById('broadcast-nav').classList.remove('active-nav');
             document.getElementById('sidebar-settings').classList.add('active-nav');
             document.getElementById('settings-frame').src = "general-settings.html";
         }
