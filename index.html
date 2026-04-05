@@ -466,6 +466,10 @@
             let contentHtml = data.text || "";
             let mediaUrl = data.file_url || data.fileUrl;
             const mediaType = data.file_type || data.fileType || "";
+            
+            // Read Status Logic
+            const statusText = isBot ? (data.is_read ? 'See' : 'Sent') : '';
+            const timeDisplay = data.time || '';
 
             if (mediaUrl) {
                 if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) {
@@ -485,15 +489,21 @@
             const msgHtml = isBot ? `
                 <div class="self-end max-w-[75%]">
                     <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
-                    <p class="text-[9px] text-gray-600 mt-2 text-right uppercase">Sent</p>
+                    <div class="flex justify-end items-center gap-2 mt-2">
+                        <p class="text-[9px] text-gray-500 uppercase">${timeDisplay}</p>
+                        <p class="text-[9px] font-bold uppercase status-label ${data.is_read ? 'text-green-500' : 'text-gray-600'}">${statusText}</p>
+                    </div>
                 </div>
             ` : `
                 <div class="flex items-start gap-3 max-w-[75%]">
                     <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-border-gray bg-gray-900 flex items-center justify-center text-[10px]">
                         ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover">` : `<i class="fas fa-user text-gray-500"></i>`}
                     </div>
-                    <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
-                        <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>${contentHtml}
+                    <div>
+                        <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
+                            <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>${contentHtml}
+                        </div>
+                        <p class="text-[9px] text-gray-600 mt-1 uppercase">${timeDisplay}</p>
                     </div>
                 </div>
             `;
@@ -522,6 +532,23 @@
                 unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
                 document.getElementById('notif-sound').play().catch(() => {});
                 renderContacts(cachedContacts);
+            }
+        });
+
+        // Real-time Read Status update
+        socket.on('messages_read', (data) => {
+            if (currentChatId === data.chatId) {
+                document.querySelectorAll('.status-label').forEach(el => {
+                    if (el.innerText === 'Sent') {
+                        el.innerText = 'See';
+                        el.classList.remove('text-gray-600');
+                        el.classList.add('text-green-500');
+                    }
+                });
+                // Update local data
+                allMessages.forEach(m => {
+                    if(m.chat_id === data.chatId) m.is_read = true;
+                });
             }
         });
 
