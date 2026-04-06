@@ -317,9 +317,9 @@
 
         // --- Session Management Logic ---
         window.onload = async function() {
-            const checkSupabase = setInterval(async () => {
+            const check_supabase = setInterval(async () => {
                 if (typeof _supabase !== 'undefined') {
-                    clearInterval(checkSupabase);
+                    clearInterval(check_supabase);
                     
                     const { data: { session } } = await _supabase.auth.getSession();
                     updateUI(session);
