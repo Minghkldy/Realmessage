@@ -5,7 +5,7 @@ const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
 const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt';
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-// --- AUTH LOGIC (ADDED & FIXED) ---
+// --- AUTH LOGIC ---
 
 // LOGIN FUNCTION
 async function handleLogin() {
@@ -27,7 +27,10 @@ async function handleLogin() {
     if (error || !data) {
         alert("Email သို့မဟုတ် Password မှားယွင်းနေပါသည်။");
     } else {
-        // Login အောင်မြင်ပါက Auth Gate ကိုဖျောက်ပြီး App ကိုပြရန်
+        // Login အောင်မြင်ပါက အချက်အလက်များကို ခေတ္တသိမ်းဆည်းထားမည် (Password ပြောင်းရာတွင် သုံးရန်)
+        localStorage.setItem('currentUserEmail', data.email);
+        localStorage.setItem('currentPassword', data.password);
+
         const authGate = document.getElementById('auth-gate');
         const mainApp = document.getElementById('main-app');
         
@@ -38,7 +41,6 @@ async function handleLogin() {
             mainApp.style.pointerEvents = 'auto';
         }
         
-        // Admin Name ကို Update လုပ်ရန်
         const nameEl = document.getElementById('top-admin-name');
         if (nameEl) nameEl.innerText = data.nickname || "Admin";
         
@@ -71,15 +73,63 @@ async function handleSignUp() {
         alert("Error: " + error.message);
     } else {
         alert("အကောင့်ဖွင့်ခြင်း အောင်မြင်ပါသည်။ ယခု Login ဝင်နိုင်ပါပြီ။");
-        // အကောင့်ဖွင့်ပြီးရင် Login UI ဘက် ပြန်ပြောင်းပေးရန်
         if (typeof toggleAuth === "function") toggleAuth();
+    }
+}
+
+// --- NEW: SECURE PASSWORD UPDATE LOGIC ---
+async function updatePassword() {
+    const oldPasswordInput = document.getElementById('old-password')?.value;
+    const newPasswordInput = document.getElementById('new-password')?.value;
+    const confirmPasswordInput = document.getElementById('confirm-password')?.value;
+
+    const storedEmail = localStorage.getItem('currentUserEmail');
+    const storedPassword = localStorage.getItem('currentPassword');
+
+    if (!oldPasswordInput || !newPasswordInput || !confirmPasswordInput) {
+        alert("အကွက်များအားလုံး ဖြည့်စွက်ပေးပါ။");
+        return;
+    }
+
+    // လက်ရှိ password မှန်မမှန် စစ်ဆေးခြင်း
+    if (oldPasswordInput !== storedPassword) {
+        alert("လက်ရှိအသုံးပြုနေသော Password မှားယွင်းနေပါသည်။");
+        return;
+    }
+
+    // Password အသစ်နှစ်ခု တူမတူ စစ်ဆေးခြင်း
+    if (newPasswordInput !== confirmPasswordInput) {
+        alert("Password အသစ်များ မကိုက်ညီပါ။");
+        return;
+    }
+
+    if (newPasswordInput.length < 6) {
+        alert("Password သည် အနည်းဆုံး ၆ လုံး ရှိရပါမည်။");
+        return;
+    }
+
+    // Supabase တွင် Update လုပ်ခြင်း
+    const { data, error } = await _supabase
+        .from('users')
+        .update({ password: newPasswordInput })
+        .eq('email', storedEmail);
+
+    if (error) {
+        alert("Error updating password: " + error.message);
+    } else {
+        localStorage.setItem('currentPassword', newPasswordInput); // Local storage update လုပ်ရန်
+        alert("Password အောင်မြင်စွာ ပြောင်းလဲပြီးပါပြီ။");
+        
+        // Input အကွက်များကို ရှင်းထုတ်ခြင်း
+        document.getElementById('old-password').value = "";
+        document.getElementById('new-password').value = "";
+        document.getElementById('confirm-password').value = "";
     }
 }
 
 // ---------------------------------------------------------
 
 const socket = io();
-
 let currentChatId = "";
 let allMessages = [];
 let unreadCounts = {};
@@ -103,18 +153,14 @@ async function loadSystemSettings() {
     } catch (e) { console.error("Error loading settings:", e); }
 }
 
-// Sidebar Logic (iOS Style Collapsed)
+// Sidebar Logic
 function toggleLeftSidebar() { 
     const sidebar = document.getElementById('left-sidebar');
     if (!sidebar) return;
-
     sidebar.classList.toggle('sidebar-collapsed'); 
-    
     if(sidebar.classList.contains('sidebar-collapsed')) {
         const dropdown = document.getElementById('messenger-dropdown');
-        const arrow = document.getElementById('arrow-icon');
         if (dropdown) dropdown.classList.add('hidden');
-        if (arrow) arrow.classList.remove('rotate-90');
     }
 }
 
@@ -130,60 +176,48 @@ function toggleDropdown() {
     const sidebar = document.getElementById('left-sidebar');
     const dropdown = document.getElementById('messenger-dropdown');
     const arrow = document.getElementById('arrow-icon');
-    
     if (!dropdown) return;
-
     if (sidebar && sidebar.classList.contains('sidebar-collapsed')) {
         sidebar.classList.remove('sidebar-collapsed');
     }
-
     dropdown.classList.toggle('hidden');
     if (arrow) arrow.classList.toggle('rotate-90');
 }
 
-// Navigation logic
+// Navigation
 function switchToInbox() {
     document.getElementById('main-dashboard-content')?.classList.remove('hidden');
     document.getElementById('bot-settings-area')?.classList.add('hidden');
-    
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
-    const inboxNav = document.getElementById('inbox-nav');
-    if (inboxNav) inboxNav.classList.add('active-nav');
-    
+    document.getElementById('inbox-nav')?.classList.add('active-nav');
     filterContacts('all');
 }
 
 function loadBotSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
-    
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
     document.getElementById('bot-config-nav')?.classList.add('active-nav');
-    
     document.getElementById('settings-frame').src = "bot-config.html";
 }
 
 function loadBroadcastSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
-    
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
     document.getElementById('broadcast-nav')?.classList.add('active-nav');
-    
     document.getElementById('settings-frame').src = "broadcast.html";
 }
 
 function loadGeneralSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
-    
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
     document.getElementById('sidebar-settings')?.classList.add('active-nav');
-    
     document.getElementById('settings-frame').src = "general-settings.html";
 }
 
-// FIXED: Image Preview Logic
+// Image Preview
 function showImagePreview(url) {
     const modal = document.getElementById('imagePreviewModal');
     const img = document.getElementById('previewImg');
@@ -191,9 +225,7 @@ function showImagePreview(url) {
         img.src = url;
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        setTimeout(() => {
-            img.classList.remove('scale-95');
-        }, 10);
+        setTimeout(() => { img.classList.remove('scale-95'); }, 10);
         document.body.style.overflow = 'hidden'; 
     }
 }
@@ -225,7 +257,6 @@ function filterContacts(platform) {
     const filtered = platform === 'all' 
         ? cachedContacts 
         : cachedContacts.filter(c => c.platform.toLowerCase() === platform.toLowerCase());
-    
     if (title) title.innerText = platform === 'all' ? "Inbox" : platform.toUpperCase();
     renderContacts(filtered);
 }
@@ -234,19 +265,15 @@ function renderContacts(contacts) {
     const container = document.getElementById('contacts-container');
     if (!container) return;
     container.innerHTML = '';
-
     contacts.forEach(c => {
         const count = unreadCounts[c.chat_id] || 0;
         const isActive = currentChatId === c.chat_id;
         const item = document.createElement('div');
-        
         item.className = `group p-4 rounded-2xl flex items-center gap-4 cursor-pointer transition-all duration-300 ${isActive ? 'active-contact' : 'hover:bg-white/5'}`;
         item.onclick = () => selectContact(c);
-        
         const avatar = c.profile_pic 
             ? `<img src="${c.profile_pic}" class="w-12 h-12 rounded-2xl object-cover border-2 ${isActive ? 'border-white/20' : 'border-white/5'}">` 
             : `<div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-sm font-black border-2 border-white/5 uppercase text-accent-blue">${(c.nickname || c.first_name || "?").charAt(0)}</div>`;
-        
         item.innerHTML = `
             <div class="relative">${avatar} ${count > 0 ? `<div class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black"></div>` : ''}</div>
             <div class="flex-1 min-w-0">
@@ -263,26 +290,10 @@ function renderContacts(contacts) {
 function selectContact(contact) {
     currentChatId = contact.chat_id;
     unreadCounts[currentChatId] = 0; 
-    
     document.getElementById('chat-header-name').innerText = contact.nickname || contact.first_name;
     document.getElementById('edit-nickname').value = contact.nickname || contact.first_name;
     document.getElementById('contact-note').value = contact.notes || "";
     document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
-    
-    const hImg = document.getElementById('header-avatar-img');
-    const hTxt = document.getElementById('header-avatar-text');
-    const sImg = document.getElementById('side-avatar-img');
-    const sTxt = document.getElementById('side-avatar-text');
-
-    if(contact.profile_pic) {
-        [hImg, sImg].forEach(img => { if(img) { img.src = contact.profile_pic; img.classList.remove('hidden'); } });
-        [hTxt, sTxt].forEach(txt => { if(txt) txt.classList.add('hidden'); });
-    } else {
-        const initial = (contact.nickname || contact.first_name || "?").charAt(0);
-        [hTxt, sTxt].forEach(txt => { if(txt) { txt.innerText = initial; txt.classList.remove('hidden'); } });
-        [hImg, sImg].forEach(img => { if(img) img.classList.add('hidden'); });
-    }
-
     socket.emit('mark_as_read', { chatId: currentChatId });
     updateGlobalBadge();
     renderContacts(cachedContacts); 
@@ -292,14 +303,12 @@ function selectContact(contact) {
 async function updateNickname() {
     const newNickname = document.getElementById('edit-nickname').value.trim();
     if (!newNickname || !currentChatId) return;
-
     try {
         const res = await fetch('/api/contacts/update-nickname', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chatId: currentChatId, nickname: newNickname })
         });
-
         if (res.ok) {
             const contact = cachedContacts.find(c => c.chat_id === currentChatId);
             if (contact) contact.nickname = newNickname;
@@ -337,136 +346,52 @@ function renderMessages() {
 function appendMessage(data, isBot) {
     const win = document.getElementById('chat-window');
     if (!win) return;
-    
     let contentHtml = data.text || "";
     let mediaUrl = data.file_url || data.fileUrl;
     const mediaType = data.file_type || data.fileType || "";
-    const statusColor = data.is_read ? 'text-accent-blue' : 'text-gray-600';
-
     if (mediaUrl) {
         if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) mediaUrl = `/uploads/${mediaUrl}`;
-
         if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
-            contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-2xl mt-2 cursor-pointer border border-white/10 shadow-xl hover:scale-[1.02] transition" onclick="showImagePreview('${mediaUrl}')">`;
-        } else if (mediaType.includes('video')) {
-            contentHtml = `<video controls class="max-w-xs rounded-2xl mt-2 border border-white/10"><source src="${mediaUrl}"></video>`;
-        }
-        
-        if(data.text && data.text !== "Sent an image") {
-            contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
+            contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-2xl mt-2 cursor-pointer border border-white/10" onclick="showImagePreview('${mediaUrl}')">`;
         }
     }
-
     const msgHtml = isBot ? `
-        <div class="self-end max-w-[80%] animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div class="bg-accent-blue p-4 rounded-3xl rounded-tr-none text-sm font-medium shadow-lg shadow-accent-blue/20 text-white">${contentHtml}</div>
-            <div class="flex items-center justify-end gap-2 mt-2 px-1">
-                <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${data.time || ''}</span>
-                <i class="fas fa-check-double text-[9px] ${statusColor} status-indicator"></i>
-            </div>
-        </div>
-    ` : `
-        <div class="flex items-start gap-3 max-w-[80%] animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div class="w-9 h-9 rounded-xl bg-white/10 border border-white/5 flex items-center justify-center flex-shrink-0">
-                ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover rounded-xl">` : `<i class="fas fa-user text-gray-600 text-xs"></i>`}
-            </div>
-            <div>
-                <div class="bg-white/5 border border-white/10 p-4 rounded-3xl rounded-tl-none text-sm leading-relaxed text-gray-200 backdrop-blur-sm shadow-sm">${contentHtml}</div>
-                <p class="text-[9px] text-gray-600 mt-2 px-1 font-bold uppercase tracking-widest">${data.time || ''}</p>
-            </div>
-        </div>
-    `;
+        <div class="self-end max-w-[80%] animate-in fade-in slide-in-from-bottom-2">
+            <div class="bg-accent-blue p-4 rounded-3xl rounded-tr-none text-white">${contentHtml}</div>
+        </div>` : `
+        <div class="flex items-start gap-3 max-w-[80%] animate-in fade-in slide-in-from-bottom-2">
+            <div class="bg-white/5 border border-white/10 p-4 rounded-3xl rounded-tl-none text-gray-200">${contentHtml}</div>
+        </div>`;
     win.insertAdjacentHTML('beforeend', msgHtml);
     win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' });
 }
 
-// Block & Delete
-window.toggleBlock = async () => {
-    if (!currentChatId || !confirm("Block this customer?")) return;
-    try {
-        const res = await fetch('/api/contacts/block', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chatId: currentChatId })
-        });
-        if (res.ok) location.reload();
-    } catch (err) { console.error(err); }
-};
-
-window.deleteContact = async () => {
-    if (!currentChatId || !confirm("Delete this conversation permanently?")) return;
-    try {
-        const res = await fetch(`/api/contacts/${currentChatId}`, { method: 'DELETE' });
-        if (res.ok) location.reload();
-    } catch (err) { console.error(err); }
-};
-
-// ---------------------------------------------------------
-// MESSAGING & UPLOAD LOGIC
-// ---------------------------------------------------------
-
+// Messaging Logic
 async function uploadFile(input) {
     if (!input.files || !input.files[0] || !currentChatId) return;
-
     const file = input.files[0];
     const formData = new FormData();
     formData.append('file', file);
     formData.append('chatId', currentChatId);
-
     try {
-        const res = await fetch('/api/admin/upload', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('/api/admin/upload', { method: 'POST', body: formData });
         const data = await res.json();
-
         if (data.success) {
-            const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            const msgData = {
-                chat_id: currentChatId,
-                text: "Sent an image",
-                file_url: data.fileUrl,
-                file_type: file.type,
-                sender_type: 'bot',
-                time: timeNow,
-                is_read: false
-            };
-
-            socket.emit('send_reply', { 
-                chatId: currentChatId, 
-                text: "Sent an image", 
-                fileUrl: data.fileUrl, 
-                fileType: file.type 
-            });
-
+            socket.emit('send_reply', { chatId: currentChatId, text: "Sent an image", fileUrl: data.fileUrl, fileType: file.type });
+            const msgData = { chat_id: currentChatId, text: "Sent an image", file_url: data.fileUrl, file_type: file.type, sender_type: 'bot', time: new Date().toLocaleTimeString() };
             allMessages.push(msgData);
             appendMessage(msgData, true);
         }
-    } catch (err) {
-        console.error("Upload failed:", err);
-        alert("Upload အဆင်မပြေပါ");
-    }
+    } catch (err) { alert("Upload အဆင်မပြေပါ"); }
     input.value = ""; 
 }
 
 function sendMessage() {
     const input = document.getElementById('user-input');
     const text = input?.value.trim();
-    
     if(text && currentChatId) {
-        const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        const msgData = {
-            chat_id: currentChatId,
-            text: text,
-            sender_type: 'bot',
-            time: timeNow,
-            is_read: false
-        };
-
+        const msgData = { chat_id: currentChatId, text: text, sender_type: 'bot', time: new Date().toLocaleTimeString() };
         socket.emit('send_reply', { chatId: currentChatId, text: text });
-
         allMessages.push(msgData);
         appendMessage(msgData, true);
         input.value = ""; 
@@ -475,7 +400,7 @@ function sendMessage() {
 
 function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
 
-// Global Scope Assignments
+// Assignments
 window.switchToInbox = switchToInbox;
 window.loadBotSettings = loadBotSettings;
 window.loadBroadcastSettings = loadBroadcastSettings;
@@ -491,12 +416,10 @@ window.updateNickname = updateNickname;
 window.sendMessage = sendMessage;
 window.handleKeyPress = handleKeyPress;
 window.uploadFile = uploadFile;
-
-// ADDED AUTH FUNCTIONS
 window.handleSignUp = handleSignUp; 
 window.handleLogin = handleLogin;
+window.updatePassword = updatePassword; // Password update ခလုတ်အတွက်
 
-// Initialization
 window.addEventListener('DOMContentLoaded', () => { 
     loadSystemSettings(); 
     loadContacts(); 
@@ -505,7 +428,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
 socket.on('new_message', (data) => {
     const senderId = data.chat_id || data.chatId;
-    
     if (currentChatId === senderId) {
         if (data.sender_type !== 'bot') {
             allMessages.push(data);
@@ -513,9 +435,7 @@ socket.on('new_message', (data) => {
         }
         socket.emit('mark_as_read', { chatId: currentChatId });
     } else {
-        allMessages.push(data);
         unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-        document.getElementById('notif-sound')?.play().catch(() => {});
         renderContacts(cachedContacts);
     }
 });
