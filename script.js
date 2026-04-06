@@ -538,7 +538,7 @@ async function handleForgotPassword() {
     }
 
     const { error } = await _supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'http://localhost:3000/reset-password.html',
+        redirectTo: 'https://realmessage-live.onrender.com/reset-password.html',
     });
 
     if (error) {
