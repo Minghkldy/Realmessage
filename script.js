@@ -104,7 +104,7 @@ function loadGeneralSettings() {
     document.getElementById('settings-frame').src = "general-settings.html";
 }
 
-// Image Preview
+// FIXED: Image Preview Logic
 function showImagePreview(url) {
     const modal = document.getElementById('imagePreviewModal');
     const img = document.getElementById('previewImg');
@@ -112,11 +112,24 @@ function showImagePreview(url) {
         img.src = url;
         modal.classList.remove('hidden');
         modal.classList.add('flex');
+        setTimeout(() => {
+            img.classList.remove('scale-95');
+        }, 10);
+        document.body.style.overflow = 'hidden'; // Scroll ပိတ်မယ်
     }
 }
 
 function closeImagePreview() {
-    document.getElementById('imagePreviewModal')?.classList.add('hidden');
+    const modal = document.getElementById('imagePreviewModal');
+    const img = document.getElementById('previewImg');
+    if (modal) {
+        if (img) img.classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = 'auto'; // Scroll ပြန်ဖွင့်မယ်
+        }, 150);
+    }
 }
 
 // Contacts Logic
@@ -260,7 +273,6 @@ function appendMessage(data, isBot) {
             contentHtml = `<video controls class="max-w-xs rounded-2xl mt-2 border border-white/10"><source src="${mediaUrl}"></video>`;
         }
         
-        // ပုံတင်တာဆိုရင် စာသားကို ရှင်းပြထားတဲ့ text မပြချင်ရင် ဒီမှာ စစ်မယ်
         if(data.text && data.text !== "Sent an image") {
             contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
         }
@@ -314,7 +326,6 @@ window.deleteContact = async () => {
 // MESSAGING & UPLOAD LOGIC
 // ---------------------------------------------------------
 
-// ပုံတင်မည့် Logic (အသစ်ပေါင်းထည့်ထားသည်)
 async function uploadFile(input) {
     if (!input.files || !input.files[0] || !currentChatId) return;
 
@@ -343,7 +354,6 @@ async function uploadFile(input) {
                 is_read: false
             };
 
-            // Socket မှတဆင့် တစ်ဖက်လူဆီပို့
             socket.emit('send_reply', { 
                 chatId: currentChatId, 
                 text: "Sent an image", 
@@ -351,7 +361,6 @@ async function uploadFile(input) {
                 fileType: file.type 
             });
 
-            // UI တွင် ချက်ချင်းပြ
             allMessages.push(msgData);
             appendMessage(msgData, true);
         }
@@ -395,13 +404,14 @@ window.loadGeneralSettings = loadGeneralSettings;
 window.toggleLeftSidebar = toggleLeftSidebar;
 window.toggleDropdown = toggleDropdown;
 window.toggleRightPanel = toggleRightPanel;
+window.showImagePreview = showImagePreview;
 window.closeImagePreview = closeImagePreview;
 window.filterContacts = filterContacts;
 window.selectContact = selectContact;
 window.updateNickname = updateNickname;
 window.sendMessage = sendMessage;
 window.handleKeyPress = handleKeyPress;
-window.uploadFile = uploadFile; // Global မှာ ထည့်ပေးရန် လိုအပ်သည်
+window.uploadFile = uploadFile;
 
 // Initialization
 window.addEventListener('DOMContentLoaded', () => { 
