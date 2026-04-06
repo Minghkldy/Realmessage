@@ -1,11 +1,52 @@
 // script.js - iOS Glassmorphism Professional Logic (Fixed Messaging & Image Upload)
 
-// --- SUPABASE CONFIGURATION (ADDED) ---
+// --- SUPABASE CONFIGURATION ---
 const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
 const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt';
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-// SIGN UP FUNCTION (ADDED)
+// --- AUTH LOGIC (ADDED & FIXED) ---
+
+// LOGIN FUNCTION
+async function handleLogin() {
+    const email = document.getElementById('login-email')?.value;
+    const password = document.getElementById('login-password')?.value;
+
+    if (!email || !password) {
+        alert("Email နှင့် Password ဖြည့်ပါ။");
+        return;
+    }
+
+    const { data, error } = await _supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .eq('password', password)
+        .single();
+
+    if (error || !data) {
+        alert("Email သို့မဟုတ် Password မှားယွင်းနေပါသည်။");
+    } else {
+        // Login အောင်မြင်ပါက Auth Gate ကိုဖျောက်ပြီး App ကိုပြရန်
+        const authGate = document.getElementById('auth-gate');
+        const mainApp = document.getElementById('main-app');
+        
+        if (authGate) authGate.style.display = 'none';
+        if (mainApp) {
+            mainApp.classList.remove('opacity-0', 'pointer-events-none');
+            mainApp.style.opacity = '1';
+            mainApp.style.pointerEvents = 'auto';
+        }
+        
+        // Admin Name ကို Update လုပ်ရန်
+        const nameEl = document.getElementById('top-admin-name');
+        if (nameEl) nameEl.innerText = data.nickname || "Admin";
+        
+        alert("Login အောင်မြင်ပါသည်။ မင်္ဂလာပါ " + (data.nickname || ""));
+    }
+}
+
+// SIGN UP FUNCTION 
 async function handleSignUp() {
     const nickname = document.getElementById('reg-nickname')?.value;
     const email = document.getElementById('reg-email')?.value;
@@ -29,8 +70,9 @@ async function handleSignUp() {
     if (error) {
         alert("Error: " + error.message);
     } else {
-        alert("အကောင့်ဖွင့်ခြင်း အောင်မြင်ပါသည်။");
-        window.location.href = "broadcast.html"; 
+        alert("အကောင့်ဖွင့်ခြင်း အောင်မြင်ပါသည်။ ယခု Login ဝင်နိုင်ပါပြီ။");
+        // အကောင့်ဖွင့်ပြီးရင် Login UI ဘက် ပြန်ပြောင်းပေးရန်
+        if (typeof toggleAuth === "function") toggleAuth();
     }
 }
 
@@ -449,7 +491,10 @@ window.updateNickname = updateNickname;
 window.sendMessage = sendMessage;
 window.handleKeyPress = handleKeyPress;
 window.uploadFile = uploadFile;
-window.handleSignUp = handleSignUp; // ADDED
+
+// ADDED AUTH FUNCTIONS
+window.handleSignUp = handleSignUp; 
+window.handleLogin = handleLogin;
 
 // Initialization
 window.addEventListener('DOMContentLoaded', () => { 
