@@ -165,6 +165,19 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Member တစ်ဦးချင်းစီ၏ Nickname နှင့် Notes ကို Update လုပ်ရန် API
+app.patch('/api/contacts/:chatId/details', async (req, res) => {
+    const { chatId } = req.params;
+    const { nickname, notes } = req.body;
+    try {
+        await pool.query(
+            'UPDATE contacts SET nickname = $1, notes = $2 WHERE chat_id = $3',
+            [nickname, notes, chatId]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/messages/read', async (req, res) => {
     const { chatId } = req.body;
     try {
