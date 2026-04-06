@@ -49,6 +49,10 @@
             background: rgba(255, 255, 255, 0.1);
             outline: none;
         }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
 </head>
 <body class="h-full flex overflow-hidden bg-pure-black text-gray-100 font-sans">
@@ -68,10 +72,10 @@
                 <input type="password" id="login-password" placeholder="Password" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
                 
                 <div class="text-right px-2">
-                    <button onclick="showForgotModal()" class="text-[10px] text-gray-500 hover:text-accent-blue transition font-bold uppercase tracking-widest transition-colors">Forgot Password?</button>
+                    <button onclick="showForgotModal()" class="text-[10px] text-gray-500 hover:text-accent-blue transition font-bold uppercase tracking-widest">Forgot Password?</button>
                 </div>
 
-                <button onclick="handleLogin()" class="w-full bg-accent-blue py-4 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-accent-blue/25">Sign In</button>
+                <button onclick="handleLogin()" id="login-btn" class="w-full bg-accent-blue py-4 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-accent-blue/25">Sign In</button>
                 <p class="text-center text-[11px] text-gray-500 font-bold uppercase mt-6">
                     Don't have an account? <span onclick="toggleAuth()" class="text-accent-blue cursor-pointer hover:underline">Sign Up</span>
                 </p>
@@ -85,7 +89,7 @@
                     <label class="text-[10px] text-gray-500 font-black uppercase ml-2">Birthday</label>
                     <input type="date" id="reg-birthday" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
                 </div>
-                <button onclick="handleSignUp()" class="w-full bg-accent-blue py-4 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-accent-blue/25">Create Account</button>
+                <button onclick="handleSignUp()" id="signup-btn" class="w-full bg-accent-blue py-4 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-accent-blue/25">Create Account</button>
                 <p class="text-center text-[11px] text-gray-500 font-bold uppercase mt-6">
                     Already have an account? <span onclick="toggleAuth()" class="text-accent-blue cursor-pointer hover:underline">Log In</span>
                 </p>
@@ -122,9 +126,9 @@
         <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-8 bg-dark-gray/50 backdrop-blur-2xl z-20 transition-all duration-300 shadow-2xl">
             <div class="px-8 mb-12 cursor-pointer flex items-center group" onclick="toggleLeftSidebar()">
                 <div class="custom-logo w-10 h-10 bg-accent-blue rounded-[12px] flex items-center justify-center group-hover:scale-105 transition-all duration-300 shadow-[0_0_20px_rgba(0,122,255,0.4)]">
-                    <span class="text-white text-lg font-extrabold tracking-tighter logo-text-animate">ON</span>
+                    <span class="text-white text-lg font-extrabold tracking-tighter">ON</span>
                 </div>
-                <span class="nav-text ml-4 text-xl font-black tracking-tighter text-white uppercase italic logo-text">OmniBot</span>
+                <span class="nav-text ml-4 text-xl font-black tracking-tighter text-white uppercase italic">OmniBot</span>
             </div>
             
             <nav class="flex flex-col w-full flex-1 px-4 space-y-2">
@@ -298,69 +302,73 @@
     </div>
 
     <script>
-        // Supabase initialize က script.js ထဲမှာရှိရပါမယ်
-        // သို့မဟုတ် ဒီမှာထည့်နိုင်ပါတယ်
-
-        // Auth Section Toggle
+        // --- Auth Section Toggle ---
         function toggleAuth() {
             const loginSection = document.getElementById('login-section');
             const signupSection = document.getElementById('signup-section');
             const title = document.getElementById('auth-title');
             
-            if (loginSection.classList.contains('hidden')) {
-                loginSection.classList.remove('hidden');
-                signupSection.classList.add('hidden');
-                title.innerText = "Welcome Back";
-            } else {
-                loginSection.classList.add('hidden');
-                signupSection.classList.remove('hidden');
-                title.innerText = "Create Account";
-            }
+            const isLoginVisible = !loginSection.classList.contains('hidden');
+            loginSection.classList.toggle('hidden', isLoginVisible);
+            signupSection.classList.toggle('hidden', !isLoginVisible);
+            title.innerText = isLoginVisible ? "Create Account" : "Welcome Back";
         }
 
-        // --- Auth Logic Handling ---
+        // --- Supabase Login Handling ---
         async function handleLogin() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
+            const btn = document.getElementById('login-btn');
             
             if(!email || !password) return alert("Please fill all fields");
+            
+            btn.innerText = "Processing...";
+            btn.disabled = true;
 
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-            if (error) alert(error.message);
+            if (error) {
+                alert(error.message);
+                btn.innerText = "Sign In";
+                btn.disabled = false;
+            }
         }
 
+        // --- Supabase SignUp Handling ---
         async function handleSignUp() {
             const email = document.getElementById('reg-email').value;
             const password = document.getElementById('reg-password').value;
             const nickname = document.getElementById('reg-nickname').value;
             const birthday = document.getElementById('reg-birthday').value;
+            const btn = document.getElementById('signup-btn');
 
             if(!email || !password || !nickname) return alert("Please fill required fields");
 
-            const { data, error } = await supabase.auth.signUp({
-                email: email,
-                password: password,
-                options: {
-                    data: {
-                        nickname: nickname,
-                        birthday: birthday
-                    }
-                }
+            btn.innerText = "Creating...";
+            btn.disabled = true;
+
+            const { error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: { data: { nickname, birthday } }
             });
 
-            if (error) alert(error.message);
-            else alert("Registration Successful! Please check your email for verification.");
+            if (error) {
+                alert(error.message);
+                btn.innerText = "Create Account";
+                btn.disabled = false;
+            } else {
+                alert("Registration Successful! Please check your email for verification.");
+                toggleAuth();
+            }
         }
 
+        // --- Forgot Password ---
         async function handleForgotPassword() {
             const email = document.getElementById('reset-email').value;
             if(!email) return alert("Please enter your email");
 
-            const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+            const { error } = await supabase.auth.resetPasswordForEmail(email);
             if (error) alert(error.message);
             else {
                 alert("Password reset link sent to your email!");
@@ -368,11 +376,12 @@
             }
         }
 
-        // --- Session Management Logic ---
-        window.onload = async function() {
-            const check_supabase = setInterval(async () => {
+        // --- Auth State Observer ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check if supabase is initialized in script.js
+            const checkSupabase = setInterval(async () => {
                 if (typeof supabase !== 'undefined') {
-                    clearInterval(check_supabase);
+                    clearInterval(checkSupabase);
                     
                     const { data: { session } } = await supabase.auth.getSession();
                     updateUI(session);
@@ -382,7 +391,7 @@
                     });
                 }
             }, 100);
-        };
+        });
 
         function updateUI(session) {
             const authGate = document.getElementById('auth-gate');
@@ -393,9 +402,9 @@
                 mainApp.classList.remove('opacity-0', 'pointer-events-none');
                 
                 const user = session.user;
-                if (document.getElementById('top-admin-name')) {
-                    document.getElementById('top-admin-name').innerText = user.user_metadata?.nickname || user.email.split('@')[0];
-                }
+                const adminName = user.user_metadata?.nickname || user.email.split('@')[0];
+                document.getElementById('top-admin-name').innerText = adminName;
+                document.getElementById('top-admin-avatar').src = `https://ui-avatars.com/api/?name=${adminName}&background=007AFF&color=fff`;
                 
                 if (typeof switchToInbox === 'function') switchToInbox();
             } else {
@@ -404,17 +413,13 @@
             }
         }
 
-        // --- Logout Function ---
         async function handleLogout() {
             if (confirm("Logout လုပ်မှာ သေချာပါသလား?")) {
                 const { error } = await supabase.auth.signOut();
-                if (error) {
-                    alert("Error signing out: " + error.message);
-                }
+                if (error) alert("Error: " + error.message);
             }
         }
 
-        window.handleLogout = handleLogout;
         window.showForgotModal = () => document.getElementById('forgot-modal').classList.remove('hidden');
         window.closeForgotModal = () => document.getElementById('forgot-modal').classList.add('hidden');
     </script>
