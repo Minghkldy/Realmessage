@@ -558,7 +558,7 @@ async function handleLogout() {
         alert("Logout လုပ်ရတာ အဆင်မပြေပါဘူး: " + error.message);
     } else {
         // Logout အောင်မြင်ရင် Login page ကို ပြန်ပို့မယ်
-        window.location.href = 'login.html'; 
+        window.location.href = 'index.html'; 
     }
 }
 
