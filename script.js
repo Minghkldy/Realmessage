@@ -519,3 +519,33 @@ socket.on('new_message', (data) => {
         renderContacts(cachedContacts);
     }
 });
+// --- FORGOT PASSWORD LOGIC ---
+
+window.showForgotModal = () => {
+    document.getElementById('forgot-modal')?.classList.remove('hidden');
+};
+
+window.closeForgotModal = () => {
+    document.getElementById('forgot-modal')?.classList.add('hidden');
+};
+
+async function handleForgotPassword() {
+    const email = document.getElementById('reset-email')?.value.trim();
+
+    if (!email || !email.endsWith('@gmail.com')) {
+        alert("မှန်ကန်သော Gmail ကို ရိုက်ထည့်ပါ။");
+        return;
+    }
+
+    const { error } = await _supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'http://localhost:3000/reset-password.html',
+    });
+
+    if (error) {
+        alert("Error: " + error.message);
+    } else {
+        alert("Password ချိန်းရန် Link ကို Email ထဲသို့ ပို့ပေးလိုက်ပါပြီ။");
+        closeForgotModal();
+    }
+}
+window.handleForgotPassword = handleForgotPassword;
