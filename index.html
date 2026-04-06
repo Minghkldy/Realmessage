@@ -152,7 +152,7 @@
             </div>
         </div>
 
-        <div id="main-dashboard-content" class="flex flex-1 flex-col min-w-0 bg-pure-black">
+        <div id="main-dashboard-content" class="flex flex-1 flex-col min-0 bg-pure-black">
             <div class="h-20 border-b border-border-gray flex items-center px-8 justify-between bg-dark-gray/30 backdrop-blur-xl z-10">
                 <div class="flex items-center gap-4">
                     <button onclick="toggleLeftSidebar()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition lg:hidden">
@@ -270,6 +270,7 @@
     </div>
 
     <script>
+        // Auth Section Toggle
         function toggleAuth() {
             const loginSection = document.getElementById('login-section');
             const signupSection = document.getElementById('signup-section');
@@ -283,6 +284,48 @@
                 loginSection.classList.add('hidden');
                 signupSection.classList.remove('hidden');
                 title.innerText = "Create Account";
+            }
+        }
+
+        // --- Session Management Logic ---
+        window.onload = async function() {
+            // Supabase Initialize ဖြစ်ဖို့ ခဏစောင့်ပေးခြင်း
+            const checkSupabase = setInterval(async () => {
+                if (typeof supabase !== 'undefined') {
+                    clearInterval(checkSupabase);
+                    
+                    // လက်ရှိ Session ရှိမရှိ စစ်မယ်
+                    const { data: { session } } = await supabase.auth.getSession();
+                    updateUI(session);
+
+                    // Auth State ပြောင်းလဲမှု (Login/Logout) ကို အမြဲစောင့်ကြည့်နေမယ်
+                    supabase.auth.onAuthStateChange((_event, session) => {
+                        updateUI(session);
+                    });
+                }
+            }, 100);
+        };
+
+        function updateUI(session) {
+            const authGate = document.getElementById('auth-gate');
+            const mainApp = document.getElementById('main-app');
+            
+            if (session) {
+                // User ရှိလျှင် App ကိုပြမယ်
+                authGate.classList.add('hidden');
+                mainApp.classList.remove('opacity-0', 'pointer-events-none');
+                
+                const user = session.user;
+                if (document.getElementById('top-admin-name')) {
+                    document.getElementById('top-admin-name').innerText = user.user_metadata?.nickname || user.email.split('@')[0];
+                }
+                
+                // စာမျက်နှာကို refresh လုပ်လိုက်တိုင်း Inbox ကို အလိုအလျောက် load လုပ်ခိုင်းမယ်
+                if (typeof switchToInbox === 'function') switchToInbox();
+            } else {
+                // User မရှိလျှင် Login Screen ပြမယ်
+                authGate.classList.remove('hidden');
+                mainApp.classList.add('opacity-0', 'pointer-events-none');
             }
         }
     </script>
