@@ -1,11 +1,11 @@
-// script.js - iOS Glassmorphism Professional Logic (Fixed Messaging & Image Upload)
+// script.js - iOS Glassmorphism Professional Logic (Fixed Messaging, Image Upload & Session Persistence)
 
 // --- SUPABASE CONFIGURATION ---
 const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
 const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt';
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-// --- AUTH LOGIC (ADDED & FIXED) ---
+// --- AUTH LOGIC (FIXED FOR SESSION PERSISTENCE) ---
 
 // LOGIN FUNCTION
 async function handleLogin() {
@@ -27,23 +27,33 @@ async function handleLogin() {
     if (error || !data) {
         alert("Email သို့မဟုတ် Password မှားယွင်းနေပါသည်။");
     } else {
-        // Login အောင်မြင်ပါက Auth Gate ကိုဖျောက်ပြီး App ကိုပြရန်
-        const authGate = document.getElementById('auth-gate');
-        const mainApp = document.getElementById('main-app');
-        
-        if (authGate) authGate.style.display = 'none';
-        if (mainApp) {
-            mainApp.classList.remove('opacity-0', 'pointer-events-none');
-            mainApp.style.opacity = '1';
-            mainApp.style.pointerEvents = 'auto';
-        }
-        
-        // Admin Name ကို Update လုပ်ရန်
-        const nameEl = document.getElementById('top-admin-name');
-        if (nameEl) nameEl.innerText = data.nickname || "Admin";
-        
+        // Login အောင်မြင်ပါက User Data ကို LocalStorage တွင်သိမ်းမည်
+        localStorage.setItem('userSession', JSON.stringify(data));
+        showAppUI(data);
         alert("Login အောင်မြင်ပါသည်။ မင်္ဂလာပါ " + (data.nickname || ""));
     }
+}
+
+// APP UI ပြသရန် Logic (Login ဝင်ပြီးသားဖြစ်ပါက ခေါ်သုံးရန်)
+function showAppUI(userData) {
+    const authGate = document.getElementById('auth-gate');
+    const mainApp = document.getElementById('main-app');
+    
+    if (authGate) authGate.style.display = 'none';
+    if (mainApp) {
+        mainApp.classList.remove('opacity-0', 'pointer-events-none');
+        mainApp.style.opacity = '1';
+        mainApp.style.pointerEvents = 'auto';
+    }
+    
+    const nameEl = document.getElementById('top-admin-name');
+    if (nameEl) nameEl.innerText = userData.nickname || "Admin";
+}
+
+// LOGOUT FUNCTION (Optional - လိုအပ်ပါက သုံးရန်)
+function handleLogout() {
+    localStorage.removeItem('userSession');
+    location.reload();
 }
 
 // SIGN UP FUNCTION 
@@ -71,7 +81,6 @@ async function handleSignUp() {
         alert("Error: " + error.message);
     } else {
         alert("အကောင့်ဖွင့်ခြင်း အောင်မြင်ပါသည်။ ယခု Login ဝင်နိုင်ပါပြီ။");
-        // အကောင့်ဖွင့်ပြီးရင် Login UI ဘက် ပြန်ပြောင်းပေးရန်
         if (typeof toggleAuth === "function") toggleAuth();
     }
 }
@@ -103,7 +112,7 @@ async function loadSystemSettings() {
     } catch (e) { console.error("Error loading settings:", e); }
 }
 
-// Sidebar Logic (iOS Style Collapsed)
+// Sidebar Logic
 function toggleLeftSidebar() { 
     const sidebar = document.getElementById('left-sidebar');
     if (!sidebar) return;
@@ -145,45 +154,37 @@ function toggleDropdown() {
 function switchToInbox() {
     document.getElementById('main-dashboard-content')?.classList.remove('hidden');
     document.getElementById('bot-settings-area')?.classList.add('hidden');
-    
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
     const inboxNav = document.getElementById('inbox-nav');
     if (inboxNav) inboxNav.classList.add('active-nav');
-    
     filterContacts('all');
 }
 
 function loadBotSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
-    
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
     document.getElementById('bot-config-nav')?.classList.add('active-nav');
-    
     document.getElementById('settings-frame').src = "bot-config.html";
 }
 
 function loadBroadcastSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
-    
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
     document.getElementById('broadcast-nav')?.classList.add('active-nav');
-    
     document.getElementById('settings-frame').src = "broadcast.html";
 }
 
 function loadGeneralSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
-    
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
     document.getElementById('sidebar-settings')?.classList.add('active-nav');
-    
     document.getElementById('settings-frame').src = "general-settings.html";
 }
 
-// FIXED: Image Preview Logic
+// Image Preview Logic
 function showImagePreview(url) {
     const modal = document.getElementById('imagePreviewModal');
     const img = document.getElementById('previewImg');
@@ -191,9 +192,7 @@ function showImagePreview(url) {
         img.src = url;
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        setTimeout(() => {
-            img.classList.remove('scale-95');
-        }, 10);
+        setTimeout(() => { img.classList.remove('scale-95'); }, 10);
         document.body.style.overflow = 'hidden'; 
     }
 }
@@ -401,9 +400,7 @@ window.deleteContact = async () => {
     } catch (err) { console.error(err); }
 };
 
-// ---------------------------------------------------------
-// MESSAGING & UPLOAD LOGIC
-// ---------------------------------------------------------
+// --- MESSAGING & UPLOAD LOGIC ---
 
 async function uploadFile(input) {
     if (!input.files || !input.files[0] || !currentChatId) return;
@@ -422,7 +419,6 @@ async function uploadFile(input) {
 
         if (data.success) {
             const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
             const msgData = {
                 chat_id: currentChatId,
                 text: "Sent an image",
@@ -456,7 +452,6 @@ function sendMessage() {
     
     if(text && currentChatId) {
         const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
         const msgData = {
             chat_id: currentChatId,
             text: text,
@@ -466,7 +461,6 @@ function sendMessage() {
         };
 
         socket.emit('send_reply', { chatId: currentChatId, text: text });
-
         allMessages.push(msgData);
         appendMessage(msgData, true);
         input.value = ""; 
@@ -491,13 +485,20 @@ window.updateNickname = updateNickname;
 window.sendMessage = sendMessage;
 window.handleKeyPress = handleKeyPress;
 window.uploadFile = uploadFile;
-
-// ADDED AUTH FUNCTIONS
 window.handleSignUp = handleSignUp; 
 window.handleLogin = handleLogin;
+window.handleLogout = handleLogout;
 
 // Initialization
 window.addEventListener('DOMContentLoaded', () => { 
+    // --- CHECK SESSION ON LOAD ---
+    const savedSession = localStorage.getItem('userSession');
+    if (savedSession) {
+        const userData = JSON.parse(savedSession);
+        showAppUI(userData);
+    }
+    // ----------------------------
+
     loadSystemSettings(); 
     loadContacts(); 
     loadHistory(); 
@@ -505,7 +506,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
 socket.on('new_message', (data) => {
     const senderId = data.chat_id || data.chatId;
-    
     if (currentChatId === senderId) {
         if (data.sender_type !== 'bot') {
             allMessages.push(data);
