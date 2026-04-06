@@ -1,33 +1,40 @@
+// script.js အပြည့်အစုံ
+
+// Socket.io initialization
 const socket = io();
+
 let currentChatId = "";
 let allMessages = [];
 let unreadCounts = {};
 let cachedContacts = []; 
 
+// System Settings loading
 async function loadSystemSettings() {
     try {
         const res = await fetch('/api/admin/profile');
         const data = await res.json();
         
-        if (data.nickname) {
-            const elName = document.getElementById('top-admin-name');
-            if (elName) elName.innerText = data.nickname;
+        const nameEl = document.getElementById('top-admin-name');
+        if (data.nickname && nameEl) {
+            nameEl.innerText = data.nickname;
         }
         
-        const el = document.getElementById('top-admin-avatar');
-        if (el && data.avatar) {
+        const avatarEl = document.getElementById('top-admin-avatar');
+        if (avatarEl && data.avatar) {
             if (data.avatar.startsWith('data:image') || data.avatar.startsWith('http')) {
-                el.src = data.avatar;
+                avatarEl.src = data.avatar;
             } else {
-                el.src = `/uploads/${data.avatar}`;
+                avatarEl.src = `/uploads/${data.avatar}`;
             }
         }
     } catch (e) { console.error("Error loading settings:", e); }
 }
 
+// Sidebar logic
 function toggleLeftSidebar() { 
     const sidebar = document.getElementById('left-sidebar');
     if (!sidebar) return;
+    
     sidebar.classList.toggle('sidebar-collapsed'); 
     if(sidebar.classList.contains('sidebar-collapsed')) {
         const dropdown = document.getElementById('messenger-dropdown');
@@ -47,7 +54,7 @@ function toggleRightPanel() {
 
 function toggleDropdown() {
     const sidebar = document.getElementById('left-sidebar');
-    if(sidebar && sidebar.classList.contains('sidebar-collapsed')) toggleLeftSidebar();
+    if (sidebar && sidebar.classList.contains('sidebar-collapsed')) toggleLeftSidebar();
     
     const dropdown = document.getElementById('messenger-dropdown');
     const arrow = document.getElementById('arrow-icon');
@@ -67,49 +74,55 @@ function toggleDropdown() {
     if (arrow) arrow.classList.toggle('rotate-arrow');
 }
 
+// Navigation logic
 function switchToInbox() {
-    document.getElementById('main-dashboard-content').classList.remove('hidden');
-    document.getElementById('bot-settings-area').classList.add('hidden');
-    document.getElementById('inbox-nav').classList.add('active-nav');
-    document.getElementById('bot-config-nav').classList.remove('active-nav');
-    document.getElementById('broadcast-nav').classList.remove('active-nav');
-    document.getElementById('sidebar-settings').classList.remove('active-nav');
+    const mainContent = document.getElementById('main-dashboard-content');
+    const botArea = document.getElementById('bot-settings-area');
+    if (mainContent) mainContent.classList.remove('hidden');
+    if (botArea) botArea.classList.add('hidden');
+    
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
+    const inboxNav = document.getElementById('inbox-nav');
+    if (inboxNav) inboxNav.classList.add('active-nav');
+    
     filterContacts('all');
 }
 
 function loadBotSettings() {
-    document.getElementById('main-dashboard-content').classList.add('hidden');
-    document.getElementById('bot-settings-area').classList.remove('hidden');
-    document.getElementById('right-panel').classList.add('hidden');
-    document.getElementById('inbox-nav').classList.remove('active-nav');
-    document.getElementById('sidebar-settings').classList.remove('active-nav');
-    document.getElementById('broadcast-nav').classList.remove('active-nav');
-    document.getElementById('bot-config-nav').classList.add('active-nav');
-    document.getElementById('settings-frame').src = "bot-config.html";
+    document.getElementById('main-dashboard-content')?.classList.add('hidden');
+    document.getElementById('bot-settings-area')?.classList.remove('hidden');
+    document.getElementById('right-panel')?.classList.add('hidden');
+    
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
+    document.getElementById('bot-config-nav')?.classList.add('active-nav');
+    
+    const frame = document.getElementById('settings-frame');
+    if (frame) frame.src = "bot-config.html";
 }
 
 function loadBroadcastSettings() {
-    document.getElementById('main-dashboard-content').classList.add('hidden');
-    document.getElementById('bot-settings-area').classList.remove('hidden');
-    document.getElementById('right-panel').classList.add('hidden');
-    document.getElementById('inbox-nav').classList.remove('active-nav');
-    document.getElementById('sidebar-settings').classList.remove('active-nav');
-    document.getElementById('bot-config-nav').classList.remove('active-nav');
-    document.getElementById('broadcast-nav').classList.add('active-nav');
-    document.getElementById('settings-frame').src = "broadcast.html";
+    document.getElementById('main-dashboard-content')?.classList.add('hidden');
+    document.getElementById('bot-settings-area')?.classList.remove('hidden');
+    
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
+    document.getElementById('broadcast-nav')?.classList.add('active-nav');
+    
+    const frame = document.getElementById('settings-frame');
+    if (frame) frame.src = "broadcast.html";
 }
 
 function loadGeneralSettings() {
-    document.getElementById('main-dashboard-content').classList.add('hidden');
-    document.getElementById('bot-settings-area').classList.remove('hidden');
-    document.getElementById('right-panel').classList.add('hidden');
-    document.getElementById('inbox-nav').classList.remove('active-nav');
-    document.getElementById('bot-config-nav').classList.remove('active-nav');
-    document.getElementById('broadcast-nav').classList.remove('active-nav');
-    document.getElementById('sidebar-settings').classList.add('active-nav');
-    document.getElementById('settings-frame').src = "general-settings.html";
+    document.getElementById('main-dashboard-content')?.classList.add('hidden');
+    document.getElementById('bot-settings-area')?.classList.remove('hidden');
+    
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
+    document.getElementById('sidebar-settings')?.classList.add('active-nav');
+    
+    const frame = document.getElementById('settings-frame');
+    if (frame) frame.src = "general-settings.html";
 }
 
+// Image Preview
 function showImagePreview(url) {
     const modal = document.getElementById('imagePreviewModal');
     const img = document.getElementById('previewImg');
@@ -124,6 +137,7 @@ function closeImagePreview() {
     if (modal) modal.style.display = 'none';
 }
 
+// Contacts and Messages Logic
 async function loadContacts() {
     try {
         const res = await fetch('/api/contacts');
@@ -154,7 +168,9 @@ function renderContacts(contacts) {
         const item = document.createElement('div');
         item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
         item.onclick = () => selectContact(c);
+        
         const avatar = c.profile_pic ? `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` : `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray uppercase">${(c.nickname || c.first_name || "?").charAt(0)}</div>`;
+        
         item.innerHTML = `
             ${avatar}
             <div class="flex-1 min-w-0">
@@ -173,10 +189,15 @@ function selectContact(contact) {
     unreadCounts[currentChatId] = 0; 
     const displayName = contact.nickname || contact.first_name;
     
-    document.getElementById('chat-header-name').innerText = displayName;
-    document.getElementById('edit-nickname').value = displayName;
-    document.getElementById('contact-note').value = contact.notes || "";
-    document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
+    const headerName = document.getElementById('chat-header-name');
+    const nickInput = document.getElementById('edit-nickname');
+    const noteInput = document.getElementById('contact-note');
+    const platformSide = document.getElementById('side-platform');
+    
+    if (headerName) headerName.innerText = displayName;
+    if (nickInput) nickInput.value = displayName;
+    if (noteInput) noteInput.value = contact.notes || "";
+    if (platformSide) platformSide.innerText = `Platform: ${contact.platform}`;
     
     const hImg = document.getElementById('header-avatar-img');
     const hTxt = document.getElementById('header-avatar-text');
@@ -184,16 +205,23 @@ function selectContact(contact) {
     const sTxt = document.getElementById('side-avatar-text');
     
     if(contact.profile_pic) {
-        hImg.src = contact.profile_pic; hImg.classList.remove('hidden'); hTxt.classList.add('hidden');
-        sImg.src = contact.profile_pic; sImg.classList.remove('hidden'); sTxt.classList.add('hidden');
+        if(hImg) { hImg.src = contact.profile_pic; hImg.classList.remove('hidden'); }
+        if(hTxt) hTxt.classList.add('hidden');
+        if(sImg) { sImg.src = contact.profile_pic; sImg.classList.remove('hidden'); }
+        if(sTxt) sTxt.classList.add('hidden');
     } else {
         const initial = (displayName || "?").charAt(0);
-        hTxt.innerText = initial; hTxt.classList.remove('hidden'); hImg.classList.add('hidden');
-        sTxt.innerText = initial; sTxt.classList.remove('hidden'); sImg.classList.add('hidden');
+        if(hTxt) { hTxt.innerText = initial; hTxt.classList.remove('hidden'); }
+        if(hImg) hImg.classList.add('hidden');
+        if(sTxt) { sTxt.innerText = initial; sTxt.classList.remove('hidden'); }
+        if(sImg) sImg.classList.add('hidden');
     }
     
-    document.getElementById('chat-status').innerText = `${contact.platform} ACTIVE`;
-    document.getElementById('chat-status').className = "text-[10px] text-green-500 uppercase font-bold";
+    const status = document.getElementById('chat-status');
+    if (status) {
+        status.innerText = `${contact.platform} ACTIVE`;
+        status.className = "text-[10px] text-green-500 uppercase font-bold";
+    }
     
     socket.emit('mark_as_read', { chatId: currentChatId });
     updateGlobalBadge();
@@ -205,14 +233,21 @@ function updateGlobalBadge() {
     const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
     const badge = document.getElementById('global-msg-count');
     const bell = document.getElementById('noti-bell');
-    if (!badge || !bell) return;
-
-    if (total > 0) {
-        badge.innerText = total; badge.classList.remove('hidden');
-        bell.classList.remove('hidden'); bell.classList.add('ring-animation', 'text-yellow-400');
-    } else {
-        badge.classList.add('hidden'); bell.classList.add('hidden');
-        bell.classList.remove('ring-animation', 'text-yellow-400');
+    
+    if (badge) {
+        if (total > 0) {
+            badge.innerText = total; badge.classList.remove('hidden');
+            if (bell) {
+                bell.classList.remove('hidden'); 
+                bell.classList.add('ring-animation', 'text-yellow-400');
+            }
+        } else {
+            badge.classList.add('hidden');
+            if (bell) {
+                bell.classList.add('hidden');
+                bell.classList.remove('ring-animation', 'text-yellow-400');
+            }
+        }
     }
 }
 
@@ -236,6 +271,7 @@ function renderMessages() {
 function appendMessage(data, isBot) {
     const win = document.getElementById('chat-window');
     if (!win) return;
+    
     let contentHtml = data.text || "";
     let mediaUrl = data.file_url || data.fileUrl;
     const mediaType = data.file_type || data.fileType || "";
@@ -283,18 +319,7 @@ function appendMessage(data, isBot) {
     win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' });
 }
 
-async function handleFileUpload(event) {
-    const file = event.target.files[0];
-    if (!file || !currentChatId) return alert("Select a chat first!");
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('chatId', currentChatId);
-    try {
-        const response = await fetch('/api/upload', { method: 'POST', body: formData });
-        if (response.ok) event.target.value = ""; else alert("Upload failed!");
-    } catch (err) { alert("Error connecting to server."); }
-}
-
+// Event Listeners
 socket.on('new_message', (data) => {
     const senderId = data.chat_id || data.chatId;
     allMessages.push(data);
@@ -333,38 +358,9 @@ function sendMessage() {
     } else if (!currentChatId) alert("Please select a contact first.");
 }
 
-async function updateNickname() {
-    if (!currentChatId) return;
-    const input = document.getElementById('edit-nickname');
-    if (!input) return;
-    const newName = input.value;
-    await fetch('/api/contacts/nickname', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, nickname: newName }) });
-    loadContacts();
-}
-
-async function saveNote() {
-    if (!currentChatId) return;
-    const noteArea = document.getElementById('contact-note');
-    if (!noteArea) return;
-    const noteValue = noteArea.value;
-    await fetch('/api/contacts/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, note: noteValue }) });
-}
-
-async function toggleBlock() {
-    if (!currentChatId || !confirm("Block this customer?")) return;
-    await fetch('/api/contacts/block', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId }) });
-    location.reload();
-}
-
-async function deleteContact() {
-    if (!currentChatId || !confirm("Delete this conversation?")) return;
-    await fetch(`/api/contacts/${currentChatId}`, { method: 'DELETE' });
-    location.reload();
-}
-
 function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
 
-// အောက်ပါ Window Onload အပိုင်းသည် HTML element များအားလုံး အဆင်သင့်ဖြစ်မှ အလုပ်လုပ်စေမည်ဖြစ်သည်
+// Initialization
 window.addEventListener('DOMContentLoaded', () => { 
     loadSystemSettings(); 
     loadContacts(); 
