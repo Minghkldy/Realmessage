@@ -1,6 +1,4 @@
-// script.js အပြည့်အစုံ
-
-// Socket.io initialization
+// script.js - Professional & Clean Logic
 const socket = io();
 
 let currentChatId = "";
@@ -15,17 +13,13 @@ async function loadSystemSettings() {
         const data = await res.json();
         
         const nameEl = document.getElementById('top-admin-name');
-        if (data.nickname && nameEl) {
-            nameEl.innerText = data.nickname;
-        }
+        if (data.nickname && nameEl) nameEl.innerText = data.nickname;
         
         const avatarEl = document.getElementById('top-admin-avatar');
         if (avatarEl && data.avatar) {
-            if (data.avatar.startsWith('data:image') || data.avatar.startsWith('http')) {
-                avatarEl.src = data.avatar;
-            } else {
-                avatarEl.src = `/uploads/${data.avatar}`;
-            }
+            avatarEl.src = (data.avatar.startsWith('data:image') || data.avatar.startsWith('http')) 
+                ? data.avatar 
+                : `/uploads/${data.avatar}`;
         }
     } catch (e) { console.error("Error loading settings:", e); }
 }
@@ -34,56 +28,35 @@ async function loadSystemSettings() {
 function toggleLeftSidebar() { 
     const sidebar = document.getElementById('left-sidebar');
     if (!sidebar) return;
-    
-    sidebar.classList.toggle('sidebar-collapsed'); 
-    if(sidebar.classList.contains('sidebar-collapsed')) {
-        const dropdown = document.getElementById('messenger-dropdown');
-        if (dropdown) {
-            dropdown.classList.remove('show');
-            setTimeout(() => dropdown.classList.add('hidden'), 300);
-        }
-        const arrow = document.getElementById('arrow-icon');
-        if (arrow) arrow.classList.remove('rotate-arrow');
-    }
+    sidebar.classList.toggle('w-20'); // Toggle between collapsed and full width
+    sidebar.querySelectorAll('.nav-text').forEach(el => el.classList.toggle('hidden'));
 }
 
 function toggleRightPanel() { 
     const panel = document.getElementById('right-panel');
-    if (panel) panel.classList.toggle('hidden'); 
+    if (panel) {
+        panel.classList.toggle('hidden');
+        panel.classList.add('animate-in', 'slide-in-from-right', 'duration-300');
+    }
 }
 
 function toggleDropdown() {
-    const sidebar = document.getElementById('left-sidebar');
-    if (sidebar && sidebar.classList.contains('sidebar-collapsed')) toggleLeftSidebar();
-    
     const dropdown = document.getElementById('messenger-dropdown');
     const arrow = document.getElementById('arrow-icon');
     if (!dropdown) return;
 
-    if (dropdown.classList.contains('hidden')) {
-        dropdown.classList.remove('hidden');
-        dropdown.classList.add('flex');
-        setTimeout(() => dropdown.classList.add('show'), 10);
-    } else {
-        dropdown.classList.remove('show');
-        setTimeout(() => {
-            dropdown.classList.remove('flex');
-            dropdown.classList.add('hidden');
-        }, 300);
-    }
-    if (arrow) arrow.classList.toggle('rotate-arrow');
+    dropdown.classList.toggle('hidden');
+    if (arrow) arrow.classList.toggle('rotate-90');
 }
 
 // Navigation logic
 function switchToInbox() {
-    const mainContent = document.getElementById('main-dashboard-content');
-    const botArea = document.getElementById('bot-settings-area');
-    if (mainContent) mainContent.classList.remove('hidden');
-    if (botArea) botArea.classList.add('hidden');
+    document.getElementById('main-dashboard-content')?.classList.remove('hidden');
+    document.getElementById('bot-settings-area')?.classList.add('hidden');
     
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/10', 'text-accent-blue'));
     const inboxNav = document.getElementById('inbox-nav');
-    if (inboxNav) inboxNav.classList.add('active-nav');
+    if (inboxNav) inboxNav.classList.add('active-nav', 'bg-white/10', 'text-accent-blue');
     
     filterContacts('all');
 }
@@ -91,35 +64,31 @@ function switchToInbox() {
 function loadBotSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
-    document.getElementById('right-panel')?.classList.add('hidden');
     
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
-    document.getElementById('bot-config-nav')?.classList.add('active-nav');
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/10', 'text-accent-blue'));
+    document.getElementById('bot-config-nav')?.classList.add('active-nav', 'bg-white/10', 'text-accent-blue');
     
-    const frame = document.getElementById('settings-frame');
-    if (frame) frame.src = "bot-config.html";
+    document.getElementById('settings-frame').src = "bot-config.html";
 }
 
 function loadBroadcastSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
     
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
-    document.getElementById('broadcast-nav')?.classList.add('active-nav');
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/10', 'text-accent-blue'));
+    document.getElementById('broadcast-nav')?.classList.add('active-nav', 'bg-white/10', 'text-accent-blue');
     
-    const frame = document.getElementById('settings-frame');
-    if (frame) frame.src = "broadcast.html";
+    document.getElementById('settings-frame').src = "broadcast.html";
 }
 
 function loadGeneralSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
     
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
-    document.getElementById('sidebar-settings')?.classList.add('active-nav');
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/10', 'text-accent-blue'));
+    document.getElementById('sidebar-settings')?.classList.add('active-nav', 'bg-white/10', 'text-accent-blue');
     
-    const frame = document.getElementById('settings-frame');
-    if (frame) frame.src = "general-settings.html";
+    document.getElementById('settings-frame').src = "general-settings.html";
 }
 
 // Image Preview
@@ -128,16 +97,16 @@ function showImagePreview(url) {
     const img = document.getElementById('previewImg');
     if (modal && img) {
         img.src = url;
-        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
     }
 }
 
 function closeImagePreview() {
-    const modal = document.getElementById('imagePreviewModal');
-    if (modal) modal.style.display = 'none';
+    document.getElementById('imagePreviewModal')?.classList.add('hidden');
 }
 
-// Contacts and Messages Logic
+// Contacts Logic
 async function loadContacts() {
     try {
         const res = await fetch('/api/contacts');
@@ -147,15 +116,12 @@ async function loadContacts() {
 }
 
 function filterContacts(platform) {
-    let filtered;
     const title = document.getElementById('inbox-title');
-    if (platform === 'all') {
-        filtered = cachedContacts;
-        if (title) title.innerText = "Inbox";
-    } else {
-        filtered = cachedContacts.filter(c => c.platform.toLowerCase() === platform.toLowerCase());
-        if (title) title.innerText = platform.toUpperCase();
-    }
+    const filtered = platform === 'all' 
+        ? cachedContacts 
+        : cachedContacts.filter(c => c.platform.toLowerCase() === platform.toLowerCase());
+    
+    if (title) title.innerText = platform === 'all' ? "Inbox" : platform.toUpperCase();
     renderContacts(filtered);
 }
 
@@ -163,21 +129,26 @@ function renderContacts(contacts) {
     const container = document.getElementById('contacts-container');
     if (!container) return;
     container.innerHTML = '';
+
     contacts.forEach(c => {
         const count = unreadCounts[c.chat_id] || 0;
+        const isActive = currentChatId === c.chat_id;
         const item = document.createElement('div');
-        item.className = `p-3 rounded-xl flex items-center gap-3 cursor-pointer transition hover:bg-dark-gray ${currentChatId === c.chat_id ? 'active-contact' : ''}`;
+        
+        item.className = `group p-4 rounded-2xl flex items-center gap-4 cursor-pointer transition-all duration-300 ${isActive ? 'bg-accent-blue shadow-lg shadow-accent-blue/20 scale-[1.02]' : 'hover:bg-white/5'}`;
         item.onclick = () => selectContact(c);
         
-        const avatar = c.profile_pic ? `<img src="${c.profile_pic}" class="w-10 h-10 rounded-full object-cover border border-border-gray">` : `<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold border border-border-gray uppercase">${(c.nickname || c.first_name || "?").charAt(0)}</div>`;
+        const avatar = c.profile_pic 
+            ? `<img src="${c.profile_pic}" class="w-12 h-12 rounded-2xl object-cover border-2 ${isActive ? 'border-white/20' : 'border-border-gray'}">` 
+            : `<div class="w-12 h-12 rounded-2xl bg-ios-gray flex items-center justify-center text-sm font-black border-2 border-border-gray uppercase text-accent-blue">${(c.nickname || c.first_name || "?").charAt(0)}</div>`;
         
         item.innerHTML = `
-            ${avatar}
+            <div class="relative">${avatar} ${count > 0 ? `<div class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-pure-black"></div>` : ''}</div>
             <div class="flex-1 min-w-0">
-                <p class="text-sm font-bold truncate ${count > 0 ? 'text-white' : 'text-gray-400'}">${c.nickname || c.first_name}</p>
-                <p class="text-[10px] text-gray-500 uppercase tracking-tighter">${c.platform}</p>
+                <p class="text-sm font-bold truncate ${isActive ? 'text-white' : 'text-gray-200'}">${c.nickname || c.first_name}</p>
+                <p class="text-[10px] uppercase font-black tracking-widest ${isActive ? 'text-white/60' : 'text-gray-500'}">${c.platform}</p>
             </div>
-            ${count > 0 ? `<span class="bg-accent-blue text-[10px] w-5 h-5 flex items-center justify-center rounded-full text-white noti-badge font-bold">${count}</span>` : ''}
+            ${count > 0 ? `<span class="bg-white text-accent-blue text-[10px] px-2 py-0.5 rounded-full font-black">${count}</span>` : ''}
         `;
         container.appendChild(item);
     });
@@ -187,55 +158,37 @@ function renderContacts(contacts) {
 function selectContact(contact) {
     currentChatId = contact.chat_id;
     unreadCounts[currentChatId] = 0; 
-    const displayName = contact.nickname || contact.first_name;
     
-    const headerName = document.getElementById('chat-header-name');
-    const nickInput = document.getElementById('edit-nickname');
-    const noteInput = document.getElementById('contact-note');
-    const platformSide = document.getElementById('side-platform');
+    document.getElementById('chat-header-name').innerText = contact.nickname || contact.first_name;
+    document.getElementById('edit-nickname').value = contact.nickname || contact.first_name;
+    document.getElementById('contact-note').value = contact.notes || "";
+    document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
     
-    if (headerName) headerName.innerText = displayName;
-    if (nickInput) nickInput.value = displayName; // Input box ထဲကို နာမည်ထည့်ပေးမယ်
-    if (noteInput) noteInput.value = contact.notes || "";
-    if (platformSide) platformSide.innerText = `Platform: ${contact.platform}`;
-    
+    // Avatar Logic
     const hImg = document.getElementById('header-avatar-img');
     const hTxt = document.getElementById('header-avatar-text');
     const sImg = document.getElementById('side-avatar-img');
     const sTxt = document.getElementById('side-avatar-text');
-    
+
     if(contact.profile_pic) {
-        if(hImg) { hImg.src = contact.profile_pic; hImg.classList.remove('hidden'); }
-        if(hTxt) hTxt.classList.add('hidden');
-        if(sImg) { sImg.src = contact.profile_pic; sImg.classList.remove('hidden'); }
-        if(sTxt) sTxt.classList.add('hidden');
+        [hImg, sImg].forEach(img => { if(img) { img.src = contact.profile_pic; img.classList.remove('hidden'); } });
+        [hTxt, sTxt].forEach(txt => { if(txt) txt.classList.add('hidden'); });
     } else {
-        const initial = (displayName || "?").charAt(0);
-        if(hTxt) { hTxt.innerText = initial; hTxt.classList.remove('hidden'); }
-        if(hImg) hImg.classList.add('hidden');
-        if(sTxt) { sTxt.innerText = initial; sTxt.classList.remove('hidden'); }
-        if(sImg) sImg.classList.add('hidden');
+        const initial = (contact.nickname || contact.first_name || "?").charAt(0);
+        [hTxt, sTxt].forEach(txt => { if(txt) { txt.innerText = initial; txt.classList.remove('hidden'); } });
+        [hImg, sImg].forEach(img => { if(img) img.classList.add('hidden'); });
     }
-    
-    const status = document.getElementById('chat-status');
-    if (status) {
-        status.innerText = `${contact.platform} ACTIVE`;
-        status.className = "text-[10px] text-green-500 uppercase font-bold";
-    }
-    
+
     socket.emit('mark_as_read', { chatId: currentChatId });
     updateGlobalBadge();
     renderContacts(cachedContacts); 
     renderMessages();
 }
 
-// နာမည်ပြောင်းလဲမှုကို Database မှာပါ Save လုပ်တဲ့ function
+// Nickname Update
 async function updateNickname() {
-    const nickInput = document.getElementById('edit-nickname');
-    if (!nickInput || !currentChatId) return;
-
-    const newNickname = nickInput.value.trim();
-    if (!newNickname) return alert("ကျေးဇူးပြု၍ နာမည်ထည့်ပေးပါ!");
+    const newNickname = document.getElementById('edit-nickname').value.trim();
+    if (!newNickname || !currentChatId) return;
 
     try {
         const res = await fetch('/api/contacts/update-nickname', {
@@ -245,40 +198,20 @@ async function updateNickname() {
         });
 
         if (res.ok) {
-            // Memory ထဲက contact စာရင်းကို update လုပ်မယ်
             const contact = cachedContacts.find(c => c.chat_id === currentChatId);
             if (contact) contact.nickname = newNickname;
-            
             renderContacts(cachedContacts); 
-            const headerName = document.getElementById('chat-header-name');
-            if (headerName) headerName.innerText = newNickname;
-            
-            alert("နာမည်ပြောင်းလဲမှု အောင်မြင်ပါသည်!");
-        } else {
-            alert("နာမည်ပြင်လို့မရပါ။ Server error ဖြစ်နေပါသည်။");
+            document.getElementById('chat-header-name').innerText = newNickname;
         }
-    } catch (err) { console.error("Error updating nickname:", err); }
+    } catch (err) { console.error(err); }
 }
 
 function updateGlobalBadge() {
     const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
     const badge = document.getElementById('global-msg-count');
-    const bell = document.getElementById('noti-bell');
-    
     if (badge) {
-        if (total > 0) {
-            badge.innerText = total; badge.classList.remove('hidden');
-            if (bell) {
-                bell.classList.remove('hidden'); 
-                bell.classList.add('ring-animation', 'text-yellow-400');
-            }
-        } else {
-            badge.classList.add('hidden');
-            if (bell) {
-                bell.classList.add('hidden');
-                bell.classList.remove('ring-animation', 'text-yellow-400');
-            }
-        }
+        badge.innerText = total;
+        total > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden');
     }
 }
 
@@ -294,9 +227,8 @@ function renderMessages() {
     const win = document.getElementById('chat-window');
     if (!win) return;
     win.innerHTML = "";
-    const filtered = allMessages.filter(m => m.chat_id === currentChatId);
-    filtered.forEach(msg => appendMessage(msg, msg.sender_type === 'bot'));
-    win.scrollTo({ top: win.scrollHeight, behavior: 'auto' });
+    allMessages.filter(m => m.chat_id === currentChatId).forEach(msg => appendMessage(msg, msg.sender_type === 'bot'));
+    win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' });
 }
 
 function appendMessage(data, isBot) {
@@ -306,43 +238,35 @@ function appendMessage(data, isBot) {
     let contentHtml = data.text || "";
     let mediaUrl = data.file_url || data.fileUrl;
     const mediaType = data.file_type || data.fileType || "";
-    const msgTime = data.time || ""; 
-    const readStatus = data.is_read ? 'SEEN' : 'SENT';
-    const statusColor = data.is_read ? 'text-accent-blue' : 'text-gray-500';
+    const statusColor = data.is_read ? 'text-accent-blue' : 'text-gray-600';
 
     if (mediaUrl) {
-        if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) {
-            mediaUrl = `/uploads/${mediaUrl}`;
-        }
+        if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) mediaUrl = `/uploads/${mediaUrl}`;
 
         if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
-            contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-lg mt-2 cursor-pointer border border-border-gray shadow-md hover:opacity-80 transition" onclick="showImagePreview('${mediaUrl}')" onerror="this.src='https://placehold.co/200x200?text=Image+Not+Found'">`;
+            contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-2xl mt-2 cursor-pointer border border-border-gray shadow-xl hover:scale-[1.02] transition" onclick="showImagePreview('${mediaUrl}')">`;
         } else if (mediaType.includes('video')) {
-            contentHtml = `<video controls class="max-w-xs rounded-lg mt-2 border border-border-gray shadow-md"><source src="${mediaUrl}"></video>`;
-        } else if (mediaType.includes('audio')) {
-            contentHtml = `<audio controls class="mt-2 w-full max-w-[240px]"><source src="${mediaUrl}"></audio>`;
+            contentHtml = `<video controls class="max-w-xs rounded-2xl mt-2 border border-border-gray"><source src="${mediaUrl}"></video>`;
         }
         if(data.text && !data.text.includes("Sent an image")) contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
     }
 
     const msgHtml = isBot ? `
-        <div class="self-end max-w-[75%]">
-            <div class="bg-accent-blue p-4 rounded-2xl rounded-tr-none text-sm font-medium shadow-lg">${contentHtml}</div>
-            <div class="flex items-center justify-end gap-2 mt-1">
-                <span class="text-[9px] text-gray-500 uppercase">${msgTime}</span>
-                <span class="text-[9px] font-bold uppercase status-indicator ${statusColor}" id="status-${data.id}">${readStatus}</span>
+        <div class="self-end max-w-[80%] animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div class="bg-accent-blue p-4 rounded-3xl rounded-tr-none text-sm font-medium shadow-lg shadow-accent-blue/20 text-white">${contentHtml}</div>
+            <div class="flex items-center justify-end gap-2 mt-2 px-1">
+                <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${data.time || ''}</span>
+                <i class="fas fa-check-double text-[9px] ${statusColor} status-indicator"></i>
             </div>
         </div>
     ` : `
-        <div class="flex items-start gap-3 max-w-[75%]">
-            <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-border-gray bg-gray-900 flex items-center justify-center text-[10px]">
-                ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover">` : `<i class="fas fa-user text-gray-500"></i>`}
+        <div class="flex items-start gap-3 max-w-[80%] animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div class="w-9 h-9 rounded-xl bg-ios-gray border border-border-gray flex items-center justify-center flex-shrink-0">
+                ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover rounded-xl">` : `<i class="fas fa-user text-gray-600 text-xs"></i>`}
             </div>
             <div>
-                <div class="bg-dark-gray border border-border-gray p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed">
-                    <p class="text-[10px] text-sky-400 mb-1 font-bold">${data.sender || 'User'}</p>${contentHtml}
-                </div>
-                <p class="text-[9px] text-gray-600 mt-1 uppercase">${msgTime}</p>
+                <div class="bg-ios-gray/50 border border-border-gray p-4 rounded-3xl rounded-tl-none text-sm leading-relaxed text-gray-200 backdrop-blur-sm shadow-sm">${contentHtml}</div>
+                <p class="text-[9px] text-gray-600 mt-2 px-1 font-bold uppercase tracking-widest">${data.time || ''}</p>
             </div>
         </div>
     `;
@@ -350,85 +274,70 @@ function appendMessage(data, isBot) {
     win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' });
 }
 
-// Block and Delete Functions
-async function toggleBlock() {
-    if (!currentChatId) return alert("ကျေးဇူးပြု၍ Contact အရင်ရွေးချယ်ပါ!");
-    if (!confirm("ဒီ customer ကို block ချင်တာ သေချာပါသလား?")) return;
-
+// Block & Delete
+window.toggleBlock = async () => {
+    if (!currentChatId || !confirm("Block this customer?")) return;
     try {
         const res = await fetch('/api/contacts/block', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chatId: currentChatId })
         });
-        if (res.ok) {
-            alert("Block လုပ်ပြီးပါပြီ!");
-            location.reload();
-        } else {
-            alert("Block လုပ်ရာတွင် အဆင်မပြေဖြစ်သွားပါသည်။");
-        }
+        if (res.ok) location.reload();
     } catch (err) { console.error(err); }
-}
+};
 
-async function deleteContact() {
-    if (!currentChatId) return alert("ကျေးဇူးပြု၍ Contact အရင်ရွေးချယ်ပါ!");
-    if (!confirm("ဒီ conversation ကို ဖျက်ပစ်ဖို့ သေချာပါသလား? ပြန်ယူလို့မရတော့ပါဘူးနော်။")) return;
-
+window.deleteContact = async () => {
+    if (!currentChatId || !confirm("Delete this conversation permanently?")) return;
     try {
         const res = await fetch(`/api/contacts/${currentChatId}`, { method: 'DELETE' });
-        if (res.ok) {
-            alert("ဖျက်ပြီးပါပြီ!");
-            location.reload();
-        } else {
-            alert("ဖျက်ရာတွင် အဆင်မပြေဖြစ်သွားပါသည်။");
-        }
+        if (res.ok) location.reload();
     } catch (err) { console.error(err); }
-}
+};
 
-// Event Listeners
-socket.on('new_message', (data) => {
-    const senderId = data.chat_id || data.chatId;
-    allMessages.push(data);
-    if (currentChatId === senderId) {
-        appendMessage(data, data.sender_type === 'bot');
-        socket.emit('mark_as_read', { chatId: currentChatId });
-    } else {
-        unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-        const sound = document.getElementById('notif-sound');
-        if (sound) sound.play().catch(() => {});
-        renderContacts(cachedContacts);
-    }
-});
-
-socket.on('messages_read', (data) => {
-    if (data.chatId === currentChatId) {
-        document.querySelectorAll('.status-indicator').forEach(el => {
-            el.innerText = 'SEEN';
-            el.classList.add('text-accent-blue');
-            el.classList.remove('text-gray-500');
-        });
-        allMessages.forEach(m => {
-            if(m.chat_id === data.chatId) m.is_read = true;
-        });
-    }
-});
-
+// Messaging
 function sendMessage() {
     const input = document.getElementById('user-input');
-    if (!input) return;
-    const text = input.value.trim();
-    if(text !== "" && currentChatId !== "") {
+    const text = input?.value.trim();
+    if(text && currentChatId) {
         socket.emit('send_reply', { chatId: currentChatId, text: text });
         input.value = ""; 
-        unreadCounts[currentChatId] = 0;
-    } else if (!currentChatId) alert("Please select a contact first.");
+    }
 }
 
 function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
+
+// Global Scope Assignments
+window.switchToInbox = switchToInbox;
+window.loadBotSettings = loadBotSettings;
+window.loadBroadcastSettings = loadBroadcastSettings;
+window.loadGeneralSettings = loadGeneralSettings;
+window.toggleLeftSidebar = toggleLeftSidebar;
+window.toggleDropdown = toggleDropdown;
+window.toggleRightPanel = toggleRightPanel;
+window.closeImagePreview = closeImagePreview;
+window.filterContacts = filterContacts;
+window.selectContact = selectContact;
+window.updateNickname = updateNickname;
+window.sendMessage = sendMessage;
+window.handleKeyPress = handleKeyPress;
 
 // Initialization
 window.addEventListener('DOMContentLoaded', () => { 
     loadSystemSettings(); 
     loadContacts(); 
     loadHistory(); 
+});
+
+socket.on('new_message', (data) => {
+    allMessages.push(data);
+    const senderId = data.chat_id || data.chatId;
+    if (currentChatId === senderId) {
+        appendMessage(data, data.sender_type === 'bot');
+        socket.emit('mark_as_read', { chatId: currentChatId });
+    } else {
+        unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
+        document.getElementById('notif-sound')?.play().catch(() => {});
+        renderContacts(cachedContacts);
+    }
 });
