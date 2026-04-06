@@ -1,4 +1,4 @@
-// script.js - iOS Glassmorphism Professional Logic (Fixed Messaging & Image Upload)
+// script.js - iOS Glassmorphism Professional Logic (Fixed Session & General Settings Link)
 
 // --- SUPABASE CONFIGURATION ---
 const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
@@ -7,13 +7,11 @@ const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 // --- AUTH LOGIC (SESSION FIXED) ---
 
-// Page Load ဖြစ်ချိန်မှာ Session ရှိမရှိ စစ်ဆေးပေးမည့် Function
 async function checkSession() {
-    const { data: { session } } = await _supabase.auth.getSession();
-    const storedUser = localStorage.getItem('currentUserEmail');
-
-    if (session || storedUser) {
-        // Session ရှိနေရင် Dashboard ကို တိုက်ရိုက်ပြမယ်
+    const storedEmail = localStorage.getItem('currentUserEmail');
+    
+    // LocalStorage မှာ Email ရှိနေရင် Login ဝင်ပြီးသားလို့ သတ်မှတ်မယ်
+    if (storedEmail) {
         const authGate = document.getElementById('auth-gate');
         const mainApp = document.getElementById('main-app');
         
@@ -24,14 +22,12 @@ async function checkSession() {
             mainApp.style.pointerEvents = 'auto';
         }
         
-        // UI ထဲက နာမည်ကို Update လုပ်မယ်
         const nameEl = document.getElementById('top-admin-name');
         const nickname = localStorage.getItem('userNickname');
         if (nameEl && nickname) nameEl.innerText = nickname;
     }
 }
 
-// LOGIN FUNCTION
 async function handleLogin() {
     const email = document.getElementById('login-email')?.value;
     const password = document.getElementById('login-password')?.value;
@@ -51,7 +47,6 @@ async function handleLogin() {
     if (error || !data) {
         alert("Email သို့မဟုတ် Password မှားယွင်းနေပါသည်။");
     } else {
-        // Login အောင်မြင်ပါက အချက်အလက်များကို သိမ်းဆည်းမည်
         localStorage.setItem('currentUserEmail', data.email);
         localStorage.setItem('currentPassword', data.password);
         localStorage.setItem('userNickname', data.nickname || "Admin");
@@ -73,7 +68,6 @@ async function handleLogin() {
     }
 }
 
-// SIGN UP FUNCTION 
 async function handleSignUp() {
     const nickname = document.getElementById('reg-nickname')?.value;
     const email = document.getElementById('reg-email')?.value;
@@ -102,49 +96,47 @@ async function handleSignUp() {
     }
 }
 
-// SECURE PASSWORD UPDATE LOGIC
-async function updatePassword() {
-    const oldPasswordInput = document.getElementById('old-password')?.value;
-    const newPasswordInput = document.getElementById('new-password')?.value;
-    const confirmPasswordInput = document.getElementById('confirm-password')?.value;
-
+// --- PASSWORD UPDATE (General Settings Iframe ထဲကနေ လှမ်းခေါ်ရန် ပြင်ဆင်ထားသည်) ---
+async function updatePassword(oldPw, newPw, confirmPw) {
     const storedEmail = localStorage.getItem('currentUserEmail');
     const storedPassword = localStorage.getItem('currentPassword');
 
-    if (!oldPasswordInput || !newPasswordInput || !confirmPasswordInput) {
+    // parameter မပါလာရင် input fields တွေကနေ ယူမယ် (ညာဘက် panel အတွက်)
+    const oldVal = oldPw || document.getElementById('old-password')?.value;
+    const newVal = newPw || document.getElementById('new-password')?.value;
+    const conVal = confirmPw || document.getElementById('confirm-password')?.value;
+
+    if (!oldVal || !newVal || !conVal) {
         alert("အကွက်များအားလုံး ဖြည့်စွက်ပေးပါ။");
         return;
     }
 
-    if (oldPasswordInput !== storedPassword) {
+    if (oldVal !== storedPassword) {
         alert("လက်ရှိအသုံးပြုနေသော Password မှားယွင်းနေပါသည်။");
         return;
     }
 
-    if (newPasswordInput !== confirmPasswordInput) {
+    if (newVal !== conVal) {
         alert("Password အသစ်များ မကိုက်ညီပါ။");
         return;
     }
 
-    if (newPasswordInput.length < 6) {
-        alert("Password သည် အနည်းဆုံး ၆ လုံး ရှိရပါမည်။");
-        return;
-    }
-
-    const { data, error } = await _supabase
+    const { error } = await _supabase
         .from('users')
-        .update({ password: newPasswordInput })
+        .update({ password: newVal })
         .eq('email', storedEmail);
 
     if (error) {
-        alert("Error updating password: " + error.message);
+        alert("Error: " + error.message);
     } else {
-        localStorage.setItem('currentPassword', newPasswordInput); 
+        localStorage.setItem('currentPassword', newVal); 
         alert("Password အောင်မြင်စွာ ပြောင်းလဲပြီးပါပြီ။");
         
-        document.getElementById('old-password').value = "";
-        document.getElementById('new-password').value = "";
-        document.getElementById('confirm-password').value = "";
+        if (document.getElementById('old-password')) {
+            document.getElementById('old-password').value = "";
+            document.getElementById('new-password').value = "";
+            document.getElementById('confirm-password').value = "";
+        }
     }
 }
 
@@ -156,7 +148,6 @@ let allMessages = [];
 let unreadCounts = {};
 let cachedContacts = []; 
 
-// System Settings loading
 async function loadSystemSettings() {
     try {
         const res = await fetch('/api/admin/profile');
@@ -174,7 +165,6 @@ async function loadSystemSettings() {
     } catch (e) { console.error("Error loading settings:", e); }
 }
 
-// Sidebar Logic
 function toggleLeftSidebar() { 
     const sidebar = document.getElementById('left-sidebar');
     if (!sidebar) return;
@@ -205,7 +195,6 @@ function toggleDropdown() {
     if (arrow) arrow.classList.toggle('rotate-90');
 }
 
-// Navigation
 function switchToInbox() {
     document.getElementById('main-dashboard-content')?.classList.remove('hidden');
     document.getElementById('bot-settings-area')?.classList.add('hidden');
@@ -238,7 +227,6 @@ function loadGeneralSettings() {
     document.getElementById('settings-frame').src = "general-settings.html";
 }
 
-// Image Preview
 function showImagePreview(url) {
     const modal = document.getElementById('imagePreviewModal');
     const img = document.getElementById('previewImg');
@@ -264,7 +252,6 @@ function closeImagePreview() {
     }
 }
 
-// Contacts Logic
 async function loadContacts() {
     try {
         const res = await fetch('/api/contacts');
@@ -387,7 +374,6 @@ function appendMessage(data, isBot) {
     win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' });
 }
 
-// Messaging Logic
 async function uploadFile(input) {
     if (!input.files || !input.files[0] || !currentChatId) return;
     const file = input.files[0];
@@ -440,10 +426,10 @@ window.uploadFile = uploadFile;
 window.handleSignUp = handleSignUp; 
 window.handleLogin = handleLogin;
 window.updatePassword = updatePassword;
-window.checkSession = checkSession; // index.html က ခေါ်သုံးနိုင်ရန်
+window.checkSession = checkSession;
 
 window.addEventListener('DOMContentLoaded', () => { 
-    checkSession(); // အရင်ဆုံး Session ရှိမရှိ စစ်မည်
+    checkSession(); 
     loadSystemSettings(); 
     loadContacts(); 
     loadHistory(); 
