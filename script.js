@@ -1,4 +1,41 @@
 // script.js - iOS Glassmorphism Professional Logic (Fixed Messaging & Image Upload)
+
+// --- SUPABASE CONFIGURATION (ADDED) ---
+const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
+const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt';
+const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+// SIGN UP FUNCTION (ADDED)
+async function handleSignUp() {
+    const nickname = document.getElementById('reg-nickname')?.value;
+    const email = document.getElementById('reg-email')?.value;
+    const password = document.getElementById('reg-password')?.value;
+    const birthday = document.getElementById('reg-birthday')?.value;
+
+    if (!email || !password) {
+        alert("Email နှင့် Password ဖြည့်ရန်လိုအပ်ပါသည်။");
+        return;
+    }
+
+    if (!email.endsWith('@gmail.com')) {
+        alert("Gmail အကောင့်ကိုသာ အသုံးပြုပေးပါ။");
+        return;
+    }
+
+    const { data, error } = await _supabase
+        .from('users')
+        .insert([{ nickname, email, password, birthday }]);
+
+    if (error) {
+        alert("Error: " + error.message);
+    } else {
+        alert("အကောင့်ဖွင့်ခြင်း အောင်မြင်ပါသည်။");
+        window.location.href = "broadcast.html"; 
+    }
+}
+
+// ---------------------------------------------------------
+
 const socket = io();
 
 let currentChatId = "";
@@ -115,7 +152,7 @@ function showImagePreview(url) {
         setTimeout(() => {
             img.classList.remove('scale-95');
         }, 10);
-        document.body.style.overflow = 'hidden'; // Scroll ပိတ်မယ်
+        document.body.style.overflow = 'hidden'; 
     }
 }
 
@@ -127,7 +164,7 @@ function closeImagePreview() {
         setTimeout(() => {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
-            document.body.style.overflow = 'auto'; // Scroll ပြန်ဖွင့်မယ်
+            document.body.style.overflow = 'auto'; 
         }, 150);
     }
 }
@@ -412,6 +449,7 @@ window.updateNickname = updateNickname;
 window.sendMessage = sendMessage;
 window.handleKeyPress = handleKeyPress;
 window.uploadFile = uploadFile;
+window.handleSignUp = handleSignUp; // ADDED
 
 // Initialization
 window.addEventListener('DOMContentLoaded', () => { 
