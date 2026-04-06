@@ -551,7 +551,7 @@ async function handleForgotPassword() {
 window.handleForgotPassword = handleForgotPassword;
 
 // --- LOGOUT LOGIC ---
-aasync function handleLogout() {
+async function handleLogout() {
     const { error } = await _supabase.auth.signOut();
 
     if (error) {
