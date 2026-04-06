@@ -2,7 +2,7 @@
 
 // --- SUPABASE CONFIGURATION ---
 const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
-const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt';
+const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W10tIt';
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 // --- AUTH LOGIC (FIXED FOR REAL SUPABASE AUTH) ---
@@ -221,10 +221,19 @@ function closeImagePreview() {
     }
 }
 
+// --- ပြင်ဆင်ထားသော Load Contacts (User အလိုက်စစ်ထုတ်ရန်) ---
 async function loadContacts() {
     try {
-        const res = await fetch('/api/contacts');
-        cachedContacts = await res.json();
+        const { data: { user } } = await _supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await _supabase
+            .from('contacts')
+            .select('*')
+            .eq('user_id', user.id); // မိမိ User ID နဲ့တူတာပဲ ယူမယ်
+
+        if (error) throw error;
+        cachedContacts = data;
         renderContacts(cachedContacts);
     } catch (err) { console.error(err); }
 }
@@ -316,10 +325,19 @@ function updateGlobalBadge() {
     }
 }
 
+// --- ပြင်ဆင်ထားသော Load History (User အလိုက်စစ်ထုတ်ရန်) ---
 async function loadHistory() {
     try {
-        const response = await fetch('/api/messages');
-        allMessages = await response.json();
+        const { data: { user } } = await _supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await _supabase
+            .from('messages')
+            .select('*')
+            .eq('user_id', user.id); // မိမိ User ID နဲ့တူတာပဲ ယူမယ်
+
+        if (error) throw error;
+        allMessages = data;
         if(currentChatId) renderMessages();
     } catch (err) { console.error(err); }
 }
@@ -406,7 +424,9 @@ async function uploadFile(input) {
         });
         const data = await res.json();
         if (data.success) {
+            const { data: { user } } = await _supabase.auth.getUser(); // User ID ယူခြင်း
             const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
             const msgData = {
                 chat_id: currentChatId,
                 text: "Sent an image",
@@ -414,8 +434,10 @@ async function uploadFile(input) {
                 file_type: file.type,
                 sender_type: 'bot',
                 time: timeNow,
-                is_read: false
+                is_read: false,
+                user_id: user.id // Database Insert အတွက် user_id ထည့်သွင်းခြင်း
             };
+            
             socket.emit('send_reply', { 
                 chatId: currentChatId, 
                 text: "Sent an image", 
@@ -432,18 +454,22 @@ async function uploadFile(input) {
     input.value = ""; 
 }
 
-function sendMessage() {
+async function sendMessage() {
     const input = document.getElementById('user-input');
     const text = input?.value.trim();
     if(text && currentChatId) {
+        const { data: { user } } = await _supabase.auth.getUser(); // User ID ယူခြင်း
         const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
         const msgData = {
             chat_id: currentChatId,
             text: text,
             sender_type: 'bot',
             time: timeNow,
-            is_read: false
+            is_read: false,
+            user_id: user.id // Database Insert အတွက် user_id ထည့်သွင်းခြင်း
         };
+        
         socket.emit('send_reply', { chatId: currentChatId, text: text });
         allMessages.push(msgData);
         appendMessage(msgData, true);
