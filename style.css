@@ -1,0 +1,53 @@
+body { background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+.active-contact { border-left: 3px solid #3B82F6; background-color: #0f0f0f; }
+
+#left-sidebar { 
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    width: 240px;
+}
+
+.sidebar-collapsed { width: 80px !important; }
+.sidebar-collapsed .nav-text, 
+.sidebar-collapsed .dropdown-arrow,
+.sidebar-collapsed #messenger-dropdown { display: none !important; }
+.sidebar-collapsed .nav-item { justify-content: center; padding: 12px 0; }
+.sidebar-collapsed .text-2xl { padding-left: 0; text-align: center; justify-content: center; }
+
+.nav-item { 
+    display: flex; align-items: center; gap: 16px; width: 100%; 
+    padding: 12px 24px; cursor: pointer; transition: 0.2s; color: #6b7280;
+}
+.nav-item:hover { color: white; background-color: rgba(255,255,255,0.05); }
+.nav-text { font-size: 14px; font-weight: 500; white-space: nowrap; }
+.active-nav { color: #3B82F6; background-color: rgba(59, 130, 246, 0.05); }
+
+#messenger-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; background: rgba(0,0,0,0.1); }
+#messenger-dropdown.show { max-height: 400px; }
+.dropdown-item { padding-left: 64px; padding-top: 10px; padding-bottom: 10px; display: flex; align-items: center; gap: 12px; color: #6b7280; transition: 0.2s; cursor: pointer; }
+.dropdown-item:hover { color: white; }
+.dropdown-arrow { transition: transform 0.3s; margin-left: auto; font-size: 10px; }
+.rotate-arrow { transform: rotate(180deg); }
+
+.noti-badge { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+@keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+@keyframes ring {
+    0% { transform: rotate(0); }
+    10% { transform: rotate(15deg); }
+    20% { transform: rotate(-15deg); }
+    30% { transform: rotate(10deg); }
+    40% { transform: rotate(-10deg); }
+    50% { transform: rotate(5deg); }
+    60% { transform: rotate(-5deg); }
+    100% { transform: rotate(0); }
+}
+.ring-animation { display: inline-block; animation: ring 0.5s ease infinite; }
+
+#imagePreviewModal {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; cursor: zoom-out;
+}
+#imagePreviewModal img { max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px; cursor: default; }
