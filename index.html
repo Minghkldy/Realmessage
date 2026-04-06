@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <script src="https://cdn.jsdelivr.net/npm/@_supabase/_supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script src="/socket.io/socket.io.js"></script>
     
@@ -298,6 +298,9 @@
     </div>
 
     <script>
+        // Supabase initialize က script.js ထဲမှာရှိရပါမယ်
+        // သို့မဟုတ် ဒီမှာထည့်နိုင်ပါတယ်
+
         // Auth Section Toggle
         function toggleAuth() {
             const loginSection = document.getElementById('login-section');
@@ -315,16 +318,66 @@
             }
         }
 
+        // --- Auth Logic Handling ---
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            if(!email || !password) return alert("Please fill all fields");
+
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) alert(error.message);
+        }
+
+        async function handleSignUp() {
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const nickname = document.getElementById('reg-nickname').value;
+            const birthday = document.getElementById('reg-birthday').value;
+
+            if(!email || !password || !nickname) return alert("Please fill required fields");
+
+            const { data, error } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        nickname: nickname,
+                        birthday: birthday
+                    }
+                }
+            });
+
+            if (error) alert(error.message);
+            else alert("Registration Successful! Please check your email for verification.");
+        }
+
+        async function handleForgotPassword() {
+            const email = document.getElementById('reset-email').value;
+            if(!email) return alert("Please enter your email");
+
+            const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+            if (error) alert(error.message);
+            else {
+                alert("Password reset link sent to your email!");
+                closeForgotModal();
+            }
+        }
+
         // --- Session Management Logic ---
         window.onload = async function() {
             const check_supabase = setInterval(async () => {
-                if (typeof _supabase !== 'undefined') {
+                if (typeof supabase !== 'undefined') {
                     clearInterval(check_supabase);
                     
-                    const { data: { session } } = await _supabase.auth.getSession();
+                    const { data: { session } } = await supabase.auth.getSession();
                     updateUI(session);
 
-                    _supabase.auth.onAuthStateChange((_event, session) => {
+                    supabase.auth.onAuthStateChange((_event, session) => {
                         updateUI(session);
                     });
                 }
@@ -354,14 +407,13 @@
         // --- Logout Function ---
         async function handleLogout() {
             if (confirm("Logout လုပ်မှာ သေချာပါသလား?")) {
-                const { error } = await _supabase.auth.signOut();
+                const { error } = await supabase.auth.signOut();
                 if (error) {
                     alert("Error signing out: " + error.message);
                 }
             }
         }
 
-        // Window object မှာ function ကို ချိတ်ပေးမယ်
         window.handleLogout = handleLogout;
         window.showForgotModal = () => document.getElementById('forgot-modal').classList.remove('hidden');
         window.closeForgotModal = () => document.getElementById('forgot-modal').classList.add('hidden');
