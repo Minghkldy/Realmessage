@@ -5,7 +5,31 @@ const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
 const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt';
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-// --- AUTH LOGIC ---
+// --- AUTH LOGIC (SESSION FIXED) ---
+
+// Page Load ဖြစ်ချိန်မှာ Session ရှိမရှိ စစ်ဆေးပေးမည့် Function
+async function checkSession() {
+    const { data: { session } } = await _supabase.auth.getSession();
+    const storedUser = localStorage.getItem('currentUserEmail');
+
+    if (session || storedUser) {
+        // Session ရှိနေရင် Dashboard ကို တိုက်ရိုက်ပြမယ်
+        const authGate = document.getElementById('auth-gate');
+        const mainApp = document.getElementById('main-app');
+        
+        if (authGate) authGate.style.display = 'none';
+        if (mainApp) {
+            mainApp.classList.remove('opacity-0', 'pointer-events-none');
+            mainApp.style.opacity = '1';
+            mainApp.style.pointerEvents = 'auto';
+        }
+        
+        // UI ထဲက နာမည်ကို Update လုပ်မယ်
+        const nameEl = document.getElementById('top-admin-name');
+        const nickname = localStorage.getItem('userNickname');
+        if (nameEl && nickname) nameEl.innerText = nickname;
+    }
+}
 
 // LOGIN FUNCTION
 async function handleLogin() {
@@ -27,9 +51,10 @@ async function handleLogin() {
     if (error || !data) {
         alert("Email သို့မဟုတ် Password မှားယွင်းနေပါသည်။");
     } else {
-        // Login အောင်မြင်ပါက အချက်အလက်များကို ခေတ္တသိမ်းဆည်းထားမည် (Password ပြောင်းရာတွင် သုံးရန်)
+        // Login အောင်မြင်ပါက အချက်အလက်များကို သိမ်းဆည်းမည်
         localStorage.setItem('currentUserEmail', data.email);
         localStorage.setItem('currentPassword', data.password);
+        localStorage.setItem('userNickname', data.nickname || "Admin");
 
         const authGate = document.getElementById('auth-gate');
         const mainApp = document.getElementById('main-app');
@@ -77,7 +102,7 @@ async function handleSignUp() {
     }
 }
 
-// --- NEW: SECURE PASSWORD UPDATE LOGIC ---
+// SECURE PASSWORD UPDATE LOGIC
 async function updatePassword() {
     const oldPasswordInput = document.getElementById('old-password')?.value;
     const newPasswordInput = document.getElementById('new-password')?.value;
@@ -91,13 +116,11 @@ async function updatePassword() {
         return;
     }
 
-    // လက်ရှိ password မှန်မမှန် စစ်ဆေးခြင်း
     if (oldPasswordInput !== storedPassword) {
         alert("လက်ရှိအသုံးပြုနေသော Password မှားယွင်းနေပါသည်။");
         return;
     }
 
-    // Password အသစ်နှစ်ခု တူမတူ စစ်ဆေးခြင်း
     if (newPasswordInput !== confirmPasswordInput) {
         alert("Password အသစ်များ မကိုက်ညီပါ။");
         return;
@@ -108,7 +131,6 @@ async function updatePassword() {
         return;
     }
 
-    // Supabase တွင် Update လုပ်ခြင်း
     const { data, error } = await _supabase
         .from('users')
         .update({ password: newPasswordInput })
@@ -117,10 +139,9 @@ async function updatePassword() {
     if (error) {
         alert("Error updating password: " + error.message);
     } else {
-        localStorage.setItem('currentPassword', newPasswordInput); // Local storage update လုပ်ရန်
+        localStorage.setItem('currentPassword', newPasswordInput); 
         alert("Password အောင်မြင်စွာ ပြောင်းလဲပြီးပါပြီ။");
         
-        // Input အကွက်များကို ရှင်းထုတ်ခြင်း
         document.getElementById('old-password').value = "";
         document.getElementById('new-password').value = "";
         document.getElementById('confirm-password').value = "";
@@ -400,7 +421,7 @@ function sendMessage() {
 
 function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
 
-// Assignments
+// Global Assignments
 window.switchToInbox = switchToInbox;
 window.loadBotSettings = loadBotSettings;
 window.loadBroadcastSettings = loadBroadcastSettings;
@@ -418,9 +439,11 @@ window.handleKeyPress = handleKeyPress;
 window.uploadFile = uploadFile;
 window.handleSignUp = handleSignUp; 
 window.handleLogin = handleLogin;
-window.updatePassword = updatePassword; // Password update ခလုတ်အတွက်
+window.updatePassword = updatePassword;
+window.checkSession = checkSession; // index.html က ခေါ်သုံးနိုင်ရန်
 
 window.addEventListener('DOMContentLoaded', () => { 
+    checkSession(); // အရင်ဆုံး Session ရှိမရှိ စစ်မည်
     loadSystemSettings(); 
     loadContacts(); 
     loadHistory(); 
