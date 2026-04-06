@@ -318,7 +318,7 @@
         // --- Session Management Logic ---
         window.onload = async function() {
             const checkSupabase = setInterval(async () => {
-                if (typeof supabase !== 'undefined') {
+                if (typeof _supabase !== 'undefined') {
                     clearInterval(checkSupabase);
                     
                     const { data: { session } } = await _supabase.auth.getSession();
@@ -354,7 +354,7 @@
         // --- Logout Function ---
         async function handleLogout() {
             if (confirm("Logout လုပ်မှာ သေချာပါသလား?")) {
-                const { error } = await supabase.auth.signOut();
+                const { error } = await _supabase.auth.signOut();
                 if (error) {
                     alert("Error signing out: " + error.message);
                 }
