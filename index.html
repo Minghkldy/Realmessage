@@ -88,7 +88,7 @@
         </div>
     </div>
 
-    <div id="main-app" class="h-full w-full flex overflow-hidden transition-opacity duration-700">
+    <div id="main-app" class="h-full w-full flex overflow-hidden opacity-0 transition-opacity duration-700 pointer-events-none">
         
         <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
@@ -239,7 +239,6 @@
                 <div class="relative inline-block group">
                     <div id="side-avatar-text" class="w-28 h-28 bg-accent-blue rounded-[2.5rem] mx-auto flex items-center justify-center text-4xl font-black border-4 border-pure-black shadow-2xl shadow-accent-blue/20">?</div>
                     <img id="side-avatar-img" class="w-28 h-28 rounded-[2.5rem] mx-auto border-4 border-pure-black hidden object-cover shadow-2xl" src="">
-                    
                     <div class="absolute -bottom-2 right-2 w-8 h-8 bg-pure-black rounded-2xl flex items-center justify-center border border-border-gray">
                         <i class="fab fa-telegram text-accent-blue text-xs" id="platform-icon"></i>
                     </div>
@@ -262,7 +261,7 @@
                     <button onclick="toggleBlock()" class="w-full py-4 bg-red-500/10 text-red-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all duration-300 flex items-center justify-center gap-3">
                         <i class="fas fa-user-slash text-sm"></i> Block Customer
                     </button>
-                    <button onclick="deleteCurrentThread()" class="w-full py-4 border border-border-gray text-gray-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-red-400 hover:border-red-400/30 transition-all duration-300 flex items-center justify-center gap-3">
+                    <button onclick="deleteContact()" class="w-full py-4 border border-border-gray text-gray-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-red-400 hover:border-red-400/30 transition-all duration-300 flex items-center justify-center gap-3">
                         <i class="fas fa-trash-alt text-sm"></i> Delete Thread
                     </button>
                 </div>
@@ -286,36 +285,6 @@
                 title.innerText = "Create Account";
             }
         }
-
-        async function checkSession() {
-            if (typeof supabase === 'undefined') return;
-            
-            const { data: { user } } = await supabase.auth.getUser();
-
-            if (user) {
-                document.getElementById('auth-gate').style.display = 'none';
-                const mainApp = document.getElementById('main-app');
-                mainApp.classList.remove('opacity-0', 'pointer-events-none');
-                
-                if (document.getElementById('top-admin-name')) {
-                    document.getElementById('top-admin-name').innerText = user.user_metadata.nickname || user.email.split('@')[0];
-                }
-            } else {
-                document.getElementById('auth-gate').style.display = 'flex';
-                document.getElementById('main-app').classList.add('opacity-0', 'pointer-events-none');
-            }
-        }
-
-        window.addEventListener('DOMContentLoaded', checkSession);
-
-        setTimeout(() => {
-            if (window.supabase) {
-                supabase.auth.onAuthStateChange((event, session) => {
-                    if (event === 'SIGNED_IN') checkSession();
-                    if (event === 'SIGNED_OUT') location.reload();
-                });
-            }
-        }, 1000);
     </script>
     
     <script src="script.js"></script>
