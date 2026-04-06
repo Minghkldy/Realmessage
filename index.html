@@ -6,6 +6,7 @@
     <title>OmniBot - Ultimate Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <script src="/socket.io/socket.io.js"></script>
     
     <link rel="stylesheet" href="style.css">
@@ -29,8 +30,8 @@
 
     <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
-    <div id="imagePreviewModal" onclick="closeImagePreview()">
-        <img id="previewImg" src="" onclick="event.stopPropagation()">
+    <div id="imagePreviewModal" onclick="closeImagePreview()" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/90 cursor-zoom-out">
+        <img id="previewImg" src="" class="max-w-[90%] max-h-[90%] rounded-lg cursor-default" onclick="event.stopPropagation()">
     </div>
 
     <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-6 bg-dark-gray z-20">
