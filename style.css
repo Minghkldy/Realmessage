@@ -70,6 +70,36 @@ body {
     font-size: 1.2rem;
 }
 
+/* --- New iOS Style "ON" Logo --- */
+.custom-logo {
+    background: linear-gradient(135deg, #007AFF, #00C7FC);
+    box-shadow: 
+        0 4px 10px rgba(0, 122, 255, 0.3),
+        inset 0 1px 1px rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.custom-logo::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+    transform: rotate(30deg);
+}
+
+.logo-text-animate {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+    letter-spacing: -0.05em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    animation: logo-pop 0.5s ease-out;
+}
+
 /* --- Navigation Items --- */
 .nav-item { 
     display: flex; 
@@ -151,6 +181,11 @@ body {
 .ring-animation { 
     display: inline-block; 
     animation: ring 1.5s ease infinite; 
+}
+
+@keyframes logo-pop {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
 }
 
 /* --- Modals & Previews --- */
