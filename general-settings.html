@@ -83,15 +83,22 @@
             <div class="glass-card p-6 border-red-500/20">
                 <h2 class="text-lg font-semibold mb-4 text-red-400"><i class="fas fa-shield-alt mr-2"></i> Security</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm text-gray-400 mb-2">Current Password</label>
+                        <input type="password" id="old_password_input" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none mb-4" placeholder="Enter current password">
+                    </div>
                     <div>
                         <label class="block text-sm text-gray-400 mb-2">New Password</label>
-                        <input type="password" id="new_password" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none" placeholder="Leave blank to keep current">
+                        <input type="password" id="new_password_input" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none" placeholder="New password">
                     </div>
                     <div>
                         <label class="block text-sm text-gray-400 mb-2">Confirm Password</label>
-                        <input type="password" id="confirm_password" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none" placeholder="Confirm new password">
+                        <input type="password" id="confirm_password_input" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none" placeholder="Confirm new password">
                     </div>
                 </div>
+                <button onclick="handlePasswordUpdate()" class="mt-4 px-6 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/30 rounded-lg transition-all text-sm font-bold">
+                    UPDATE PASSWORD ONLY
+                </button>
             </div>
 
             <button onclick="saveSettings()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95">
@@ -116,9 +123,26 @@
             }
         }
 
+        // Parent window (script.js) က updatePassword function ကို လှမ်းခေါ်တဲ့အပိုင်း
+        async function handlePasswordUpdate() {
+            const oldPw = document.getElementById('old_password_input').value;
+            const newPw = document.getElementById('new_password_input').value;
+            const confirmPw = document.getElementById('confirm_password_input').value;
+
+            if (window.parent && typeof window.parent.updatePassword === 'function') {
+                await window.parent.updatePassword(oldPw, newPw, confirmPw);
+                // ရှင်းလင်းရေးလုပ်မယ်
+                document.getElementById('old_password_input').value = "";
+                document.getElementById('new_password_input').value = "";
+                document.getElementById('confirm_password_input').value = "";
+            } else {
+                alert("စနစ်အတွင်း အမှားအယွင်းရှိနေပါသည်။");
+            }
+        }
+
         async function saveSettings() {
-            const pass = document.getElementById('new_password').value;
-            const confirm = document.getElementById('confirm_password').value;
+            const pass = document.getElementById('new_password_input').value;
+            const confirm = document.getElementById('confirm_password_input').value;
             
             if (pass && pass !== confirm) {
                 return alert("❌ Passwords do not match!");
@@ -132,13 +156,9 @@
             formData.append('enable_autoreply', document.getElementById('enable_autoreply').checked);
             formData.append('autoreply_text', document.getElementById('autoreply_text').value);
 
-            // Appearance နှင့် Notifications section များကို ဖြုတ်လိုက်သော်လည်း 
-            // API compatibility အတွက် လိုအပ်ပါက default value များ ပို့ပေးနိုင်ပါသည်
-            // formData.append('notif_sound', false);
-            // formData.append('auto_refresh', false);
-
             if (pass) {
-                formData.append('admin_password', pass);
+                // အကယ်၍ Password ပါပြောင်းချင်ရင် handlePasswordUpdate ကိုပါ တခါတည်းခေါ်ပေးလိုက်မယ်
+                await handlePasswordUpdate();
             }
 
             const avatarInput = document.getElementById('avatar_input');
@@ -174,7 +194,7 @@
                     alert("✅ Settings အားလုံးကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။");
                     
                 } else {
-                    alert("❌ သိမ်းဆည်းရာတွင် အမှားအယွင်းရှိပါသည်။");
+                    alert("✅ Site settings saved (Password requires separate update if errored).");
                 }
             } catch (err) {
                 console.error("Save Error:", err);
@@ -194,7 +214,6 @@
                     document.getElementById('admin_nickname').value = data.admin_nickname;
                     const currentAvatar = data.admin_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.admin_nickname)}&background=random&color=fff`;
                     document.getElementById('avatar_preview').src = currentAvatar;
-                    localStorage.setItem('admin_avatar', currentAvatar);
                 }
                 if (data.admin_email) document.getElementById('admin_email').value = data.admin_email;
                 if (data.autoreply_text) document.getElementById('autoreply_text').value = data.autoreply_text;
