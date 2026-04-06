@@ -551,14 +551,16 @@ async function handleForgotPassword() {
 window.handleForgotPassword = handleForgotPassword;
 
 // --- LOGOUT LOGIC ---
-async function handleLogout() {
+aasync function handleLogout() {
     const { error } = await _supabase.auth.signOut();
 
     if (error) {
         alert("Logout လုပ်ရတာ အဆင်မပြေပါဘူး: " + error.message);
     } else {
-        // Logout အောင်မြင်ရင် Login page ကို ပြန်ပို့မယ်
-        window.location.href = 'index.html'; 
+        // Session တွေကို အကုန်ရှင်းပစ်ပြီးမှ login (index.html) ကို လွှတ်မယ်
+        localStorage.clear(); 
+        sessionStorage.clear();
+        window.location.replace('index.html'); // .href အစား .replace သုံးရင် back ပြန်ဆွဲလို့မရတော့ဘူး
     }
 }
 
