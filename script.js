@@ -195,7 +195,7 @@ function selectContact(contact) {
     const platformSide = document.getElementById('side-platform');
     
     if (headerName) headerName.innerText = displayName;
-    if (nickInput) nickInput.value = displayName;
+    if (nickInput) nickInput.value = displayName; // Input box ထဲကို နာမည်ထည့်ပေးမယ်
     if (noteInput) noteInput.value = contact.notes || "";
     if (platformSide) platformSide.innerText = `Platform: ${contact.platform}`;
     
@@ -227,6 +227,37 @@ function selectContact(contact) {
     updateGlobalBadge();
     renderContacts(cachedContacts); 
     renderMessages();
+}
+
+// နာမည်ပြောင်းလဲမှုကို Database မှာပါ Save လုပ်တဲ့ function
+async function updateNickname() {
+    const nickInput = document.getElementById('edit-nickname');
+    if (!nickInput || !currentChatId) return;
+
+    const newNickname = nickInput.value.trim();
+    if (!newNickname) return alert("ကျေးဇူးပြု၍ နာမည်ထည့်ပေးပါ!");
+
+    try {
+        const res = await fetch('/api/contacts/update-nickname', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chatId: currentChatId, nickname: newNickname })
+        });
+
+        if (res.ok) {
+            // Memory ထဲက contact စာရင်းကို update လုပ်မယ်
+            const contact = cachedContacts.find(c => c.chat_id === currentChatId);
+            if (contact) contact.nickname = newNickname;
+            
+            renderContacts(cachedContacts); 
+            const headerName = document.getElementById('chat-header-name');
+            if (headerName) headerName.innerText = newNickname;
+            
+            alert("နာမည်ပြောင်းလဲမှု အောင်မြင်ပါသည်!");
+        } else {
+            alert("နာမည်ပြင်လို့မရပါ။ Server error ဖြစ်နေပါသည်။");
+        }
+    } catch (err) { console.error("Error updating nickname:", err); }
 }
 
 function updateGlobalBadge() {
