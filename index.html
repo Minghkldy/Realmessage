@@ -167,10 +167,15 @@
                 </div>
             </nav>
 
-            <div class="mt-auto px-4">
+            <div class="mt-auto px-4 space-y-2">
                 <div onclick="loadGeneralSettings()" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition" id="sidebar-settings">
                     <i class="fas fa-cog text-lg w-8"></i>
                     <span class="nav-text font-medium ml-2">Settings</span>
+                </div>
+                
+                <div onclick="handleLogout()" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-all duration-300">
+                    <i class="fas fa-sign-out-alt text-lg w-8"></i>
+                    <span class="nav-text font-medium ml-2">Logout</span>
                 </div>
             </div>
         </div>
@@ -312,16 +317,13 @@
 
         // --- Session Management Logic ---
         window.onload = async function() {
-            // Supabase Initialize ဖြစ်ဖို့ ခဏစောင့်ပေးခြင်း
             const checkSupabase = setInterval(async () => {
                 if (typeof supabase !== 'undefined') {
                     clearInterval(checkSupabase);
                     
-                    // လက်ရှိ Session ရှိမရှိ စစ်မယ်
                     const { data: { session } } = await supabase.auth.getSession();
                     updateUI(session);
 
-                    // Auth State ပြောင်းလဲမှု (Login/Logout) ကို အမြဲစောင့်ကြည့်နေမယ်
                     supabase.auth.onAuthStateChange((_event, session) => {
                         updateUI(session);
                     });
@@ -334,7 +336,6 @@
             const mainApp = document.getElementById('main-app');
             
             if (session) {
-                // User ရှိလျှင် App ကိုပြမယ်
                 authGate.classList.add('hidden');
                 mainApp.classList.remove('opacity-0', 'pointer-events-none');
                 
@@ -343,16 +344,25 @@
                     document.getElementById('top-admin-name').innerText = user.user_metadata?.nickname || user.email.split('@')[0];
                 }
                 
-                // စာမျက်နှာကို refresh လုပ်လိုက်တိုင်း Inbox ကို အလိုအလျောက် load လုပ်ခိုင်းမယ်
                 if (typeof switchToInbox === 'function') switchToInbox();
             } else {
-                // User မရှိလျှင် Login Screen ပြမယ်
                 authGate.classList.remove('hidden');
                 mainApp.classList.add('opacity-0', 'pointer-events-none');
             }
         }
 
-        // Modal Logic
+        // --- Logout Function ---
+        async function handleLogout() {
+            if (confirm("Logout လုပ်မှာ သေချာပါသလား?")) {
+                const { error } = await supabase.auth.signOut();
+                if (error) {
+                    alert("Error signing out: " + error.message);
+                }
+            }
+        }
+
+        // Window object မှာ function ကို ချိတ်ပေးမယ်
+        window.handleLogout = handleLogout;
         window.showForgotModal = () => document.getElementById('forgot-modal').classList.remove('hidden');
         window.closeForgotModal = () => document.getElementById('forgot-modal').classList.add('hidden');
     </script>
