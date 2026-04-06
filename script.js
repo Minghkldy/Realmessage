@@ -1,4 +1,4 @@
-// script.js - iOS Glassmorphism Professional Logic (Fixed Session & General Settings Link)
+// script.js - iOS Glassmorphism Professional Logic (Fixed Session, Image Preview & User Deletion)
 
 // --- SUPABASE CONFIGURATION ---
 const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
@@ -10,7 +10,6 @@ const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 async function checkSession() {
     const storedEmail = localStorage.getItem('currentUserEmail');
     
-    // LocalStorage မှာ Email ရှိနေရင် Login ဝင်ပြီးသားလို့ သတ်မှတ်မယ်
     if (storedEmail) {
         const authGate = document.getElementById('auth-gate');
         const mainApp = document.getElementById('main-app');
@@ -96,12 +95,33 @@ async function handleSignUp() {
     }
 }
 
-// --- PASSWORD UPDATE (General Settings Iframe ထဲကနေ လှမ်းခေါ်ရန် ပြင်ဆင်ထားသည်) ---
+// --- DELETE USER FUNCTION (NEWLY ADDED/FIXED) ---
+async function deleteUserAccount() {
+    const storedEmail = localStorage.getItem('currentUserEmail');
+    if (!storedEmail) return;
+
+    const confirmDelete = confirm("ဤအကောင့်ကို အပြီးပိုင်ဖျက်ဆီးရန် သေချာပါသလား?");
+    if (!confirmDelete) return;
+
+    const { error } = await _supabase
+        .from('users')
+        .delete()
+        .eq('email', storedEmail);
+
+    if (error) {
+        alert("ဖျက်သိမ်း၍မရပါ: " + error.message);
+    } else {
+        alert("အကောင့်ကို အောင်မြင်စွာ ဖျက်သိမ်းပြီးပါပြီ။");
+        localStorage.clear();
+        window.location.reload();
+    }
+}
+
+// --- PASSWORD UPDATE ---
 async function updatePassword(oldPw, newPw, confirmPw) {
     const storedEmail = localStorage.getItem('currentUserEmail');
     const storedPassword = localStorage.getItem('currentPassword');
 
-    // parameter မပါလာရင် input fields တွေကနေ ယူမယ် (ညာဘက် panel အတွက်)
     const oldVal = oldPw || document.getElementById('old-password')?.value;
     const newVal = newPw || document.getElementById('new-password')?.value;
     const conVal = confirmPw || document.getElementById('confirm-password')?.value;
@@ -158,6 +178,7 @@ async function loadSystemSettings() {
         
         const avatarEl = document.getElementById('top-admin-avatar');
         if (avatarEl && data.avatar) {
+            // URL logic fixed to show correctly
             avatarEl.src = (data.avatar.startsWith('data:image') || data.avatar.startsWith('http')) 
                 ? data.avatar 
                 : `/uploads/${data.avatar}`;
@@ -279,9 +300,16 @@ function renderContacts(contacts) {
         const item = document.createElement('div');
         item.className = `group p-4 rounded-2xl flex items-center gap-4 cursor-pointer transition-all duration-300 ${isActive ? 'active-contact' : 'hover:bg-white/5'}`;
         item.onclick = () => selectContact(c);
-        const avatar = c.profile_pic 
-            ? `<img src="${c.profile_pic}" class="w-12 h-12 rounded-2xl object-cover border-2 ${isActive ? 'border-white/20' : 'border-white/5'}">` 
+        
+        let pfpUrl = c.profile_pic;
+        if (pfpUrl && !pfpUrl.startsWith('http') && !pfpUrl.startsWith('data:')) {
+            pfpUrl = `/uploads/${pfpUrl}`;
+        }
+
+        const avatar = pfpUrl 
+            ? `<img src="${pfpUrl}" class="w-12 h-12 rounded-2xl object-cover border-2 ${isActive ? 'border-white/20' : 'border-white/5'}">` 
             : `<div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-sm font-black border-2 border-white/5 uppercase text-accent-blue">${(c.nickname || c.first_name || "?").charAt(0)}</div>`;
+        
         item.innerHTML = `
             <div class="relative">${avatar} ${count > 0 ? `<div class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black"></div>` : ''}</div>
             <div class="flex-1 min-w-0">
@@ -427,6 +455,7 @@ window.handleSignUp = handleSignUp;
 window.handleLogin = handleLogin;
 window.updatePassword = updatePassword;
 window.checkSession = checkSession;
+window.deleteUserAccount = deleteUserAccount; // Assigned to window for HTML access
 
 window.addEventListener('DOMContentLoaded', () => { 
     checkSession(); 
