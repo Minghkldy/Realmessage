@@ -165,7 +165,19 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Member တစ်ဦးချင်းစီ၏ Nickname နှင့် Notes ကို Update လုပ်ရန် API
+// Member တစ်ဦးချင်းစီ၏ Nickname ကို Update လုပ်ရန် API (script.js မှ ခေါ်ဆိုမှုအတွက်)
+app.post('/api/contacts/update-nickname', async (req, res) => {
+    const { chatId, nickname } = req.body;
+    try {
+        await pool.query(
+            'UPDATE contacts SET nickname = $1 WHERE chat_id = $2',
+            [nickname, chatId]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Member တစ်ဦးချင်းစီ၏ Nickname နှင့် Notes ကို Update လုပ်ရန် API (Patch method)
 app.patch('/api/contacts/:chatId/details', async (req, res) => {
     const { chatId } = req.params;
     const { nickname, notes } = req.body;
