@@ -319,6 +319,41 @@ function appendMessage(data, isBot) {
     win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' });
 }
 
+// Block and Delete Functions
+async function toggleBlock() {
+    if (!currentChatId) return alert("ကျေးဇူးပြု၍ Contact အရင်ရွေးချယ်ပါ!");
+    if (!confirm("ဒီ customer ကို block ချင်တာ သေချာပါသလား?")) return;
+
+    try {
+        const res = await fetch('/api/contacts/block', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chatId: currentChatId })
+        });
+        if (res.ok) {
+            alert("Block လုပ်ပြီးပါပြီ!");
+            location.reload();
+        } else {
+            alert("Block လုပ်ရာတွင် အဆင်မပြေဖြစ်သွားပါသည်။");
+        }
+    } catch (err) { console.error(err); }
+}
+
+async function deleteContact() {
+    if (!currentChatId) return alert("ကျေးဇူးပြု၍ Contact အရင်ရွေးချယ်ပါ!");
+    if (!confirm("ဒီ conversation ကို ဖျက်ပစ်ဖို့ သေချာပါသလား? ပြန်ယူလို့မရတော့ပါဘူးနော်။")) return;
+
+    try {
+        const res = await fetch(`/api/contacts/${currentChatId}`, { method: 'DELETE' });
+        if (res.ok) {
+            alert("ဖျက်ပြီးပါပြီ!");
+            location.reload();
+        } else {
+            alert("ဖျက်ရာတွင် အဆင်မပြေဖြစ်သွားပါသည်။");
+        }
+    } catch (err) { console.error(err); }
+}
+
 // Event Listeners
 socket.on('new_message', (data) => {
     const senderId = data.chat_id || data.chatId;
