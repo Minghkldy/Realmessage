@@ -549,3 +549,18 @@ async function handleForgotPassword() {
     }
 }
 window.handleForgotPassword = handleForgotPassword;
+
+// --- LOGOUT LOGIC ---
+async function handleLogout() {
+    const { error } = await _supabase.auth.signOut();
+
+    if (error) {
+        alert("Logout လုပ်ရတာ အဆင်မပြေပါဘူး: " + error.message);
+    } else {
+        // Logout အောင်မြင်ရင် Login page ကို ပြန်ပို့မယ်
+        window.location.href = 'login.html'; 
+    }
+}
+
+// Window object မှာ ချိတ်ပေးထားမှ HTML ကနေ ခေါ်သုံးလို့ရမှာပါ
+window.handleLogout = handleLogout;
