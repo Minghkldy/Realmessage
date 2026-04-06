@@ -1,4 +1,4 @@
-// script.js - iOS Glassmorphism Professional Logic (Fixed Session, Image Preview & User Deletion)
+// script.js - iOS Glassmorphism Professional Logic (Fixed Header, Profile & Actions)
 
 // --- SUPABASE CONFIGURATION ---
 const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
@@ -95,7 +95,7 @@ async function handleSignUp() {
     }
 }
 
-// --- DELETE USER FUNCTION (NEWLY ADDED/FIXED) ---
+// --- DELETE USER ACCOUNT (ADMIN SELF) ---
 async function deleteUserAccount() {
     const storedEmail = localStorage.getItem('currentUserEmail');
     if (!storedEmail) return;
@@ -114,6 +114,29 @@ async function deleteUserAccount() {
         alert("အကောင့်ကို အောင်မြင်စွာ ဖျက်သိမ်းပြီးပါပြီ။");
         localStorage.clear();
         window.location.reload();
+    }
+}
+
+// --- DELETE CHAT THREAD (NEW FIXED) ---
+async function deleteCurrentThread() {
+    if (!currentChatId) {
+        alert("ဖျက်ရန် Chat တစ်ခု အရင်ရွေးချယ်ပါ။");
+        return;
+    }
+
+    const confirmDelete = confirm("ဤ Chat Thread တစ်ခုလုံးကို အပြီးပိုင်ဖျက်ရန် သေချာပါသလား?");
+    if (!confirmDelete) return;
+
+    try {
+        const res = await fetch(`/api/contacts/${currentChatId}`, { method: 'DELETE' });
+        if (res.ok) {
+            alert("Thread ကို အောင်မြင်စွာ ဖျက်ပြီးပါပြီ။");
+            window.location.reload();
+        } else {
+            alert("ဖျက်၍ မရပါ။");
+        }
+    } catch (err) {
+        console.error("Delete Error:", err);
     }
 }
 
@@ -178,7 +201,6 @@ async function loadSystemSettings() {
         
         const avatarEl = document.getElementById('top-admin-avatar');
         if (avatarEl && data.avatar) {
-            // URL logic fixed to show correctly
             avatarEl.src = (data.avatar.startsWith('data:image') || data.avatar.startsWith('http')) 
                 ? data.avatar 
                 : `/uploads/${data.avatar}`;
@@ -307,7 +329,7 @@ function renderContacts(contacts) {
         }
 
         const avatar = pfpUrl 
-            ? `<img src="${pfpUrl}" class="w-12 h-12 rounded-2xl object-cover border-2 ${isActive ? 'border-white/20' : 'border-white/5'}">` 
+            ? `<img src="${pfpUrl}" class="w-12 h-12 rounded-2xl object-cover border-2 ${isActive ? 'border-white/20' : 'border-white/5'}" onerror="this.src='https://ui-avatars.com/api/?name=${c.nickname || c.first_name}&background=random'">` 
             : `<div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-sm font-black border-2 border-white/5 uppercase text-accent-blue">${(c.nickname || c.first_name || "?").charAt(0)}</div>`;
         
         item.innerHTML = `
@@ -326,10 +348,30 @@ function renderContacts(contacts) {
 function selectContact(contact) {
     currentChatId = contact.chat_id;
     unreadCounts[currentChatId] = 0; 
+    
+    // --- Header & Side Profile Image Logic (FIXED) ---
+    let pfpUrl = contact.profile_pic;
+    if (pfpUrl && !pfpUrl.startsWith('http') && !pfpUrl.startsWith('data:')) {
+        pfpUrl = `/uploads/${pfpUrl}`;
+    }
+    const defaultAvatar = `https://ui-avatars.com/api/?name=${contact.nickname || contact.first_name}&background=random`;
+    const finalImg = pfpUrl || defaultAvatar;
+
+    // Header Avatar Update
+    const headerPfp = document.getElementById('chat-header-pfp');
+    if (headerPfp) headerPfp.src = finalImg;
+    
+    // Right Panel Avatar Update
+    const sidePfp = document.getElementById('side-profile-pic');
+    if (sidePfp) sidePfp.src = finalImg;
+
+    // Text Information Update
     document.getElementById('chat-header-name').innerText = contact.nickname || contact.first_name;
+    document.getElementById('side-nickname').innerText = contact.nickname || contact.first_name;
     document.getElementById('edit-nickname').value = contact.nickname || contact.first_name;
     document.getElementById('contact-note').value = contact.notes || "";
     document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
+    
     socket.emit('mark_as_read', { chatId: currentChatId });
     updateGlobalBadge();
     renderContacts(cachedContacts); 
@@ -350,6 +392,7 @@ async function updateNickname() {
             if (contact) contact.nickname = newNickname;
             renderContacts(cachedContacts); 
             document.getElementById('chat-header-name').innerText = newNickname;
+            document.getElementById('side-nickname').innerText = newNickname;
         }
     } catch (err) { console.error(err); }
 }
@@ -455,7 +498,8 @@ window.handleSignUp = handleSignUp;
 window.handleLogin = handleLogin;
 window.updatePassword = updatePassword;
 window.checkSession = checkSession;
-window.deleteUserAccount = deleteUserAccount; // Assigned to window for HTML access
+window.deleteUserAccount = deleteUserAccount;
+window.deleteCurrentThread = deleteCurrentThread; // Assigned for HTML access
 
 window.addEventListener('DOMContentLoaded', () => { 
     checkSession(); 
