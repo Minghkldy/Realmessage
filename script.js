@@ -1,4 +1,4 @@
-// script.js - Professional & Clean Logic
+// script.js - iOS Glassmorphism Professional Logic
 const socket = io();
 
 let currentChatId = "";
@@ -24,12 +24,21 @@ async function loadSystemSettings() {
     } catch (e) { console.error("Error loading settings:", e); }
 }
 
-// Sidebar logic
+// Sidebar Logic (iOS Style Collapsed)
 function toggleLeftSidebar() { 
     const sidebar = document.getElementById('left-sidebar');
     if (!sidebar) return;
-    sidebar.classList.toggle('w-20'); // Toggle between collapsed and full width
-    sidebar.querySelectorAll('.nav-text').forEach(el => el.classList.toggle('hidden'));
+
+    // Sidebar ကို class toggle လုပ်မယ်
+    sidebar.classList.toggle('sidebar-collapsed'); 
+    
+    // Sidebar ပိတ်သွားရင် Dropdown ဖွင့်နေတာကိုပါ တစ်ခါတည်း ပိတ်မယ်
+    if(sidebar.classList.contains('sidebar-collapsed')) {
+        const dropdown = document.getElementById('messenger-dropdown');
+        const arrow = document.getElementById('arrow-icon');
+        if (dropdown) dropdown.classList.add('hidden');
+        if (arrow) arrow.classList.remove('rotate-90');
+    }
 }
 
 function toggleRightPanel() { 
@@ -41,9 +50,16 @@ function toggleRightPanel() {
 }
 
 function toggleDropdown() {
+    const sidebar = document.getElementById('left-sidebar');
     const dropdown = document.getElementById('messenger-dropdown');
     const arrow = document.getElementById('arrow-icon');
+    
     if (!dropdown) return;
+
+    // Sidebar ပိတ်နေရင် Dropdown နှိပ်လိုက်တာနဲ့ အရင်ဖွင့်ပေးမယ်
+    if (sidebar && sidebar.classList.contains('sidebar-collapsed')) {
+        sidebar.classList.remove('sidebar-collapsed');
+    }
 
     dropdown.classList.toggle('hidden');
     if (arrow) arrow.classList.toggle('rotate-90');
@@ -54,9 +70,9 @@ function switchToInbox() {
     document.getElementById('main-dashboard-content')?.classList.remove('hidden');
     document.getElementById('bot-settings-area')?.classList.add('hidden');
     
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/10', 'text-accent-blue'));
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
     const inboxNav = document.getElementById('inbox-nav');
-    if (inboxNav) inboxNav.classList.add('active-nav', 'bg-white/10', 'text-accent-blue');
+    if (inboxNav) inboxNav.classList.add('active-nav');
     
     filterContacts('all');
 }
@@ -65,8 +81,8 @@ function loadBotSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
     
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/10', 'text-accent-blue'));
-    document.getElementById('bot-config-nav')?.classList.add('active-nav', 'bg-white/10', 'text-accent-blue');
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
+    document.getElementById('bot-config-nav')?.classList.add('active-nav');
     
     document.getElementById('settings-frame').src = "bot-config.html";
 }
@@ -75,8 +91,8 @@ function loadBroadcastSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
     
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/10', 'text-accent-blue'));
-    document.getElementById('broadcast-nav')?.classList.add('active-nav', 'bg-white/10', 'text-accent-blue');
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
+    document.getElementById('broadcast-nav')?.classList.add('active-nav');
     
     document.getElementById('settings-frame').src = "broadcast.html";
 }
@@ -85,8 +101,8 @@ function loadGeneralSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
     
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/10', 'text-accent-blue'));
-    document.getElementById('sidebar-settings')?.classList.add('active-nav', 'bg-white/10', 'text-accent-blue');
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
+    document.getElementById('sidebar-settings')?.classList.add('active-nav');
     
     document.getElementById('settings-frame').src = "general-settings.html";
 }
@@ -135,15 +151,15 @@ function renderContacts(contacts) {
         const isActive = currentChatId === c.chat_id;
         const item = document.createElement('div');
         
-        item.className = `group p-4 rounded-2xl flex items-center gap-4 cursor-pointer transition-all duration-300 ${isActive ? 'bg-accent-blue shadow-lg shadow-accent-blue/20 scale-[1.02]' : 'hover:bg-white/5'}`;
+        item.className = `group p-4 rounded-2xl flex items-center gap-4 cursor-pointer transition-all duration-300 ${isActive ? 'active-contact' : 'hover:bg-white/5'}`;
         item.onclick = () => selectContact(c);
         
         const avatar = c.profile_pic 
-            ? `<img src="${c.profile_pic}" class="w-12 h-12 rounded-2xl object-cover border-2 ${isActive ? 'border-white/20' : 'border-border-gray'}">` 
-            : `<div class="w-12 h-12 rounded-2xl bg-ios-gray flex items-center justify-center text-sm font-black border-2 border-border-gray uppercase text-accent-blue">${(c.nickname || c.first_name || "?").charAt(0)}</div>`;
+            ? `<img src="${c.profile_pic}" class="w-12 h-12 rounded-2xl object-cover border-2 ${isActive ? 'border-white/20' : 'border-white/5'}">` 
+            : `<div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-sm font-black border-2 border-white/5 uppercase text-accent-blue">${(c.nickname || c.first_name || "?").charAt(0)}</div>`;
         
         item.innerHTML = `
-            <div class="relative">${avatar} ${count > 0 ? `<div class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-pure-black"></div>` : ''}</div>
+            <div class="relative">${avatar} ${count > 0 ? `<div class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black"></div>` : ''}</div>
             <div class="flex-1 min-w-0">
                 <p class="text-sm font-bold truncate ${isActive ? 'text-white' : 'text-gray-200'}">${c.nickname || c.first_name}</p>
                 <p class="text-[10px] uppercase font-black tracking-widest ${isActive ? 'text-white/60' : 'text-gray-500'}">${c.platform}</p>
@@ -164,7 +180,6 @@ function selectContact(contact) {
     document.getElementById('contact-note').value = contact.notes || "";
     document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
     
-    // Avatar Logic
     const hImg = document.getElementById('header-avatar-img');
     const hTxt = document.getElementById('header-avatar-text');
     const sImg = document.getElementById('side-avatar-img');
@@ -185,7 +200,6 @@ function selectContact(contact) {
     renderMessages();
 }
 
-// Nickname Update
 async function updateNickname() {
     const newNickname = document.getElementById('edit-nickname').value.trim();
     if (!newNickname || !currentChatId) return;
@@ -244,9 +258,9 @@ function appendMessage(data, isBot) {
         if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) mediaUrl = `/uploads/${mediaUrl}`;
 
         if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
-            contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-2xl mt-2 cursor-pointer border border-border-gray shadow-xl hover:scale-[1.02] transition" onclick="showImagePreview('${mediaUrl}')">`;
+            contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-2xl mt-2 cursor-pointer border border-white/10 shadow-xl hover:scale-[1.02] transition" onclick="showImagePreview('${mediaUrl}')">`;
         } else if (mediaType.includes('video')) {
-            contentHtml = `<video controls class="max-w-xs rounded-2xl mt-2 border border-border-gray"><source src="${mediaUrl}"></video>`;
+            contentHtml = `<video controls class="max-w-xs rounded-2xl mt-2 border border-white/10"><source src="${mediaUrl}"></video>`;
         }
         if(data.text && !data.text.includes("Sent an image")) contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
     }
@@ -261,11 +275,11 @@ function appendMessage(data, isBot) {
         </div>
     ` : `
         <div class="flex items-start gap-3 max-w-[80%] animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div class="w-9 h-9 rounded-xl bg-ios-gray border border-border-gray flex items-center justify-center flex-shrink-0">
+            <div class="w-9 h-9 rounded-xl bg-white/10 border border-white/5 flex items-center justify-center flex-shrink-0">
                 ${data.profile_pic ? `<img src="${data.profile_pic}" class="w-full h-full object-cover rounded-xl">` : `<i class="fas fa-user text-gray-600 text-xs"></i>`}
             </div>
             <div>
-                <div class="bg-ios-gray/50 border border-border-gray p-4 rounded-3xl rounded-tl-none text-sm leading-relaxed text-gray-200 backdrop-blur-sm shadow-sm">${contentHtml}</div>
+                <div class="bg-white/5 border border-white/10 p-4 rounded-3xl rounded-tl-none text-sm leading-relaxed text-gray-200 backdrop-blur-sm shadow-sm">${contentHtml}</div>
                 <p class="text-[9px] text-gray-600 mt-2 px-1 font-bold uppercase tracking-widest">${data.time || ''}</p>
             </div>
         </div>
