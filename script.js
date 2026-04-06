@@ -1,4 +1,4 @@
-// script.js - iOS Glassmorphism Professional Logic
+// script.js - iOS Glassmorphism Professional Logic (Fixed Messaging)
 const socket = io();
 
 let currentChatId = "";
@@ -29,10 +29,8 @@ function toggleLeftSidebar() {
     const sidebar = document.getElementById('left-sidebar');
     if (!sidebar) return;
 
-    // Sidebar ကို class toggle လုပ်မယ်
     sidebar.classList.toggle('sidebar-collapsed'); 
     
-    // Sidebar ပိတ်သွားရင် Dropdown ဖွင့်နေတာကိုပါ တစ်ခါတည်း ပိတ်မယ်
     if(sidebar.classList.contains('sidebar-collapsed')) {
         const dropdown = document.getElementById('messenger-dropdown');
         const arrow = document.getElementById('arrow-icon');
@@ -56,7 +54,6 @@ function toggleDropdown() {
     
     if (!dropdown) return;
 
-    // Sidebar ပိတ်နေရင် Dropdown နှိပ်လိုက်တာနဲ့ အရင်ဖွင့်ပေးမယ်
     if (sidebar && sidebar.classList.contains('sidebar-collapsed')) {
         sidebar.classList.remove('sidebar-collapsed');
     }
@@ -309,12 +306,32 @@ window.deleteContact = async () => {
     } catch (err) { console.error(err); }
 };
 
-// Messaging
+// ---------------------------------------------------------
+// MESSAGING LOGIC (စာမပေါ်တဲ့ ပြဿနာကို ဒီမှာ ပြင်ထားပါတယ်)
+// ---------------------------------------------------------
 function sendMessage() {
     const input = document.getElementById('user-input');
     const text = input?.value.trim();
+    
     if(text && currentChatId) {
+        const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        const msgData = {
+            chat_id: currentChatId,
+            text: text,
+            sender_type: 'bot',
+            time: timeNow,
+            is_read: false
+        };
+
+        // 1. Server ကို socket ကနေ ပို့မယ်
         socket.emit('send_reply', { chatId: currentChatId, text: text });
+
+        // 2. UI ပေါ်မှာ စာတန်းချက်ချင်းပေါ်လာအောင် လုပ်မယ်
+        allMessages.push(msgData);
+        appendMessage(msgData, true);
+
+        // 3. Input ရှင်းမယ်
         input.value = ""; 
     }
 }
@@ -344,12 +361,17 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 socket.on('new_message', (data) => {
-    allMessages.push(data);
     const senderId = data.chat_id || data.chatId;
+    
     if (currentChatId === senderId) {
-        appendMessage(data, data.sender_type === 'bot');
+        // ကိုယ်ပို့လိုက်တဲ့စာ (bot) ဆိုရင် UI မှာ ပြပြီးသားဖြစ်လို့ နှစ်ခါမပေါ်အောင် စစ်မယ်
+        if (data.sender_type !== 'bot') {
+            allMessages.push(data);
+            appendMessage(data, false);
+        }
         socket.emit('mark_as_read', { chatId: currentChatId });
     } else {
+        allMessages.push(data); // တခြားလူဆီကစာဆိုရင် data သိမ်းထားမယ်
         unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
         document.getElementById('notif-sound')?.play().catch(() => {});
         renderContacts(cachedContacts);
