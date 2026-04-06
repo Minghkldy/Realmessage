@@ -28,187 +28,265 @@
             }
         }
     </script>
+    <style>
+        /* Auth Screen Styling */
+        .auth-wrapper {
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+        }
+        .glass-auth {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .auth-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .auth-input:focus {
+            border-color: #007AFF;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+    </style>
 </head>
-<body class="h-full flex overflow-hidden bg-pure-black text-gray-100">
+<body class="h-full flex overflow-hidden bg-pure-black text-gray-100 font-sans">
 
-    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
+    <div id="auth-gate" class="fixed inset-0 z-[10000] flex items-center justify-center auth-wrapper p-6">
+        <div class="w-full max-w-md glass-auth p-10 rounded-[2.5rem] shadow-2xl animate-in fade-in zoom-in duration-500">
+            <div class="text-center mb-10">
+                <div class="w-16 h-16 bg-accent-blue rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(0,122,255,0.4)]">
+                    <span class="text-white text-2xl font-black italic">ON</span>
+                </div>
+                <h2 id="auth-title" class="text-3xl font-black italic tracking-tighter uppercase mb-2">Welcome Back</h2>
+                <p id="auth-subtitle" class="text-xs text-gray-500 font-bold uppercase tracking-widest">Access your command center</p>
+            </div>
 
-    <div id="imagePreviewModal" onclick="closeImagePreview()" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/95 backdrop-blur-xl cursor-zoom-out">
-        <img id="previewImg" src="" class="max-w-[92%] max-h-[92%] rounded-2xl shadow-2xl cursor-default transition-transform duration-300" onclick="event.stopPropagation()">
+            <div id="login-section" class="space-y-4">
+                <input type="email" id="login-email" placeholder="Gmail Address" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
+                <input type="password" id="login-password" placeholder="Password" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
+                <button onclick="handleLogin()" class="w-full bg-accent-blue py-4 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-accent-blue/25">Sign In</button>
+                <p class="text-center text-[11px] text-gray-500 font-bold uppercase mt-6">
+                    Don't have an account? <span onclick="toggleAuth()" class="text-accent-blue cursor-pointer hover:underline">Sign Up</span>
+                </p>
+            </div>
+
+            <div id="signup-section" class="hidden space-y-4">
+                <input type="text" id="reg-nickname" placeholder="Full Name / Nickname" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
+                <input type="email" id="reg-email" placeholder="Gmail Address" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
+                <input type="password" id="reg-password" placeholder="Password" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
+                <div class="space-y-1">
+                    <label class="text-[10px] text-gray-500 font-black uppercase ml-2">Birthday</label>
+                    <input type="date" id="reg-birthday" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
+                </div>
+                <button onclick="handleSignUp()" class="w-full bg-accent-blue py-4 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-accent-blue/25">Create Account</button>
+                <p class="text-center text-[11px] text-gray-500 font-bold uppercase mt-6">
+                    Already have an account? <span onclick="toggleAuth()" class="text-accent-blue cursor-pointer hover:underline">Log In</span>
+                </p>
+            </div>
+        </div>
     </div>
 
-    <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-8 bg-dark-gray/50 backdrop-blur-2xl z-20 transition-all duration-300 shadow-2xl">
-        <div class="px-8 mb-12 cursor-pointer flex items-center group" onclick="toggleLeftSidebar()">
-            <div class="custom-logo w-10 h-10 bg-accent-blue rounded-[12px] flex items-center justify-center group-hover:scale-105 transition-all duration-300 shadow-[0_0_20px_rgba(0,122,255,0.4)]">
-                <span class="text-white text-lg font-extrabold tracking-tighter logo-text-animate">ON</span>
-            </div>
-            <span class="nav-text ml-4 text-xl font-black tracking-tighter text-white uppercase italic logo-text">OmniBot</span>
-        </div>
+    <div id="main-app" class="h-full w-full flex overflow-hidden opacity-0 transition-opacity duration-700 pointer-events-none">
         
-        <nav class="flex flex-col w-full flex-1 px-4 space-y-2">
-            <div class="w-full">
-                <div class="nav-item active-nav flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all hover:bg-white/5" id="inbox-nav" onclick="switchToInbox()">
-                    <div class="flex items-center">
-                        <i class="fas fa-message text-lg w-8"></i>
-                        <span class="nav-text font-medium ml-2">Inbox</span>
-                    </div>
-                    <i id="arrow-icon" class="fas fa-chevron-right text-[10px] opacity-40 dropdown-arrow" onclick="event.stopPropagation(); toggleDropdown()"></i>
-                </div>
-                
-                <div id="messenger-dropdown" class="hidden mt-2 ml-4 pl-4 border-l border-border-gray space-y-1">
-                    <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('messenger')">
-                        <i class="fab fa-facebook-messenger text-[#0084FF]"></i> Messenger
-                    </div>
-                    <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('instagram')">
-                        <i class="fab fa-instagram text-[#E4405F]"></i> Instagram
-                    </div>
-                    <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('telegram')">
-                        <i class="fab fa-telegram text-[#26A5E4]"></i> Telegram
-                    </div>
-                    <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('viber')">
-                        <i class="fab fa-viber text-[#7360F2]"></i> Viber
-                    </div>
-                    <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('whatsapp')">
-                        <i class="fab fa-whatsapp text-[#25D366]"></i> WhatsApp
-                    </div>
-                </div>
-            </div>
+        <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
-            <div id="bot-config-nav" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition" onclick="loadBotSettings()">
-                <i class="fas fa-sliders-h text-lg w-8"></i>
-                <span class="nav-text font-medium ml-2">Bot Config</span>
-            </div>
-
-            <div id="broadcast-nav" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition" onclick="loadBroadcastSettings()">
-                <i class="fas fa-paper-plane text-lg w-8"></i>
-                <span class="nav-text font-medium ml-2">Bulk Messaging</span>
-            </div>
-        </nav>
-
-        <div class="mt-auto px-4">
-            <div onclick="loadGeneralSettings()" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition" id="sidebar-settings">
-                <i class="fas fa-cog text-lg w-8"></i>
-                <span class="nav-text font-medium ml-2">Settings</span>
-            </div>
+        <div id="imagePreviewModal" onclick="closeImagePreview()" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/95 backdrop-blur-xl cursor-zoom-out">
+            <img id="previewImg" src="" class="max-w-[92%] max-h-[92%] rounded-2xl shadow-2xl cursor-default transition-transform duration-300" onclick="event.stopPropagation()">
         </div>
-    </div>
 
-    <div id="main-dashboard-content" class="flex flex-1 flex-col min-w-0 bg-pure-black">
-        <div class="h-20 border-b border-border-gray flex items-center px-8 justify-between bg-dark-gray/30 backdrop-blur-xl z-10">
-            <div class="flex items-center gap-4">
-                <button onclick="toggleLeftSidebar()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition lg:hidden">
-                    <i class="fas fa-bars text-gray-400"></i>
-                </button>
-                <h1 class="text-xl font-black tracking-tighter text-white uppercase italic ml-2">OmniBot</h1>
+        <div id="left-sidebar" class="flex-shrink-0 flex flex-col border-r border-border-gray py-8 bg-dark-gray/50 backdrop-blur-2xl z-20 transition-all duration-300 shadow-2xl">
+            <div class="px-8 mb-12 cursor-pointer flex items-center group" onclick="toggleLeftSidebar()">
+                <div class="custom-logo w-10 h-10 bg-accent-blue rounded-[12px] flex items-center justify-center group-hover:scale-105 transition-all duration-300 shadow-[0_0_20px_rgba(0,122,255,0.4)]">
+                    <span class="text-white text-lg font-extrabold tracking-tighter logo-text-animate">ON</span>
+                </div>
+                <span class="nav-text ml-4 text-xl font-black tracking-tighter text-white uppercase italic logo-text">OmniBot</span>
             </div>
             
-            <div class="flex items-center space-x-4 px-4 py-2 rounded-2xl hover:bg-white/5 transition cursor-pointer group">
-                <div class="text-right hidden md:block">
-                    <p id="top-admin-name" class="text-sm font-bold text-white tracking-tight">Admin</p>
-                    <p class="text-[10px] text-accent-blue font-black uppercase tracking-widest">Master</p>
+            <nav class="flex flex-col w-full flex-1 px-4 space-y-2">
+                <div class="w-full">
+                    <div class="nav-item active-nav flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all hover:bg-white/5" id="inbox-nav" onclick="switchToInbox()">
+                        <div class="flex items-center">
+                            <i class="fas fa-message text-lg w-8"></i>
+                            <span class="nav-text font-medium ml-2">Inbox</span>
+                        </div>
+                        <i id="arrow-icon" class="fas fa-chevron-right text-[10px] opacity-40 dropdown-arrow" onclick="event.stopPropagation(); toggleDropdown()"></i>
+                    </div>
+                    
+                    <div id="messenger-dropdown" class="hidden mt-2 ml-4 pl-4 border-l border-border-gray space-y-1">
+                        <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('messenger')">
+                            <i class="fab fa-facebook-messenger text-[#0084FF]"></i> Messenger
+                        </div>
+                        <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('instagram')">
+                            <i class="fab fa-instagram text-[#E4405F]"></i> Instagram
+                        </div>
+                        <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('telegram')">
+                            <i class="fab fa-telegram text-[#26A5E4]"></i> Telegram
+                        </div>
+                        <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('viber')">
+                            <i class="fab fa-viber text-[#7360F2]"></i> Viber
+                        </div>
+                        <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('whatsapp')">
+                            <i class="fab fa-whatsapp text-[#25D366]"></i> WhatsApp
+                        </div>
+                    </div>
                 </div>
-                <div class="relative">
-                    <img id="top-admin-avatar" src="https://ui-avatars.com/api/?name=Admin&background=007AFF&color=fff" 
-                         class="w-10 h-10 rounded-2xl border-2 border-border-gray object-cover group-hover:border-accent-blue transition">
-                    <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-4 border-pure-black rounded-full"></div>
+
+                <div id="bot-config-nav" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition" onclick="loadBotSettings()">
+                    <i class="fas fa-sliders-h text-lg w-8"></i>
+                    <span class="nav-text font-medium ml-2">Bot Config</span>
+                </div>
+
+                <div id="broadcast-nav" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition" onclick="loadBroadcastSettings()">
+                    <i class="fas fa-paper-plane text-lg w-8"></i>
+                    <span class="nav-text font-medium ml-2">Bulk Messaging</span>
+                </div>
+            </nav>
+
+            <div class="mt-auto px-4">
+                <div onclick="loadGeneralSettings()" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition" id="sidebar-settings">
+                    <i class="fas fa-cog text-lg w-8"></i>
+                    <span class="nav-text font-medium ml-2">Settings</span>
                 </div>
             </div>
         </div>
 
-        <div class="flex flex-1 overflow-hidden">
-            <div id="chat-list-container" class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black hidden md:flex">
-                <div class="p-8 pb-4 flex justify-between items-end">
-                    <div>
-                        <h2 id="inbox-title" class="text-2xl font-black italic tracking-tighter uppercase">Inbox</h2>
-                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Recent Messages</p>
-                    </div>
-                    <span id="global-msg-count" class="hidden bg-accent-blue text-[10px] px-2.5 py-1 rounded-full text-white font-black shadow-[0_0_15px_rgba(0,122,255,0.5)]">0</span>
+        <div id="main-dashboard-content" class="flex flex-1 flex-col min-w-0 bg-pure-black">
+            <div class="h-20 border-b border-border-gray flex items-center px-8 justify-between bg-dark-gray/30 backdrop-blur-xl z-10">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleLeftSidebar()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition lg:hidden">
+                        <i class="fas fa-bars text-gray-400"></i>
+                    </button>
+                    <h1 class="text-xl font-black tracking-tighter text-white uppercase italic ml-2">OmniBot</h1>
                 </div>
-                <div id="contact-list" class="flex-1 overflow-y-auto px-4 py-2 space-y-2">
-                    <div id="contacts-container"></div>
+                
+                <div class="flex items-center space-x-4 px-4 py-2 rounded-2xl hover:bg-white/5 transition cursor-pointer group">
+                    <div class="text-right hidden md:block">
+                        <p id="top-admin-name" class="text-sm font-bold text-white tracking-tight">Admin</p>
+                        <p class="text-[10px] text-accent-blue font-black uppercase tracking-widest">Master</p>
+                    </div>
+                    <div class="relative">
+                        <img id="top-admin-avatar" src="https://ui-avatars.com/api/?name=Admin&background=007AFF&color=fff" 
+                             class="w-10 h-10 rounded-2xl border-2 border-border-gray object-cover group-hover:border-accent-blue transition">
+                        <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-4 border-pure-black rounded-full"></div>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex-1 flex flex-col bg-pure-black relative min-w-0">
-                <div class="h-20 border-b border-border-gray flex items-center px-8 justify-between bg-dark-gray/20">
-                    <div class="flex items-center gap-4 overflow-hidden">
-                        <div id="header-avatar-container" class="relative flex-shrink-0">
-                            <img id="header-avatar-img" class="w-11 h-11 rounded-2xl hidden border border-border-gray object-cover" src="">
-                            <div id="header-avatar-text" class="w-11 h-11 rounded-2xl bg-accent-blue flex items-center justify-center font-black text-sm text-white shadow-lg shadow-accent-blue/20">?</div>
+            <div class="flex flex-1 overflow-hidden">
+                <div id="chat-list-container" class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black hidden md:flex">
+                    <div class="p-8 pb-4 flex justify-between items-end">
+                        <div>
+                            <h2 id="inbox-title" class="text-2xl font-black italic tracking-tighter uppercase">Inbox</h2>
+                            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Recent Messages</p>
                         </div>
-                        <div class="truncate">
-                            <h3 id="chat-header-name" class="text-base font-bold truncate tracking-tight">Select a conversation</h3>
-                            <div class="flex items-center gap-1.5 mt-0.5">
-                                <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                                <p id="chat-status" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">System Active</p>
+                        <span id="global-msg-count" class="hidden bg-accent-blue text-[10px] px-2.5 py-1 rounded-full text-white font-black shadow-[0_0_15px_rgba(0,122,255,0.5)]">0</span>
+                    </div>
+                    <div id="contact-list" class="flex-1 overflow-y-auto px-4 py-2 space-y-2">
+                        <div id="contacts-container"></div>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col bg-pure-black relative min-w-0">
+                    <div class="h-20 border-b border-border-gray flex items-center px-8 justify-between bg-dark-gray/20">
+                        <div class="flex items-center gap-4 overflow-hidden">
+                            <div id="header-avatar-container" class="relative flex-shrink-0">
+                                <img id="header-avatar-img" class="w-11 h-11 rounded-2xl hidden border border-border-gray object-cover" src="">
+                                <div id="header-avatar-text" class="w-11 h-11 rounded-2xl bg-accent-blue flex items-center justify-center font-black text-sm text-white shadow-lg shadow-accent-blue/20">?</div>
+                            </div>
+                            <div class="truncate">
+                                <h3 id="chat-header-name" class="text-base font-bold truncate tracking-tight">Select a conversation</h3>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                                    <p id="chat-status" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">System Active</p>
+                                </div>
                             </div>
                         </div>
+                        <button onclick="toggleRightPanel()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 hover:text-accent-blue transition">
+                            <i class="fas fa-info-circle text-lg"></i>
+                        </button>
                     </div>
-                    <button onclick="toggleRightPanel()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 hover:text-accent-blue transition">
-                        <i class="fas fa-info-circle text-lg"></i>
+
+                    <div id="chat-window" class="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 flex flex-col bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-accent-blue/5 via-transparent to-transparent"></div>
+
+                    <div class="p-6 md:p-8 bg-gradient-to-t from-pure-black via-pure-black to-transparent">
+                        <div class="flex items-center gap-4 bg-ios-gray/80 backdrop-blur-xl border border-border-gray rounded-3xl px-6 py-4 focus-within:border-accent-blue/50 focus-within:ring-4 ring-accent-blue/10 transition-all duration-300">
+                            
+                            <input type="file" id="file-input" class="hidden" onchange="uploadFile(this)" accept="image/*,video/*,audio/*">
+                            
+                            <button class="w-10 h-10 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition" onclick="document.getElementById('file-input').click()">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            
+                            <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Type a message..." class="bg-transparent flex-1 outline-none text-sm text-white placeholder:text-gray-600">
+                            
+                            <button onclick="sendMessage()" class="w-11 h-11 rounded-2xl bg-accent-blue text-white shadow-lg shadow-accent-blue/30 hover:scale-105 active:scale-95 transition-all">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="bot-settings-area" class="hidden flex-1 flex flex-col bg-pure-black overflow-hidden animate-in fade-in duration-500">
+            <iframe src="bot-config.html" id="settings-frame" class="w-full h-full border-none"></iframe>
+        </div>
+
+        <div id="right-panel" class="hidden w-80 border-l border-border-gray bg-dark-gray/50 backdrop-blur-3xl flex flex-col p-8 space-y-10 overflow-y-auto z-10 shadow-2xl">
+            <div class="text-center space-y-5 pt-4">
+                <div class="relative inline-block group">
+                    <div id="side-avatar-text" class="w-28 h-28 bg-accent-blue rounded-[2.5rem] mx-auto flex items-center justify-center text-4xl font-black border-4 border-pure-black shadow-2xl shadow-accent-blue/20">?</div>
+                    <img id="side-avatar-img" class="w-28 h-28 rounded-[2.5rem] mx-auto border-4 border-pure-black hidden object-cover shadow-2xl" src="">
+                    <div class="absolute -bottom-2 right-2 w-8 h-8 bg-pure-black rounded-2xl flex items-center justify-center border border-border-gray">
+                        <i class="fab fa-telegram text-accent-blue text-xs" id="platform-icon"></i>
+                    </div>
+                </div>
+                <div>
+                    <input type="text" id="edit-nickname" onblur="updateNickname()" class="bg-transparent text-center font-black text-2xl outline-none border-b-2 border-transparent focus:border-accent-blue w-full pb-1 transition" placeholder="Nickname">
+                    <p id="side-platform" class="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mt-3">Platform: -</p>
+                </div>
+            </div>
+
+            <div class="space-y-8 italic">
+                <div class="space-y-4">
+                    <label class="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-2 px-1">
+                        <span class="w-1.5 h-1.5 bg-accent-blue rounded-full"></span> Internal Notes
+                    </label>
+                    <textarea id="contact-note" onblur="saveNote()" class="w-full h-40 bg-ios-gray/50 border border-border-gray rounded-2xl p-5 text-sm outline-none focus:border-accent-blue/50 focus:ring-4 ring-accent-blue/5 resize-none text-gray-300 transition-all" placeholder="Write private details here..."></textarea>
+                </div>
+
+                <div class="pt-8 border-t border-border-gray space-y-4">
+                    <button onclick="toggleBlock()" class="w-full py-4 bg-red-500/10 text-red-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all duration-300 flex items-center justify-center gap-3">
+                        <i class="fas fa-user-slash text-sm"></i> Block Customer
+                    </button>
+                    <button onclick="deleteContact()" class="w-full py-4 border border-border-gray text-gray-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-red-400 hover:border-red-400/30 transition-all duration-300 flex items-center justify-center gap-3">
+                        <i class="fas fa-trash-alt text-sm"></i> Delete Thread
                     </button>
                 </div>
-
-                <div id="chat-window" class="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 flex flex-col bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-accent-blue/5 via-transparent to-transparent"></div>
-
-                <div class="p-6 md:p-8 bg-gradient-to-t from-pure-black via-pure-black to-transparent">
-                    <div class="flex items-center gap-4 bg-ios-gray/80 backdrop-blur-xl border border-border-gray rounded-3xl px-6 py-4 focus-within:border-accent-blue/50 focus-within:ring-4 ring-accent-blue/10 transition-all duration-300">
-                        
-                        <input type="file" id="file-input" class="hidden" onchange="uploadFile(this)" accept="image/*,video/*,audio/*">
-                        
-                        <button class="w-10 h-10 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition" onclick="document.getElementById('file-input').click()">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                        
-                        <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Type a message..." class="bg-transparent flex-1 outline-none text-sm text-white placeholder:text-gray-600">
-                        
-                        <button onclick="sendMessage()" class="w-11 h-11 rounded-2xl bg-accent-blue text-white shadow-lg shadow-accent-blue/30 hover:scale-105 active:scale-95 transition-all">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
 
-    <div id="bot-settings-area" class="hidden flex-1 flex flex-col bg-pure-black overflow-hidden animate-in fade-in duration-500">
-        <iframe src="bot-config.html" id="settings-frame" class="w-full h-full border-none"></iframe>
-    </div>
-
-    <div id="right-panel" class="hidden w-80 border-l border-border-gray bg-dark-gray/50 backdrop-blur-3xl flex flex-col p-8 space-y-10 overflow-y-auto z-10 shadow-2xl">
-        <div class="text-center space-y-5 pt-4">
-            <div class="relative inline-block group">
-                <div id="side-avatar-text" class="w-28 h-28 bg-accent-blue rounded-[2.5rem] mx-auto flex items-center justify-center text-4xl font-black border-4 border-pure-black shadow-2xl shadow-accent-blue/20">?</div>
-                <img id="side-avatar-img" class="w-28 h-28 rounded-[2.5rem] mx-auto border-4 border-pure-black hidden object-cover shadow-2xl" src="">
-                <div class="absolute -bottom-2 right-2 w-8 h-8 bg-pure-black rounded-2xl flex items-center justify-center border border-border-gray">
-                    <i class="fab fa-telegram text-accent-blue text-xs" id="platform-icon"></i>
-                </div>
-            </div>
-            <div>
-                <input type="text" id="edit-nickname" onblur="updateNickname()" class="bg-transparent text-center font-black text-2xl outline-none border-b-2 border-transparent focus:border-accent-blue w-full pb-1 transition" placeholder="Nickname">
-                <p id="side-platform" class="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mt-3">Platform: -</p>
-            </div>
-        </div>
-
-        <div class="space-y-8 italic">
-            <div class="space-y-4">
-                <label class="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-2 px-1">
-                    <span class="w-1.5 h-1.5 bg-accent-blue rounded-full"></span> Internal Notes
-                </label>
-                <textarea id="contact-note" onblur="saveNote()" class="w-full h-40 bg-ios-gray/50 border border-border-gray rounded-2xl p-5 text-sm outline-none focus:border-accent-blue/50 focus:ring-4 ring-accent-blue/5 resize-none text-gray-300 transition-all" placeholder="Write private details here..."></textarea>
-            </div>
-
-            <div class="pt-8 border-t border-border-gray space-y-4">
-                <button onclick="toggleBlock()" class="w-full py-4 bg-red-500/10 text-red-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all duration-300 flex items-center justify-center gap-3">
-                    <i class="fas fa-user-slash text-sm"></i> Block Customer
-                </button>
-                <button onclick="deleteContact()" class="w-full py-4 border border-border-gray text-gray-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-red-400 hover:border-red-400/30 transition-all duration-300 flex items-center justify-center gap-3">
-                    <i class="fas fa-trash-alt text-sm"></i> Delete Thread
-                </button>
-            </div>
-        </div>
-    </div>
-
+    <script>
+        function toggleAuth() {
+            const loginSection = document.getElementById('login-section');
+            const signupSection = document.getElementById('signup-section');
+            const title = document.getElementById('auth-title');
+            
+            if (loginSection.classList.contains('hidden')) {
+                loginSection.classList.remove('hidden');
+                signupSection.classList.add('hidden');
+                title.innerText = "Welcome Back";
+            } else {
+                loginSection.classList.add('hidden');
+                signupSection.classList.remove('hidden');
+                title.innerText = "Create Account";
+            }
+        }
+    </script>
+    
     <script src="script.js"></script>
 </body>
 </html>
