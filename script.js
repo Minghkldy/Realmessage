@@ -1,4 +1,4 @@
-// script.js - iOS Glassmorphism Professional Logic (Fixed Messaging)
+// script.js - iOS Glassmorphism Professional Logic (Fixed Messaging & Image Upload)
 const socket = io();
 
 let currentChatId = "";
@@ -259,7 +259,11 @@ function appendMessage(data, isBot) {
         } else if (mediaType.includes('video')) {
             contentHtml = `<video controls class="max-w-xs rounded-2xl mt-2 border border-white/10"><source src="${mediaUrl}"></video>`;
         }
-        if(data.text && !data.text.includes("Sent an image")) contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
+        
+        // ပုံတင်တာဆိုရင် စာသားကို ရှင်းပြထားတဲ့ text မပြချင်ရင် ဒီမှာ စစ်မယ်
+        if(data.text && data.text !== "Sent an image") {
+            contentHtml = `<p class="mb-2">${data.text}</p>` + contentHtml;
+        }
     }
 
     const msgHtml = isBot ? `
@@ -307,8 +311,57 @@ window.deleteContact = async () => {
 };
 
 // ---------------------------------------------------------
-// MESSAGING LOGIC (စာမပေါ်တဲ့ ပြဿနာကို ဒီမှာ ပြင်ထားပါတယ်)
+// MESSAGING & UPLOAD LOGIC
 // ---------------------------------------------------------
+
+// ပုံတင်မည့် Logic (အသစ်ပေါင်းထည့်ထားသည်)
+async function uploadFile(input) {
+    if (!input.files || !input.files[0] || !currentChatId) return;
+
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('chatId', currentChatId);
+
+    try {
+        const res = await fetch('/api/admin/upload', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const msgData = {
+                chat_id: currentChatId,
+                text: "Sent an image",
+                file_url: data.fileUrl,
+                file_type: file.type,
+                sender_type: 'bot',
+                time: timeNow,
+                is_read: false
+            };
+
+            // Socket မှတဆင့် တစ်ဖက်လူဆီပို့
+            socket.emit('send_reply', { 
+                chatId: currentChatId, 
+                text: "Sent an image", 
+                fileUrl: data.fileUrl, 
+                fileType: file.type 
+            });
+
+            // UI တွင် ချက်ချင်းပြ
+            allMessages.push(msgData);
+            appendMessage(msgData, true);
+        }
+    } catch (err) {
+        console.error("Upload failed:", err);
+        alert("Upload အဆင်မပြေပါ");
+    }
+    input.value = ""; 
+}
+
 function sendMessage() {
     const input = document.getElementById('user-input');
     const text = input?.value.trim();
@@ -324,14 +377,10 @@ function sendMessage() {
             is_read: false
         };
 
-        // 1. Server ကို socket ကနေ ပို့မယ်
         socket.emit('send_reply', { chatId: currentChatId, text: text });
 
-        // 2. UI ပေါ်မှာ စာတန်းချက်ချင်းပေါ်လာအောင် လုပ်မယ်
         allMessages.push(msgData);
         appendMessage(msgData, true);
-
-        // 3. Input ရှင်းမယ်
         input.value = ""; 
     }
 }
@@ -352,6 +401,7 @@ window.selectContact = selectContact;
 window.updateNickname = updateNickname;
 window.sendMessage = sendMessage;
 window.handleKeyPress = handleKeyPress;
+window.uploadFile = uploadFile; // Global မှာ ထည့်ပေးရန် လိုအပ်သည်
 
 // Initialization
 window.addEventListener('DOMContentLoaded', () => { 
@@ -364,14 +414,13 @@ socket.on('new_message', (data) => {
     const senderId = data.chat_id || data.chatId;
     
     if (currentChatId === senderId) {
-        // ကိုယ်ပို့လိုက်တဲ့စာ (bot) ဆိုရင် UI မှာ ပြပြီးသားဖြစ်လို့ နှစ်ခါမပေါ်အောင် စစ်မယ်
         if (data.sender_type !== 'bot') {
             allMessages.push(data);
             appendMessage(data, false);
         }
         socket.emit('mark_as_read', { chatId: currentChatId });
     } else {
-        allMessages.push(data); // တခြားလူဆီကစာဆိုရင် data သိမ်းထားမယ်
+        allMessages.push(data);
         unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
         document.getElementById('notif-sound')?.play().catch(() => {});
         renderContacts(cachedContacts);
