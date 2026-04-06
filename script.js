@@ -10,7 +10,8 @@ async function loadSystemSettings() {
         const data = await res.json();
         
         if (data.nickname) {
-            document.getElementById('top-admin-name').innerText = data.nickname;
+            const elName = document.getElementById('top-admin-name');
+            if (elName) elName.innerText = data.nickname;
         }
         
         const el = document.getElementById('top-admin-avatar');
@@ -26,24 +27,32 @@ async function loadSystemSettings() {
 
 function toggleLeftSidebar() { 
     const sidebar = document.getElementById('left-sidebar');
+    if (!sidebar) return;
     sidebar.classList.toggle('sidebar-collapsed'); 
     if(sidebar.classList.contains('sidebar-collapsed')) {
         const dropdown = document.getElementById('messenger-dropdown');
-        dropdown.classList.remove('show');
-        setTimeout(() => dropdown.classList.add('hidden'), 300);
-        document.getElementById('arrow-icon').classList.remove('rotate-arrow');
+        if (dropdown) {
+            dropdown.classList.remove('show');
+            setTimeout(() => dropdown.classList.add('hidden'), 300);
+        }
+        const arrow = document.getElementById('arrow-icon');
+        if (arrow) arrow.classList.remove('rotate-arrow');
     }
 }
 
 function toggleRightPanel() { 
-    document.getElementById('right-panel').classList.toggle('hidden'); 
+    const panel = document.getElementById('right-panel');
+    if (panel) panel.classList.toggle('hidden'); 
 }
 
 function toggleDropdown() {
     const sidebar = document.getElementById('left-sidebar');
-    if(sidebar.classList.contains('sidebar-collapsed')) toggleLeftSidebar();
+    if(sidebar && sidebar.classList.contains('sidebar-collapsed')) toggleLeftSidebar();
+    
     const dropdown = document.getElementById('messenger-dropdown');
     const arrow = document.getElementById('arrow-icon');
+    if (!dropdown) return;
+
     if (dropdown.classList.contains('hidden')) {
         dropdown.classList.remove('hidden');
         dropdown.classList.add('flex');
@@ -55,7 +64,7 @@ function toggleDropdown() {
             dropdown.classList.add('hidden');
         }, 300);
     }
-    arrow.classList.toggle('rotate-arrow');
+    if (arrow) arrow.classList.toggle('rotate-arrow');
 }
 
 function switchToInbox() {
@@ -103,12 +112,16 @@ function loadGeneralSettings() {
 
 function showImagePreview(url) {
     const modal = document.getElementById('imagePreviewModal');
-    document.getElementById('previewImg').src = url;
-    modal.style.display = 'flex';
+    const img = document.getElementById('previewImg');
+    if (modal && img) {
+        img.src = url;
+        modal.style.display = 'flex';
+    }
 }
 
 function closeImagePreview() {
-    document.getElementById('imagePreviewModal').style.display = 'none';
+    const modal = document.getElementById('imagePreviewModal');
+    if (modal) modal.style.display = 'none';
 }
 
 async function loadContacts() {
@@ -124,16 +137,17 @@ function filterContacts(platform) {
     const title = document.getElementById('inbox-title');
     if (platform === 'all') {
         filtered = cachedContacts;
-        title.innerText = "Inbox";
+        if (title) title.innerText = "Inbox";
     } else {
         filtered = cachedContacts.filter(c => c.platform.toLowerCase() === platform.toLowerCase());
-        title.innerText = platform.toUpperCase();
+        if (title) title.innerText = platform.toUpperCase();
     }
     renderContacts(filtered);
 }
 
 function renderContacts(contacts) {
     const container = document.getElementById('contacts-container');
+    if (!container) return;
     container.innerHTML = '';
     contacts.forEach(c => {
         const count = unreadCounts[c.chat_id] || 0;
@@ -158,6 +172,7 @@ function selectContact(contact) {
     currentChatId = contact.chat_id;
     unreadCounts[currentChatId] = 0; 
     const displayName = contact.nickname || contact.first_name;
+    
     document.getElementById('chat-header-name').innerText = displayName;
     document.getElementById('edit-nickname').value = displayName;
     document.getElementById('contact-note').value = contact.notes || "";
@@ -190,6 +205,8 @@ function updateGlobalBadge() {
     const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
     const badge = document.getElementById('global-msg-count');
     const bell = document.getElementById('noti-bell');
+    if (!badge || !bell) return;
+
     if (total > 0) {
         badge.innerText = total; badge.classList.remove('hidden');
         bell.classList.remove('hidden'); bell.classList.add('ring-animation', 'text-yellow-400');
@@ -209,6 +226,7 @@ async function loadHistory() {
 
 function renderMessages() {
     const win = document.getElementById('chat-window');
+    if (!win) return;
     win.innerHTML = "";
     const filtered = allMessages.filter(m => m.chat_id === currentChatId);
     filtered.forEach(msg => appendMessage(msg, msg.sender_type === 'bot'));
@@ -217,6 +235,7 @@ function renderMessages() {
 
 function appendMessage(data, isBot) {
     const win = document.getElementById('chat-window');
+    if (!win) return;
     let contentHtml = data.text || "";
     let mediaUrl = data.file_url || data.fileUrl;
     const mediaType = data.file_type || data.fileType || "";
@@ -284,7 +303,8 @@ socket.on('new_message', (data) => {
         socket.emit('mark_as_read', { chatId: currentChatId });
     } else {
         unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-        document.getElementById('notif-sound').play().catch(() => {});
+        const sound = document.getElementById('notif-sound');
+        if (sound) sound.play().catch(() => {});
         renderContacts(cachedContacts);
     }
 });
@@ -304,6 +324,7 @@ socket.on('messages_read', (data) => {
 
 function sendMessage() {
     const input = document.getElementById('user-input');
+    if (!input) return;
     const text = input.value.trim();
     if(text !== "" && currentChatId !== "") {
         socket.emit('send_reply', { chatId: currentChatId, text: text });
@@ -314,14 +335,18 @@ function sendMessage() {
 
 async function updateNickname() {
     if (!currentChatId) return;
-    const newName = document.getElementById('edit-nickname').value;
+    const input = document.getElementById('edit-nickname');
+    if (!input) return;
+    const newName = input.value;
     await fetch('/api/contacts/nickname', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, nickname: newName }) });
     loadContacts();
 }
 
 async function saveNote() {
     if (!currentChatId) return;
-    const noteValue = document.getElementById('contact-note').value;
+    const noteArea = document.getElementById('contact-note');
+    if (!noteArea) return;
+    const noteValue = noteArea.value;
     await fetch('/api/contacts/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: currentChatId, note: noteValue }) });
 }
 
@@ -339,8 +364,9 @@ async function deleteContact() {
 
 function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
 
-window.onload = () => { 
+// အောက်ပါ Window Onload အပိုင်းသည် HTML element များအားလုံး အဆင်သင့်ဖြစ်မှ အလုပ်လုပ်စေမည်ဖြစ်သည်
+window.addEventListener('DOMContentLoaded', () => { 
     loadSystemSettings(); 
     loadContacts(); 
     loadHistory(); 
-};
+});
