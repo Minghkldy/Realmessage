@@ -19,9 +19,12 @@ app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname)));
 
-if (!fs.existsSync('./uploads')) fs.mkdirSync('./uploads');
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Upload folder setup
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+app.use('/uploads', express.static(uploadDir));
 
+// Multer Setup
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
@@ -91,11 +94,10 @@ async function getTelegramProfilePic(userId, token) {
     return `https://ui-avatars.com/api/?name=User&background=random`;
 }
 
-// ၃။ Unified Message Handler (Viber-style logic ပါဝင်သည်)
+// ၃။ Unified Message Handler
 async function handleIncomingMessage(payload) {
     const { sender, text, platform, chatId, profilePic, fileUrl, fileType } = payload;
     try {
-        // User ဆီက စာဝင်လာရင် Admin ပို့ထားသမျှစာတွေကို Read (Seen) ဖြစ်အောင်လုပ်မယ်
         await pool.query("UPDATE messages SET is_read = true WHERE chat_id = $1 AND sender_type = 'bot'", [chatId]);
         io.emit('messages_read', { chatId, role: 'bot' });
 
@@ -106,7 +108,6 @@ async function handleIncomingMessage(payload) {
             [chatId, sender, profilePic, platform]
         );
 
-        // စာဝင်ချိန်ကို Asia/Yangon timezone ပြောင်းပြီးမှ HH:MI AM format နဲ့ ယူခြင်း
         const msgRes = await pool.query(
             "INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time",
             [sender, text, platform, chatId, 'user', fileUrl, fileType]
@@ -165,27 +166,19 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Member တစ်ဦးချင်းစီ၏ Nickname ကို Update လုပ်ရန် API (script.js မှ ခေါ်ဆိုမှုအတွက်)
 app.post('/api/contacts/update-nickname', async (req, res) => {
     const { chatId, nickname } = req.body;
     try {
-        await pool.query(
-            'UPDATE contacts SET nickname = $1 WHERE chat_id = $2',
-            [nickname, chatId]
-        );
+        await pool.query('UPDATE contacts SET nickname = $1 WHERE chat_id = $2', [nickname, chatId]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Member တစ်ဦးချင်းစီ၏ Nickname နှင့် Notes ကို Update လုပ်ရန် API (Patch method)
 app.patch('/api/contacts/:chatId/details', async (req, res) => {
     const { chatId } = req.params;
     const { nickname, notes } = req.body;
     try {
-        await pool.query(
-            'UPDATE contacts SET nickname = $1, notes = $2 WHERE chat_id = $3',
-            [nickname, notes, chatId]
-        );
+        await pool.query('UPDATE contacts SET nickname = $1, notes = $2 WHERE chat_id = $3', [nickname, notes, chatId]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -261,10 +254,13 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     }
 });
 
-app.post('/api/upload', upload.single('file'), async (req, res) => {
+// --- FIXED UPLOAD ROUTE (Renamed to /api/admin/upload to match script.js) ---
+app.post('/api/admin/upload', upload.single('file'), async (req, res) => {
     const { chatId } = req.body;
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    
     const base64File = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    
     try {
         const contactRes = await pool.query('SELECT platform FROM contacts WHERE chat_id = $1', [chatId]);
         const platform = contactRes.rows[0]?.platform || 'Unknown';
@@ -288,7 +284,10 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         }
         io.emit('new_message', msgRes.rows[0]);
         res.json({ success: true, fileUrl: base64File });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) { 
+        console.error("Upload Error:", err.message);
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
 app.post('/api/broadcast', upload.single('file'), async (req, res) => {
