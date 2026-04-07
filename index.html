@@ -350,7 +350,12 @@
             const { error } = await supabase.auth.signUp({
                 email,
                 password,
-                options: { data: { nickname, birthday } }
+                options: { 
+                    data: { 
+                        nickname: nickname, 
+                        birthday: birthday 
+                    } 
+                }
             });
 
             if (error) {
@@ -406,6 +411,7 @@
                 document.getElementById('top-admin-name').innerText = adminName;
                 document.getElementById('top-admin-avatar').src = `https://ui-avatars.com/api/?name=${adminName}&background=007AFF&color=fff`;
                 
+                // Ensure chat functions are ready
                 if (typeof switchToInbox === 'function') switchToInbox();
             } else {
                 authGate.classList.remove('hidden');
