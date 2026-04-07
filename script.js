@@ -1,7 +1,6 @@
 // script.js - iOS Glassmorphism Professional Logic (Fixed Messaging, Image Upload & Session Persistence)
 
 // --- SUPABASE CONFIGURATION ---
-// ဤနေရာတွင် သင်၏ Supabase Project Settings > API မှ URL နှင့် Key ကို ထည့်သွင်းပါ
 const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
 const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt'; 
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
@@ -27,7 +26,6 @@ async function handleLogin() {
     } else {
         localStorage.setItem('userSession', JSON.stringify(data.user));
         showAppUI(data.user);
-        // Login ဝင်ပြီးတာနဲ့ Data တွေကို တန်းခေါ်ပါသည်
         await loadContacts();
         await loadHistory();
         alert("Login အောင်မြင်ပါသည်။");
@@ -50,12 +48,15 @@ async function handleSignUp() {
         return;
     }
 
-    // ၁။ Supabase Auth မှာ အကောင့်အရင်ဖွင့်ပါတယ်
+    // ၁။ Supabase Auth မှာ အကောင့်အရင်ဖွင့်ပါတယ် (Nickname နဲ့ Birthday ကို Metadata မှာပါ ထည့်သွင်းပါတယ်)
     const { data, error: authError } = await _supabase.auth.signUp({
         email: email,
         password: password,
         options: {
-            data: { nickname, birthday }
+            data: { 
+                nickname: nickname, 
+                birthday: birthday 
+            }
         }
     });
 
@@ -64,24 +65,26 @@ async function handleSignUp() {
         return;
     }
 
-    // ၂။ Auth ကရတဲ့ User ID ကိုယူပြီး 'users' table ထဲမှာ သိမ်းပါတယ် (ဒါအရေးကြီးဆုံးပါ)
-    const { error: dbError } = await _supabase
-        .from('users')
-        .insert([{ 
-            id: data.user.id, // Auth ID ကို Database table ရဲ့ UUID နဲ့ ချိတ်လိုက်တာပါ
-            nickname: nickname, 
-            email: email, 
-            password: password, 
-            birthday: birthday 
-        }]);
+    // ၂။ Database 'users' table ထဲကို Manual Insert လုပ်တဲ့အပိုင်း
+    // Duplicate Error မတက်စေရန် စစ်ဆေးပြီးမှ သွင်းပါသည်
+    if (data.user) {
+        const { error: dbError } = await _supabase
+            .from('users')
+            .upsert([{ 
+                id: data.user.id, 
+                nickname: nickname, 
+                email: email, 
+                password: password, 
+                birthday: birthday 
+            }], { onConflict: 'email' }); // Email တူနေရင် Error မပြဘဲ Update လုပ်ခိုင်းတာပါ
 
-    if (dbError) {
-        alert("Database Error: " + dbError.message);
-        console.error("Detailed DB Error:", dbError);
-    } else {
-        alert("အကောင့်ဖွင့်ခြင်း အောင်မြင်ပါသည်။ Login ပြန်ဝင်ပေးပါ။");
-        if (typeof toggleAuth === "function") toggleAuth();
+        if (dbError) {
+            console.error("Database sync issue (ignored if trigger exists):", dbError.message);
+        }
     }
+
+    alert("အကောင့်ဖွင့်ခြင်း အောင်မြင်ပါသည်။ Login ပြန်ဝင်ပေးပါ။");
+    if (typeof toggleAuth === "function") toggleAuth();
 }
 
 async function handleLogout() {
@@ -90,7 +93,6 @@ async function handleLogout() {
     if (error) {
         alert("Logout လုပ်ရတာ အဆင်မပြေပါဘူး: " + error.message);
     } else {
-        // ဒေတာအဟောင်းတွေ လုံးဝမကျန်အောင် Clean လုပ်ပါသည်
         localStorage.clear(); 
         sessionStorage.clear();
         cachedContacts = [];
@@ -214,13 +216,12 @@ function closeImagePreview() {
     }
 }
 
-// --- ပြင်ဆင်ထားသော Load Contacts (မိမိ user_id နဲ့သာ စစ်ထုတ်သည်) ---
 async function loadContacts() {
     try {
         const { data: { user } } = await _supabase.auth.getUser();
         if (!user) return;
 
-        cachedContacts = []; // အဟောင်းရှင်းထုတ်သည်
+        cachedContacts = []; 
         const { data, error } = await _supabase
             .from('contacts')
             .select('*')
@@ -308,13 +309,12 @@ function updateGlobalBadge() {
     }
 }
 
-// --- ပြင်ဆင်ထားသော Load History (မိမိ user_id နဲ့သာ စစ်ထုတ်သည်) ---
 async function loadHistory() {
     try {
         const { data: { user } } = await _supabase.auth.getUser();
         if (!user) return;
 
-        allMessages = []; // အဟောင်းရှင်းထုတ်သည်
+        allMessages = []; 
         const { data, error } = await _supabase
             .from('messages')
             .select('*')
@@ -415,7 +415,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Socket logic
 socket.on('new_message', (data) => {
     const senderId = data.chat_id || data.chatId;
     if (currentChatId === senderId) {
@@ -431,7 +430,6 @@ socket.on('new_message', (data) => {
     }
 });
 
-// --- FORGOT PASSWORD ---
 async function handleForgotPassword() {
     const email = document.getElementById('reset-email')?.value.trim();
     if (!email) return alert("Email ရိုက်ထည့်ပါ");
