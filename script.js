@@ -1,8 +1,9 @@
 // script.js - iOS Glassmorphism Professional Logic (Fixed Messaging, Image Upload & Session Persistence)
 
 // --- SUPABASE CONFIGURATION ---
+// --- SUPABASE CONFIGURATION ---
 const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
-const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W10tIt';
+const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt'; // 0 အစား O အကြီးသို့ ပြင်ဆင်ပြီး
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 // --- AUTH LOGIC (FIXED FOR REAL SUPABASE AUTH) ---
