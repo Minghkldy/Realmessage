@@ -10,12 +10,13 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-        // သင့်ရဲ့ Project ကနေရလာတဲ့ URL နဲ့ Publishable Key ကို ဒီမှာ ထည့်သွင်းထားပါတယ်
+        // သင့် project ရဲ့ URL နဲ့ Key ကို ဒီမှာ ထည့်သွင်းပါ
         const SUPABASE_URL = 'https://vquzfxzahxesrfjctoef.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OsUeBv3'; // Screenshot ထဲကအတိုင်း ထည့်ပေးထားသည်
+        const SUPABASE_KEY = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtUeBv3'; 
 
-        // Global supabase variable ကို create လုပ်ခြင်း
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // window.supabase ကနေ createClient ကို ခေါ်သုံးပြီး variable name ကို supabase လို့ ပေးလိုက်ပါမယ်
+        // အရင်က supabase.createClient လို့ ရေးရင် variable နာမည်နဲ့ function နာမည် ထပ်နေလို့ Error တက်တတ်ပါတယ်
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     </script>
     
     <script src="/socket.io/socket.io.js"></script>
