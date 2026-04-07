@@ -2,7 +2,7 @@
 
 // --- SUPABASE CONFIGURATION ---
 const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
-const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt'; // 0 အစား O အကြီးသို့ ပြင်ဆင်ပြီး
+const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt'; 
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 // --- AUTH LOGIC ---
@@ -26,9 +26,9 @@ async function handleLogin() {
     } else {
         localStorage.setItem('userSession', JSON.stringify(data.user));
         showAppUI(data.user);
-        // Login ဝင်ပြီးတာနဲ့ Data တွေကို တန်းခေါ်လိုက်ပါမည်
-        loadContacts();
-        loadHistory();
+        // Login ဝင်ပြီးတာနဲ့ Data တွေကို တန်းခေါ်ပါသည်
+        await loadContacts();
+        await loadHistory();
         alert("Login အောင်မြင်ပါသည်။");
     }
 }
@@ -80,9 +80,11 @@ async function handleLogout() {
     if (error) {
         alert("Logout လုပ်ရတာ အဆင်မပြေပါဘူး: " + error.message);
     } else {
+        // ဒေတာအဟောင်းတွေ လုံးဝမကျန်အောင် Clean လုပ်ပါသည်
         localStorage.clear(); 
         sessionStorage.clear();
-        // ဒေတာအဟောင်းတွေ လုံးဝမကျန်အောင် Website ကို အစကနေ ပြန်တက်ခိုင်းပါမယ်
+        cachedContacts = [];
+        allMessages = [];
         window.location.replace('index.html');
     }
 }
@@ -202,12 +204,13 @@ function closeImagePreview() {
     }
 }
 
-// --- ပြင်ဆင်ထားသော Load Contacts (User အလိုက်စစ်ထုတ်ရန်) ---
+// --- ပြင်ဆင်ထားသော Load Contacts (မိမိ user_id နဲ့သာ စစ်ထုတ်သည်) ---
 async function loadContacts() {
     try {
         const { data: { user } } = await _supabase.auth.getUser();
         if (!user) return;
 
+        cachedContacts = []; // အဟောင်းရှင်းထုတ်သည်
         const { data, error } = await _supabase
             .from('contacts')
             .select('*')
@@ -295,12 +298,13 @@ function updateGlobalBadge() {
     }
 }
 
-// --- ပြင်ဆင်ထားသော Load History (User အလိုက်စစ်ထုတ်ရန်) ---
+// --- ပြင်ဆင်ထားသော Load History (မိမိ user_id နဲ့သာ စစ်ထုတ်သည်) ---
 async function loadHistory() {
     try {
         const { data: { user } } = await _supabase.auth.getUser();
         if (!user) return;
 
+        allMessages = []; // အဟောင်းရှင်းထုတ်သည်
         const { data, error } = await _supabase
             .from('messages')
             .select('*')
@@ -385,18 +389,17 @@ window.handleSignUp = handleSignUp;
 window.handleLogout = handleLogout;
 window.sendMessage = sendMessage;
 
-// --- INITIALIZATION (FIXED) ---
+// --- INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => { 
-    // Supabase ကနေ လက်ရှိ Session ရှိမရှိ စစ်ဆေးပါမည်
     const { data: { session } } = await _supabase.auth.getSession();
     
     if (session) {
         showAppUI(session.user);
         loadSystemSettings(); 
-        loadContacts(); 
-        loadHistory(); 
+        await loadContacts(); 
+        await loadHistory(); 
     } else {
-        localStorage.clear(); // Session မရှိရင် ဒေတာအဟောင်းတွေ ရှင်းပစ်ပါ
+        localStorage.clear(); 
         const authGate = document.getElementById('auth-gate');
         if (authGate) authGate.style.display = 'flex';
     }
