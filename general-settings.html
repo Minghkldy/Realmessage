@@ -6,6 +6,7 @@
     <title>General Settings</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background-color: #050505; color: white; font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
         .glass-card {
@@ -57,7 +58,7 @@
                     </div>
                     <div class="flex-1">
                         <label class="block text-sm text-gray-400 mb-2">Admin Email</label>
-                        <input type="email" id="admin_email" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none" placeholder="admin@example.com">
+                        <input type="email" id="admin_email" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none text-gray-500 cursor-not-allowed" placeholder="admin@example.com" readonly>
                     </div>
                 </div>
             </div>
@@ -123,7 +124,6 @@
             }
         }
 
-        // Parent window (script.js) က updatePassword function ကို လှမ်းခေါ်တဲ့အပိုင်း
         async function handlePasswordUpdate() {
             const oldPw = document.getElementById('old_password_input').value;
             const newPw = document.getElementById('new_password_input').value;
@@ -131,7 +131,6 @@
 
             if (window.parent && typeof window.parent.updatePassword === 'function') {
                 await window.parent.updatePassword(oldPw, newPw, confirmPw);
-                // ရှင်းလင်းရေးလုပ်မယ်
                 document.getElementById('old_password_input').value = "";
                 document.getElementById('new_password_input').value = "";
                 document.getElementById('confirm_password_input').value = "";
@@ -157,7 +156,6 @@
             formData.append('autoreply_text', document.getElementById('autoreply_text').value);
 
             if (pass) {
-                // အကယ်၍ Password ပါပြောင်းချင်ရင် handlePasswordUpdate ကိုပါ တခါတည်းခေါ်ပေးလိုက်မယ်
                 await handlePasswordUpdate();
             }
 
@@ -203,6 +201,15 @@
         }
 
         window.onload = async () => {
+            // ၁။ လက်ရှိ Login ဝင်ထားတဲ့ User Email ကို ဆွဲထုတ်ပြသခြင်း
+            if (window.parent && window.parent._supabase) {
+                const { data: { user } } = await window.parent._supabase.auth.getUser();
+                if (user) {
+                    document.getElementById('admin_email').value = user.email;
+                }
+            }
+
+            // ၂။ ကျန်ရှိသော Settings များ Load လုပ်ခြင်း
             try {
                 const res = await fetch('/api/settings');
                 if (!res.ok) throw new Error('Failed to load settings');
@@ -215,7 +222,10 @@
                     const currentAvatar = data.admin_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.admin_nickname)}&background=random&color=fff`;
                     document.getElementById('avatar_preview').src = currentAvatar;
                 }
-                if (data.admin_email) document.getElementById('admin_email').value = data.admin_email;
+                // အကယ်၍ API က email ပြန်ပေးရင်လည်း အပေါ်က Auth email က ပိုမှန်ပါလိမ့်မယ်
+                if (data.admin_email && !document.getElementById('admin_email').value) {
+                    document.getElementById('admin_email').value = data.admin_email;
+                }
                 if (data.autoreply_text) document.getElementById('autoreply_text').value = data.autoreply_text;
                 
                 if(document.getElementById('enable_autoreply')) {
