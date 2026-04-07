@@ -9,6 +9,15 @@
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
+    <script>
+        // သင့်ရဲ့ Project ကနေရလာတဲ့ URL နဲ့ Publishable Key ကို ဒီမှာ ထည့်သွင်းထားပါတယ်
+        const SUPABASE_URL = 'https://vquzfxzahxesrfjctoef.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OsUeBv3'; // Screenshot ထဲကအတိုင်း ထည့်ပေးထားသည်
+
+        // Global supabase variable ကို create လုပ်ခြင်း
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    </script>
+    
     <script src="/socket.io/socket.io.js"></script>
     
     <link rel="stylesheet" href="style.css">
@@ -383,19 +392,14 @@
 
         // --- Auth State Observer ---
         document.addEventListener('DOMContentLoaded', async () => {
-            // Check if supabase is initialized in script.js
-            const checkSupabase = setInterval(async () => {
-                if (typeof supabase !== 'undefined') {
-                    clearInterval(checkSupabase);
-                    
-                    const { data: { session } } = await supabase.auth.getSession();
-                    updateUI(session);
+            // Check session directly after initialization
+            const { data: { session } } = await supabase.auth.getSession();
+            updateUI(session);
 
-                    supabase.auth.onAuthStateChange((_event, session) => {
-                        updateUI(session);
-                    });
-                }
-            }, 100);
+            // Listen for any auth changes
+            supabase.auth.onAuthStateChange((_event, session) => {
+                updateUI(session);
+            });
         });
 
         function updateUI(session) {
