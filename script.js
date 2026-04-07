@@ -49,6 +49,7 @@ async function handleSignUp() {
         return;
     }
 
+    // ၁။ Supabase Auth မှာ အကောင့်အရင်ဖွင့်ပါတယ်
     const { data, error: authError } = await _supabase.auth.signUp({
         email: email,
         password: password,
@@ -62,12 +63,20 @@ async function handleSignUp() {
         return;
     }
 
+    // ၂။ Auth ကရတဲ့ User ID ကိုယူပြီး 'users' table ထဲမှာ သိမ်းပါတယ် (ဒါအရေးကြီးဆုံးပါ)
     const { error: dbError } = await _supabase
         .from('users')
-        .insert([{ nickname, email, password, birthday }]);
+        .insert([{ 
+            id: data.user.id, // Auth ID ကို Database table ရဲ့ UUID နဲ့ ချိတ်လိုက်တာပါ
+            nickname: nickname, 
+            email: email, 
+            password: password, 
+            birthday: birthday 
+        }]);
 
     if (dbError) {
         alert("Database Error: " + dbError.message);
+        console.error("Detailed DB Error:", dbError);
     } else {
         alert("အကောင့်ဖွင့်ခြင်း အောင်မြင်ပါသည်။ Login ပြန်ဝင်ပေးပါ။");
         if (typeof toggleAuth === "function") toggleAuth();
