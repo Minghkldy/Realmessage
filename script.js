@@ -1,6 +1,7 @@
 // script.js - iOS Glassmorphism Professional Logic (Fixed Messaging, Image Upload & Session Persistence)
 
 // --- SUPABASE CONFIGURATION ---
+// ဤနေရာတွင် သင်၏ Supabase Project Settings > API မှ URL နှင့် Key ကို ထည့်သွင်းပါ
 const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
 const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt'; 
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
