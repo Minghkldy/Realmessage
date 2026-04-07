@@ -14,10 +14,14 @@
         const SUPABASE_URL = 'https://vquzfxzahxesrfjctoef.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtUeBv3'; 
 
-        // Variable ကို တစ်ကြိမ်တည်းပဲ Declare လုပ်ပါတယ် (Error မတက်အောင် line 12 မှာ ပြင်ထားသည်)
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Error မတက်အောင် window.supabase_instance အနေနဲ့ သိမ်းပြီး တစ်ခါပဲ ဆောက်ပါမယ်
+        if (!window.supabase) {
+            window.supabase = window.supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+        // global variable အနေနဲ့ သုံးလို့ရအောင် assign လုပ်ထားပေးပါတယ်
+        const supabase = window.supabase;
 
-        // Realtime Listener Setup (Refresh မလိုဘဲ စာတက်လာအောင်)
+        // Realtime Listener Setup
         function initRealtime() {
             supabase
                 .channel('realtime_messages')
@@ -26,11 +30,9 @@
                     { event: 'INSERT', schema: 'public', table: 'messages' }, 
                     (payload) => {
                         console.log('New Message Arrived:', payload.new);
-                        // စာအသစ်ရောက်တာနဲ့ Inbox စာရင်းကို update လုပ်ခိုင်းတာပါ
                         if (typeof fetchMessages === 'function') fetchMessages();
                         if (typeof loadMessages === 'function') loadMessages();
                         
-                        // အသံသတိပေးချက်ပါ ထည့်ပေးထားပါတယ်
                         const sound = document.getElementById('notif-sound');
                         if (sound) sound.play().catch(e => console.log('Audio play blocked'));
                     }
@@ -377,7 +379,6 @@
                 document.getElementById('top-admin-name').innerText = adminName;
                 document.getElementById('top-admin-avatar').src = `https://ui-avatars.com/api/?name=${adminName}&background=007AFF&color=fff`;
                 
-                // Realtime ကို စတင်အသက်သွင်းခြင်း
                 initRealtime();
                 
                 if (typeof switchToInbox === 'function') switchToInbox();
