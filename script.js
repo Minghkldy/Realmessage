@@ -1,9 +1,11 @@
 // script.js - iOS Glassmorphism Professional Logic (Fixed Messaging, Image Upload & Session Persistence)
 
 // --- SUPABASE CONFIGURATION ---
+// index.html ထဲမှာရှိတဲ့ supabase config code တွေကို အကုန်ဖျက်ပစ်ဖို့ မမေ့ပါနဲ့။
 var supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
 var supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W10tUeBv3';
 var supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
 // --- AUTH LOGIC ---
 
 async function handleLogin() {
@@ -47,7 +49,7 @@ async function handleSignUp() {
         return;
     }
 
-    // ၁။ Supabase Auth မှာ အကောင့်အရင်ဖွင့်ပါတယ် (Nickname နဲ့ Birthday ကို Metadata မှာပါ ထည့်သွင်းပါတယ်)
+    // ၁။ Supabase Auth မှာ အကောင့်အရင်ဖွင့်ပါတယ်
     const { data, error: authError } = await supabase.auth.signUp({
         email: email,
         password: password,
@@ -65,9 +67,8 @@ async function handleSignUp() {
     }
 
     // ၂။ Database 'users' table ထဲကို Manual Insert လုပ်တဲ့အပိုင်း
-    // Duplicate Error မတက်စေရန် စစ်ဆေးပြီးမှ သွင်းပါသည်
     if (data.user) {
-        const { error: dbError } = await _supabase
+        const { error: dbError } = await supabase
             .from('users')
             .upsert([{ 
                 id: data.user.id, 
@@ -75,10 +76,10 @@ async function handleSignUp() {
                 email: email, 
                 password: password, 
                 birthday: birthday 
-            }], { onConflict: 'email' }); // Email တူနေရင် Error မပြဘဲ Update လုပ်ခိုင်းတာပါ
+            }], { onConflict: 'email' });
 
         if (dbError) {
-            console.error("Database sync issue (ignored if trigger exists):", dbError.message);
+            console.error("Database sync issue:", dbError.message);
         }
     }
 
@@ -87,7 +88,7 @@ async function handleSignUp() {
 }
 
 async function handleLogout() {
-    const { error } = await _supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
 
     if (error) {
         alert("Logout လုပ်ရတာ အဆင်မပြေပါဘူး: " + error.message);
@@ -217,11 +218,11 @@ function closeImagePreview() {
 
 async function loadContacts() {
     try {
-        const { data: { user } } = await _supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
         cachedContacts = []; 
-        const { data, error } = await _supabase
+        const { data, error } = await supabase
             .from('contacts')
             .select('*')
             .eq('user_id', user.id); 
@@ -310,11 +311,11 @@ function updateGlobalBadge() {
 
 async function loadHistory() {
     try {
-        const { data: { user } } = await _supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
         allMessages = []; 
-        const { data, error } = await _supabase
+        const { data, error } = await supabase
             .from('messages')
             .select('*')
             .eq('user_id', user.id); 
@@ -369,7 +370,7 @@ async function sendMessage() {
     const input = document.getElementById('user-input');
     const text = input?.value.trim();
     if(text && currentChatId) {
-        const { data: { user } } = await _supabase.auth.getUser(); 
+        const { data: { user } } = await supabase.auth.getUser(); 
         const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
         const msgData = {
@@ -397,10 +398,11 @@ window.handleLogin = handleLogin;
 window.handleSignUp = handleSignUp;
 window.handleLogout = handleLogout;
 window.sendMessage = sendMessage;
+window.handleForgotPassword = handleForgotPassword;
 
 // --- INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => { 
-    const { data: { session } } = await _supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     
     if (session) {
         showAppUI(session.user);
@@ -433,11 +435,10 @@ async function handleForgotPassword() {
     const email = document.getElementById('reset-email')?.value.trim();
     if (!email) return alert("Email ရိုက်ထည့်ပါ");
 
-    const { error } = await _supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: 'https://realmessage-live.onrender.com/reset-password.html',
     });
 
     if (error) alert("Error: " + error.message);
     else alert("Reset Link ပို့ပေးလိုက်ပါပြီ။");
 }
-window.handleForgotPassword = handleForgotPassword;
