@@ -10,12 +10,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-        // ၁။ Supabase Initialization (ဒီနေရာမှာ တစ်ခါပဲ ကြေညာပါ)
-        const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co'; // အကို့ URL ပြန်ထည့်ပါ
-        const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt'; // အကို့ Key ပြန်ထည့်ပါ
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-        // ၂။ Realtime Listener (Fixed .subscribe() position)
         function initRealtime() {
             const channel = supabase
                 .channel('realtime_messages')
