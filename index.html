@@ -10,16 +10,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-        // --- Supabase Config & Initialization ---
-        const SUPABASE_URL = 'https://vquzfxzahxesrfjctoef.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtUeBv3'; 
-
-        // Error မတက်အောင် window.supabase_instance အနေနဲ့ သိမ်းပြီး တစ်ခါပဲ ဆောက်ပါမယ်
-        if (!window.supabase) {
-            window.supabase = window.supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY);
-        }
-        // global variable အနေနဲ့ သုံးလို့ရအောင် assign လုပ်ထားပေးပါတယ်
-        const supabase = window.supabase;
 
         // Realtime Listener Setup
         function initRealtime() {
