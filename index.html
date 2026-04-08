@@ -12,6 +12,15 @@
     <script src="script.js"></script>
     
     <script>
+  // Supabase Config & Initialization
+  const SUPABASE_URL = 'https://vquzfxzahxesrfjctoef.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIT'; // Key ကို သေချာပြန်စစ်ပါ (Image 8 ထဲမှာ t က t အကြီး ဖြစ်နေတတ်လို့ပါ)
+
+  if (!window.supabase_instance) {
+      window.supabase = window.supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY);
+      window.supabase_instance = true;
+  }
+  const supabase = window.supabase;
         // Realtime function ကို window level မှာပဲ ထားပေးထားပါတယ်
         function initRealtime() {
             // script.js ထဲက supabase variable ကို လှမ်းသုံးမှာပါ
