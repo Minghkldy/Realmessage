@@ -48,7 +48,7 @@ async function handleSignUp() {
     }
 
     // ၁။ Supabase Auth မှာ အကောင့်အရင်ဖွင့်ပါတယ် (Nickname နဲ့ Birthday ကို Metadata မှာပါ ထည့်သွင်းပါတယ်)
-    const { data, error: authError } = await _supabase.auth.signUp({
+    const { data, error: authError } = await supabase.auth.signUp({
         email: email,
         password: password,
         options: {
