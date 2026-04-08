@@ -9,8 +9,14 @@
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
+    <script src="script.js"></script>
+    
     <script>
+        // Realtime function ကို window level မှာပဲ ထားပေးထားပါတယ်
         function initRealtime() {
+            // script.js ထဲက supabase variable ကို လှမ်းသုံးမှာပါ
+            if (typeof supabase === 'undefined') return;
+
             const channel = supabase
                 .channel('realtime_messages')
                 .on(
@@ -18,7 +24,6 @@
                     { event: 'INSERT', schema: 'public', table: 'messages' },
                     (payload) => {
                         console.log('New Message Arrived:', payload.new);
-                        // စာအသစ်ဝင်လာရင် function တွေကို ပြန်ခေါ်ခိုင်းတာပါ
                         if (typeof loadContacts === 'function') loadContacts();
                         if (typeof loadHistory === 'function') loadHistory();
                         
@@ -352,11 +357,16 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            updateUI(session);
-            supabase.auth.onAuthStateChange((_event, session) => {
-                updateUI(session);
-            });
+            // script.js က supabase တည်ဆောက်ပြီးတာကို ခဏစောင့်မယ်
+            setTimeout(async () => {
+                if (typeof supabase !== 'undefined') {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    updateUI(session);
+                    supabase.auth.onAuthStateChange((_event, session) => {
+                        updateUI(session);
+                    });
+                }
+            }, 100);
         });
 
         function updateUI(session) {
@@ -389,6 +399,5 @@
         window.showForgotModal = () => document.getElementById('forgot-modal').classList.remove('hidden');
         window.closeForgotModal = () => document.getElementById('forgot-modal').classList.add('hidden');
     </script>
-    <script src="script.js"></script>
 </body>
 </html>
