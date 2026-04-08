@@ -1,7 +1,6 @@
 // script.js - iOS Glassmorphism Professional Logic (Fixed Messaging, Image Upload & Session Persistence)
 
 // --- SUPABASE CONFIGURATION ---
-// Note: Ensure no other supabase initialization exists in index.html
 const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
 const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt';
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -25,7 +24,6 @@ async function handleLogin() {
     if (error) {
         alert("Email သို့မဟုတ် Password မှားယွင်းနေပါသည်။ " + error.message);
     } else {
-        // User session is automatically handled by Supabase, but we sync UI
         showAppUI(data.user);
         await loadContacts();
         await loadHistory();
@@ -49,7 +47,6 @@ async function handleSignUp() {
         return;
     }
 
-    // ၁။ Supabase Auth မှာ အကောင့်ဖွင့်ခြင်း
     const { data, error: authError } = await supabase.auth.signUp({
         email: email,
         password: password,
@@ -66,7 +63,6 @@ async function handleSignUp() {
         return;
     }
 
-    // ၂။ Database 'users' table ထဲသို့ manual insert လုပ်ခြင်း (Public Profile အတွက်)
     if (data?.user) {
         const { error: dbError } = await supabase
             .from('users')
@@ -75,7 +71,7 @@ async function handleSignUp() {
                 nickname: nickname, 
                 email: email, 
                 birthday: birthday 
-            }], { onConflict: 'id' }); // ID ကို conflict check လုပ်ခြင်းက ပိုမှန်ပါသည်
+            }], { onConflict: 'id' });
 
         if (dbError) {
             console.error("Database sync issue:", dbError.message);
@@ -117,9 +113,8 @@ function showAppUI(userData) {
     }
 }
 
-// ---------------------------------------------------------
+// --- MESSAGING & UI LOGIC ---
 const socket = io();
-
 let currentChatId = "";
 let allMessages = [];
 let unreadCounts = {};
@@ -140,7 +135,6 @@ async function loadSystemSettings() {
     } catch (e) { console.error("Error loading settings:", e); }
 }
 
-// UI Toggles
 function toggleLeftSidebar() { 
     const sidebar = document.getElementById('left-sidebar');
     if (!sidebar) return;
@@ -324,7 +318,7 @@ async function loadHistory() {
             .from('messages')
             .select('*')
             .eq('user_id', user.id)
-            .order('created_at', { ascending: true }); // အချိန်အစီအစဉ်အတိုင်းစီရန်
+            .order('created_at', { ascending: true });
 
         if (error) throw error;
         allMessages = data || [];
@@ -377,6 +371,8 @@ async function sendMessage() {
     const text = input?.value.trim();
     if(text && currentChatId) {
         const { data: { user } } = await supabase.auth.getUser(); 
+        if(!user) return;
+
         const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
         const msgData = {
@@ -388,7 +384,7 @@ async function sendMessage() {
             user_id: user.id 
         };
         
-        socket.emit('send_reply', { chatId: currentChatId, text: text });
+        socket.emit('send_reply', { chatId: currentChatId, text: text, userId: user.id });
         allMessages.push(msgData);
         appendMessage(msgData, true);
         if (input) input.value = ""; 
