@@ -10,24 +10,31 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
+        // ၁။ Supabase Initialization (ဒီနေရာမှာ တစ်ခါပဲ ကြေညာပါ)
+        const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co'; // အကို့ URL ပြန်ထည့်ပါ
+        const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt'; // အကို့ Key ပြန်ထည့်ပါ
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // Realtime Listener Setup
+        // ၂။ Realtime Listener (Fixed .subscribe() position)
         function initRealtime() {
-            supabase
+            const channel = supabase
                 .channel('realtime_messages')
                 .on(
-                    'postgres_changes', 
-                    { event: 'INSERT', schema: 'public', table: 'messages' }, 
+                    'postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'messages' },
                     (payload) => {
                         console.log('New Message Arrived:', payload.new);
-                        if (typeof fetchMessages === 'function') fetchMessages();
-                        if (typeof loadMessages === 'function') loadMessages();
+                        // စာအသစ်ဝင်လာရင် function တွေကို ပြန်ခေါ်ခိုင်းတာပါ
+                        if (typeof loadContacts === 'function') loadContacts();
+                        if (typeof loadHistory === 'function') loadHistory();
                         
                         const sound = document.getElementById('notif-sound');
                         if (sound) sound.play().catch(e => console.log('Audio play blocked'));
                     }
                 )
-                .subscribe();
+                .subscribe((status) => {
+                    console.log("Realtime status:", status);
+                });
         }
     </script>
     
