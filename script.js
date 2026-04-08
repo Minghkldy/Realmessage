@@ -3,7 +3,7 @@
 // --- SUPABASE CONFIGURATION ---
 // index.html ထဲမှာရှိတဲ့ supabase config code တွေကို အကုန်ဖျက်ပစ်ဖို့ မမေ့ပါနဲ့။
 var supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
-var supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W10tUeBv3';
+var supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt';
 var supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 // --- AUTH LOGIC ---
