@@ -1,10 +1,10 @@
 // script.js - iOS Glassmorphism Professional Logic (Fixed Messaging, Image Upload & Session Persistence)
 
 // --- SUPABASE CONFIGURATION ---
-// index.html ထဲမှာရှိတဲ့ supabase config code တွေကို အကုန်ဖျက်ပစ်ဖို့ မမေ့ပါနဲ့။
-var supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
-var supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt';
-var supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+// Note: Ensure no other supabase initialization exists in index.html
+const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
+const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt';
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 // --- AUTH LOGIC ---
 
@@ -25,7 +25,7 @@ async function handleLogin() {
     if (error) {
         alert("Email သို့မဟုတ် Password မှားယွင်းနေပါသည်။ " + error.message);
     } else {
-        localStorage.setItem('userSession', JSON.stringify(data.user));
+        // User session is automatically handled by Supabase, but we sync UI
         showAppUI(data.user);
         await loadContacts();
         await loadHistory();
@@ -49,7 +49,7 @@ async function handleSignUp() {
         return;
     }
 
-    // ၁။ Supabase Auth မှာ အကောင့်အရင်ဖွင့်ပါတယ်
+    // ၁။ Supabase Auth မှာ အကောင့်ဖွင့်ခြင်း
     const { data, error: authError } = await supabase.auth.signUp({
         email: email,
         password: password,
@@ -66,17 +66,16 @@ async function handleSignUp() {
         return;
     }
 
-    // ၂။ Database 'users' table ထဲကို Manual Insert လုပ်တဲ့အပိုင်း
-    if (data.user) {
+    // ၂။ Database 'users' table ထဲသို့ manual insert လုပ်ခြင်း (Public Profile အတွက်)
+    if (data?.user) {
         const { error: dbError } = await supabase
             .from('users')
             .upsert([{ 
                 id: data.user.id, 
                 nickname: nickname, 
                 email: email, 
-                password: password, 
                 birthday: birthday 
-            }], { onConflict: 'email' });
+            }], { onConflict: 'id' }); // ID ကို conflict check လုပ်ခြင်းက ပိုမှန်ပါသည်
 
         if (dbError) {
             console.error("Database sync issue:", dbError.message);
@@ -113,7 +112,9 @@ function showAppUI(userData) {
     }
     
     const nameEl = document.getElementById('top-admin-name');
-    if (nameEl) nameEl.innerText = userData.user_metadata?.nickname || userData.nickname || "Admin";
+    if (nameEl) {
+        nameEl.innerText = userData.user_metadata?.nickname || userData.nickname || "Admin";
+    }
 }
 
 // ---------------------------------------------------------
@@ -221,7 +222,6 @@ async function loadContacts() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        cachedContacts = []; 
         const { data, error } = await supabase
             .from('contacts')
             .select('*')
@@ -230,14 +230,14 @@ async function loadContacts() {
         if (error) throw error;
         cachedContacts = data || [];
         renderContacts(cachedContacts);
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Load Contacts Error:", err); }
 }
 
 function filterContacts(platform) {
     const title = document.getElementById('inbox-title');
     const filtered = platform === 'all' 
         ? cachedContacts 
-        : cachedContacts.filter(c => c.platform.toLowerCase() === platform.toLowerCase());
+        : cachedContacts.filter(c => c.platform?.toLowerCase() === platform.toLowerCase());
     if (title) title.innerText = platform === 'all' ? "Inbox" : platform.toUpperCase();
     renderContacts(filtered);
 }
@@ -259,7 +259,7 @@ function renderContacts(contacts) {
             <div class="relative">${avatar} ${count > 0 ? `<div class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black"></div>` : ''}</div>
             <div class="flex-1 min-w-0">
                 <p class="text-sm font-bold truncate ${isActive ? 'text-white' : 'text-gray-200'}">${c.nickname || c.first_name}</p>
-                <p class="text-[10px] uppercase font-black tracking-widest ${isActive ? 'text-white/60' : 'text-gray-500'}">${c.platform}</p>
+                <p class="text-[10px] uppercase font-black tracking-widest ${isActive ? 'text-white/60' : 'text-gray-500'}">${c.platform || ''}</p>
             </div>
             ${count > 0 ? `<span class="bg-white text-accent-blue text-[10px] px-2 py-0.5 rounded-full font-black">${count}</span>` : ''}
         `;
@@ -272,9 +272,15 @@ function selectContact(contact) {
     currentChatId = contact.chat_id;
     unreadCounts[currentChatId] = 0; 
     document.getElementById('chat-header-name').innerText = contact.nickname || contact.first_name;
-    document.getElementById('edit-nickname').value = contact.nickname || contact.first_name;
-    document.getElementById('contact-note').value = contact.notes || "";
-    document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
+    
+    const editNicknameEl = document.getElementById('edit-nickname');
+    if (editNicknameEl) editNicknameEl.value = contact.nickname || contact.first_name;
+    
+    const contactNoteEl = document.getElementById('contact-note');
+    if (contactNoteEl) contactNoteEl.value = contact.notes || "";
+    
+    const sidePlatformEl = document.getElementById('side-platform');
+    if (sidePlatformEl) sidePlatformEl.innerText = `Platform: ${contact.platform}`;
     
     socket.emit('mark_as_read', { chatId: currentChatId });
     updateGlobalBadge();
@@ -283,15 +289,15 @@ function selectContact(contact) {
 }
 
 async function updateNickname() {
-    const newNickname = document.getElementById('edit-nickname').value.trim();
+    const newNickname = document.getElementById('edit-nickname')?.value.trim();
     if (!newNickname || !currentChatId) return;
     try {
-        const res = await fetch('/api/contacts/update-nickname', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chatId: currentChatId, nickname: newNickname })
-        });
-        if (res.ok) {
+        const { error } = await supabase
+            .from('contacts')
+            .update({ nickname: newNickname })
+            .eq('chat_id', currentChatId);
+
+        if (!error) {
             const contact = cachedContacts.find(c => c.chat_id === currentChatId);
             if (contact) contact.nickname = newNickname;
             renderContacts(cachedContacts); 
@@ -314,16 +320,16 @@ async function loadHistory() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        allMessages = []; 
         const { data, error } = await supabase
             .from('messages')
             .select('*')
-            .eq('user_id', user.id); 
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: true }); // အချိန်အစီအစဉ်အတိုင်းစီရန်
 
         if (error) throw error;
         allMessages = data || [];
         if(currentChatId) renderMessages();
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Load History Error:", err); }
 }
 
 function renderMessages() {
@@ -344,7 +350,7 @@ function appendMessage(data, isBot) {
     
     if (mediaUrl) {
         if (!mediaUrl.startsWith('data:') && !mediaUrl.startsWith('http')) mediaUrl = `/uploads/${mediaUrl}`;
-        if (mediaType.includes('image') || mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+        if (mediaType.includes('image') || (typeof mediaUrl === 'string' && mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i))) {
             contentHtml = `<img src="${mediaUrl}" class="max-w-xs rounded-2xl mt-2 cursor-pointer border border-white/10" onclick="showImagePreview('${mediaUrl}')">`;
         }
     }
@@ -385,20 +391,9 @@ async function sendMessage() {
         socket.emit('send_reply', { chatId: currentChatId, text: text });
         allMessages.push(msgData);
         appendMessage(msgData, true);
-        input.value = ""; 
+        if (input) input.value = ""; 
     }
 }
-
-// --- GLOBAL SCOPE ASSIGNMENTS ---
-window.switchToInbox = switchToInbox;
-window.loadBotSettings = loadBotSettings;
-window.loadBroadcastSettings = loadBroadcastSettings;
-window.loadGeneralSettings = loadGeneralSettings;
-window.handleLogin = handleLogin;
-window.handleSignUp = handleSignUp;
-window.handleLogout = handleLogout;
-window.sendMessage = sendMessage;
-window.handleForgotPassword = handleForgotPassword;
 
 // --- INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => { 
@@ -442,3 +437,19 @@ async function handleForgotPassword() {
     if (error) alert("Error: " + error.message);
     else alert("Reset Link ပို့ပေးလိုက်ပါပြီ။");
 }
+
+// --- GLOBAL SCOPE ASSIGNMENTS ---
+window.switchToInbox = switchToInbox;
+window.loadBotSettings = loadBotSettings;
+window.loadBroadcastSettings = loadBroadcastSettings;
+window.loadGeneralSettings = loadGeneralSettings;
+window.handleLogin = handleLogin;
+window.handleSignUp = handleSignUp;
+window.handleLogout = handleLogout;
+window.sendMessage = sendMessage;
+window.handleForgotPassword = handleForgotPassword;
+window.updateNickname = updateNickname;
+window.toggleLeftSidebar = toggleLeftSidebar;
+window.toggleRightPanel = toggleRightPanel;
+window.toggleDropdown = toggleDropdown;
+window.closeImagePreview = closeImagePreview;
