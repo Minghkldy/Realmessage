@@ -1,10 +1,9 @@
 // script.js - iOS Glassmorphism Professional Logic (Fixed Messaging, Image Upload & Session Persistence)
 
 // --- SUPABASE CONFIGURATION ---
-const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
-const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt'; 
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
+var supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
+var supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W10tUeBv3';
+var supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 // --- AUTH LOGIC ---
 
 async function handleLogin() {
