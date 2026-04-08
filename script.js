@@ -3,7 +3,7 @@
 // --- SUPABASE CONFIGURATION ---
 const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
 const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt'; 
-const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 // --- AUTH LOGIC ---
 
@@ -16,7 +16,7 @@ async function handleLogin() {
         return;
     }
 
-    const { data, error } = await _supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
     });
