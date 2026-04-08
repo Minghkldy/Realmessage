@@ -1,12 +1,8 @@
-// script.js - iOS Glassmorphism Professional Logic (Fixed Messaging, Image Upload & Session Persistence)
-
 // --- SUPABASE CONFIGURATION ---
-const supabaseUrl = 'https://vquzfxzahxesrfjctoef.supabase.co';
-const supabaseKey = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+// index.html မှာ ကြေညာထားပြီးသားဖြစ်လို့ ဒီမှာ window.supabase ကို ပြန်သုံးပါမယ်
+const supabase = window.supabase; 
 
 // --- AUTH LOGIC ---
-
 async function handleLogin() {
     const email = document.getElementById('login-email')?.value;
     const password = document.getElementById('login-password')?.value;
@@ -16,21 +12,38 @@ async function handleLogin() {
         return;
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
-    });
+    // Processing status ပြရန်
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) {
+        loginBtn.innerText = "PROCESSING...";
+        loginBtn.disabled = true;
+    }
 
-    if (error) {
-        alert("Email သို့မဟုတ် Password မှားယွင်းနေပါသည်။ " + error.message);
-    } else {
-        showAppUI(data.user);
-        await loadContacts();
-        await loadHistory();
-        alert("Login အောင်မြင်ပါသည်။");
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
+
+        if (error) {
+            alert("Email သို့မဟုတ် Password မှားယွင်းနေပါသည်။ " + error.message);
+        } else {
+            // Session သိမ်းဆည်းခြင်း
+            localStorage.setItem('userSession', JSON.stringify(data.user));
+            showAppUI(data.user);
+            await loadContacts();
+            await loadHistory();
+            alert("Login အောင်မြင်ပါသည်။");
+        }
+    } catch (err) {
+        console.error("Login Error:", err);
+    } finally {
+        if (loginBtn) {
+            loginBtn.innerText = "SIGN IN";
+            loginBtn.disabled = false;
+        }
     }
 }
-
 async function handleSignUp() {
     const nickname = document.getElementById('reg-nickname')?.value;
     const email = document.getElementById('reg-email')?.value;
