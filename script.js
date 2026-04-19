@@ -1,7 +1,6 @@
-// အပေါ်ဆုံးက variable ကြေညာတဲ့နေရာမှာ ဒါနဲ့ အစားထိုးပါ
-if (typeof supabase === 'undefined') {
-    var supabase = window.supabase;
-}
+// --- SUPABASE CONFIGURATION ---
+// အခြားနေရာမှာ supabase ကြေညာထားတာရှိရင် error မတက်အောင် window object ကနေပဲ တိုက်ရိုက်ယူသုံးပါမယ်
+var supabase = window.supabase;
 
 // --- VARIABLES ---
 let currentChatId = "";
@@ -19,7 +18,9 @@ function showAppUI() {
 
 // --- DATA LOADING ---
 async function loadContacts() {
+    // ပထမဆုံးအကြိမ် ခေါ်တဲ့အခါ supabase မရှိသေးရင် window ထဲကနေ ပြန်ဆွဲထုတ်မယ်
     if (!supabase) supabase = window.supabase;
+    
     try {
         const { data, error } = await supabase
             .from('messages')
@@ -42,7 +43,9 @@ async function loadContacts() {
         });
         cachedContacts = Object.values(unique);
         renderContacts(cachedContacts);
-    } catch (err) { console.error("Load Contacts Error:", err); }
+    } catch (err) { 
+        console.error("Load Contacts Error:", err); 
+    }
 }
 
 function renderContacts(contacts) {
@@ -75,7 +78,6 @@ async function selectContact(contact) {
     document.getElementById('chat-status').innerText = 'Active Now';
     document.getElementById('header-avatar-text').innerText = contact.nickname.charAt(0).toUpperCase();
     
-    // Side Panel (if exists)
     const sideName = document.getElementById('side-name');
     if (sideName) sideName.innerText = contact.nickname;
 
@@ -95,7 +97,9 @@ async function loadHistory() {
         if (error) throw error;
         allMessages = data || [];
         renderMessages();
-    } catch (err) { console.error("Load History Error:", err); }
+    } catch (err) { 
+        console.error("Load History Error:", err); 
+    }
 }
 
 function renderMessages() {
@@ -138,7 +142,6 @@ async function sendMessage() {
 
         if (!error) {
             input.value = "";
-            // Realtime listener က loadHistory ကို လှမ်းခေါ်ပေးပါလိမ့်မယ်
         } else {
             console.error("Send Error:", error);
         }
@@ -146,7 +149,9 @@ async function sendMessage() {
 }
 
 // --- REAL-TIME SUBSCRIPTION ---
-function setupRealtime() {
+// နာမည်ကို initRealtime လို့ ပြောင်းလိုက်ပါတယ် (Error မတက်အောင်လို့ပါ)
+function initRealtime() {
+    if (!supabase) supabase = window.supabase;
     if (!supabase) return;
     
     supabase
@@ -155,9 +160,7 @@ function setupRealtime() {
             { event: 'INSERT', schema: 'public', table: 'messages' }, 
             (payload) => {
                 console.log('New message received!', payload);
-                // Contact list အသစ်တွေကို ပြန်ဆွဲမယ်
                 loadContacts();
-                // အကယ်၍ လက်ရှိဖွင့်ထားတဲ့ Chat ထဲကစာဆိုရင် History ကို update လုပ်မယ်
                 if (currentChatId && (payload.new.sender_name === currentChatId || payload.new.receiver_name === currentChatId)) {
                     loadHistory();
                 }
@@ -170,7 +173,7 @@ function setupRealtime() {
 window.addEventListener('load', async () => { 
     showAppUI();
     await loadContacts();
-    setupRealtime(); // Real-time ကို စတင်ဖွင့်လှစ်ခြင်း
+    initRealtime(); // ဒီမှာ နာမည်သစ်နဲ့ ခေါ်ထားပါတယ်
     
     document.getElementById('user-input')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
