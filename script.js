@@ -1,5 +1,4 @@
 // --- SUPABASE CONFIGURATION ---
-// window.supabase က index.html ကနေ လာပါလိမ့်မယ်
 let supabase = window.supabase; 
 
 // --- VARIABLES ---
@@ -8,7 +7,7 @@ let allMessages = [];
 let cachedContacts = []; 
 
 // --- UI & NAVIGATION ---
-function showAppUI(userData) {
+function showAppUI() {
     const mainApp = document.getElementById('main-app');
     if (mainApp) {
         mainApp.style.opacity = '1';
@@ -57,7 +56,7 @@ function renderContacts(contacts) {
 
         item.innerHTML = `
             <div class="w-12 h-12 rounded-2xl bg-accent-blue/20 flex items-center justify-center font-bold text-accent-blue uppercase">
-                ${c.nickname.charAt(0)}
+                ${c.nickname ? c.nickname.charAt(0) : '?'}
             </div>
             <div class="flex-1 min-w-0">
                 <p class="text-sm font-bold truncate ${isActive ? 'text-white' : 'text-gray-200'}">${c.nickname}</p>
@@ -105,11 +104,11 @@ function renderMessages() {
     allMessages.forEach(msg => {
         const isMe = msg.sender_name === 'Admin';
         const msgHtml = `
-            <div class="flex ${isMe ? 'justify-end' : 'justify-start'} w-full">
+            <div class="flex ${isMe ? 'justify-end' : 'justify-start'} w-full mb-4">
                 <div class="max-w-[75%] p-4 rounded-3xl text-sm ${
-                    isMe ? 'bg-accent-blue text-white rounded-tr-none' : 'bg-ios-gray text-gray-100 rounded-tl-none border border-border-gray'
+                    isMe ? 'bg-accent-blue text-white rounded-tr-none' : 'bg-gray-800 text-gray-100 rounded-tl-none border border-gray-700'
                 }">
-                    <p>${msg.message_text}</p>
+                    <p>${msg.message_text || ''}</p>
                     <span class="text-[9px] opacity-50 mt-1 block">
                         ${new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </span>
@@ -137,23 +136,43 @@ async function sendMessage() {
 
         if (!error) {
             input.value = "";
-            // Realtime က auto update လုပ်ပေးပါလိမ့်မယ်
+            // Realtime listener က loadHistory ကို လှမ်းခေါ်ပေးပါလိမ့်မယ်
         } else {
             console.error("Send Error:", error);
         }
     }
 }
 
+// --- REAL-TIME SUBSCRIPTION ---
+function setupRealtime() {
+    if (!supabase) return;
+    
+    supabase
+        .channel('schema-db-changes')
+        .on('postgres_changes', 
+            { event: 'INSERT', schema: 'public', table: 'messages' }, 
+            (payload) => {
+                console.log('New message received!', payload);
+                // Contact list အသစ်တွေကို ပြန်ဆွဲမယ်
+                loadContacts();
+                // အကယ်၍ လက်ရှိဖွင့်ထားတဲ့ Chat ထဲကစာဆိုရင် History ကို update လုပ်မယ်
+                if (currentChatId && (payload.new.sender_name === currentChatId || payload.new.receiver_name === currentChatId)) {
+                    loadHistory();
+                }
+            }
+        )
+        .subscribe();
+}
+
 // --- INITIALIZATION ---
 window.addEventListener('load', async () => { 
     showAppUI();
     await loadContacts();
+    setupRealtime(); // Real-time ကို စတင်ဖွင့်လှစ်ခြင်း
     
-    // Enter Key စစ်ဖို့ listener ထည့်မယ်
     document.getElementById('user-input')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
 });
 
-// Global functions for HTML
 window.sendMessage = sendMessage;
