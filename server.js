@@ -24,7 +24,7 @@ const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 app.use('/uploads', express.static(uploadDir));
 
-// Multer Setup
+// Multer Setup (Memory storage for easy handling)
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
@@ -33,9 +33,10 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// ၁။ Database Tables Initialization
+// ၁။ Database Tables & Settings Initialization
 const initDb = async () => {
     try {
+        // Create Contacts Table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS contacts (
                 chat_id TEXT PRIMARY KEY,
@@ -50,6 +51,7 @@ const initDb = async () => {
             )
         `);
 
+        // Create Messages Table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS messages (
                 id SERIAL PRIMARY KEY,
@@ -65,16 +67,27 @@ const initDb = async () => {
             )
         `);
 
-        await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false`);
-
+        // Create Settings Table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY,
                 value TEXT
             )
         `);
+
+        // Default Settings Initialization
+        const defaultSettings = [
+            ['admin_nickname', 'OmniBot'],
+            ['enable_autoreply', 'false'],
+            ['autoreply_text', 'မင်္ဂလာပါ၊ ခဏစောင့်ပေးပါခင်ဗျာ...'],
+            ['site_name', 'OmniBot Dashboard']
+        ];
+
+        for (const [key, val] of defaultSettings) {
+            await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', [key, val]);
+        }
         
-        console.log("✅ Database structure ready.");
+        console.log("✅ Database & Settings ready.");
     } catch (err) {
         console.error("❌ DB Init Error:", err.message);
     }
@@ -90,7 +103,7 @@ async function getTelegramProfilePic(userId, token) {
             const fileRes = await axios.get(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
             return `https://api.telegram.org/file/bot${token}/${fileRes.data.result.file_path}`;
         }
-    } catch (e) { console.error("Avatar Fetch Error"); }
+    } catch (e) { /* Silent fail */ }
     return `https://ui-avatars.com/api/?name=User&background=random`;
 }
 
@@ -98,9 +111,11 @@ async function getTelegramProfilePic(userId, token) {
 async function handleIncomingMessage(payload) {
     const { sender, text, platform, chatId, profilePic, fileUrl, fileType } = payload;
     try {
+        // Mark previous bot messages as read when user replies
         await pool.query("UPDATE messages SET is_read = true WHERE chat_id = $1 AND sender_type = 'bot'", [chatId]);
         io.emit('messages_read', { chatId, role: 'bot' });
 
+        // Save/Update Contact
         await pool.query(`
             INSERT INTO contacts (chat_id, first_name, profile_pic, platform) 
             VALUES ($1, $2, $3, $4) 
@@ -108,6 +123,7 @@ async function handleIncomingMessage(payload) {
             [chatId, sender, profilePic, platform]
         );
 
+        // Save Incoming Message
         const msgRes = await pool.query(
             "INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time",
             [sender, text, platform, chatId, 'user', fileUrl, fileType]
@@ -115,6 +131,7 @@ async function handleIncomingMessage(payload) {
 
         io.emit('new_message', msgRes.rows[0]);
 
+        // --- Auto Reply Logic ---
         const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'enable_autoreply', 'autoreply_text', 'admin_nickname')");
         const settingsMap = {};
         settingsRes.rows.forEach(r => settingsMap[r.key] = r.value);
@@ -135,10 +152,8 @@ async function handleIncomingMessage(payload) {
     } catch (err) { console.error("Unified Logic Error:", err.message); }
 }
 
-// --- Routes (No Login/Auth Required) ---
+// --- Routes ---
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/settings', (req, res) => res.sendFile(path.join(__dirname, 'general-settings.html')));
-app.get('/broadcast', (req, res) => res.sendFile(path.join(__dirname, 'broadcast.html')));
 
 app.get('/api/admin/profile', async (req, res) => {
     try {
@@ -166,46 +181,12 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/contacts/update-nickname', async (req, res) => {
-    const { chatId, nickname } = req.body;
-    try {
-        await pool.query('UPDATE contacts SET nickname = $1 WHERE chat_id = $2', [nickname, chatId]);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.patch('/api/contacts/:chatId/details', async (req, res) => {
-    const { chatId } = req.params;
-    const { nickname, notes } = req.body;
-    try {
-        await pool.query('UPDATE contacts SET nickname = $1, notes = $2 WHERE chat_id = $3', [nickname, notes, chatId]);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 app.post('/api/messages/read', async (req, res) => {
     const { chatId } = req.body;
     try {
         await pool.query("UPDATE messages SET is_read = true WHERE chat_id = $1 AND sender_type = 'user'", [chatId]);
         io.emit('messages_read', { chatId, role: 'user' });
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.delete('/api/contacts/:chatId', async (req, res) => {
-    const { chatId } = req.params;
-    try {
-        await pool.query('DELETE FROM messages WHERE chat_id = $1', [chatId]);
-        await pool.query('DELETE FROM contacts WHERE chat_id = $1', [chatId]);
-        res.json({ success: true, message: "Conversation deleted" });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/contacts/status', async (req, res) => {
-    const { chatId, status } = req.body;
-    try {
-        await pool.query('UPDATE contacts SET status = $1 WHERE chat_id = $2', [status, chatId]);
-        res.json({ success: true, status });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -228,8 +209,7 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
             settingsData.admin_avatar = base64Image;
         }
 
-        const keys = Object.keys(settingsData);
-        for (const key of keys) {
+        for (const key of Object.keys(settingsData)) {
             const val = settingsData[key];
             if (val !== undefined) {
                 await pool.query(
@@ -242,105 +222,20 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
         io.emit('settings_updated', settingsData);
 
         if (settingsData.telegram_token) {
-            try {
-                await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
-            } catch (e) { console.error("Webhook Update Error"); }
+            await axios.get(`https://api.telegram.org/bot${settingsData.telegram_token}/setWebhook?url=${RENDER_URL}/webhook/telegram`);
         }
 
         res.json({ success: true, settings: settingsData });
     } catch (err) { 
-        console.error("Bulk Save Error:", err.message);
         res.status(500).json({ error: err.message }); 
     }
 });
 
-app.post('/api/admin/upload', upload.single('file'), async (req, res) => {
-    const { chatId } = req.body;
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-    
-    const base64File = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-    
-    try {
-        const contactRes = await pool.query('SELECT platform FROM contacts WHERE chat_id = $1', [chatId]);
-        const platform = contactRes.rows[0]?.platform || 'Unknown';
-        const settingsRes = await pool.query("SELECT value FROM settings WHERE key = 'admin_nickname'");
-        const adminName = settingsRes.rows[0]?.value || 'OmniBot';
-
-        const msgRes = await pool.query(
-            "INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time",
-            [adminName, `Sent an image`, platform, chatId, 'bot', base64File, 'image']
-        );
-
-        if (platform === 'Telegram') {
-            const tokenRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
-            const token = tokenRes.rows[0]?.value;
-            if (token) {
-                const form = new FormData();
-                form.append('chat_id', chatId);
-                form.append('photo', req.file.buffer, { filename: req.file.originalname });
-                await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, form, { headers: form.getHeaders() });
-            }
-        }
-        io.emit('new_message', msgRes.rows[0]);
-        res.json({ success: true, fileUrl: base64File });
-    } catch (err) { 
-        console.error("Upload Error:", err.message);
-        res.status(500).json({ error: err.message }); 
-    }
-});
-
-app.post('/api/broadcast', upload.single('file'), async (req, res) => {
-    try {
-        const { text } = req.body;
-        const file = req.file;
-        const base64File = file ? `data:${file.mimetype};base64,${file.buffer.toString('base64')}` : null;
-
-        const settingsRes = await pool.query("SELECT value, key FROM settings WHERE key IN ('telegram_token', 'admin_nickname')");
-        const settingsMap = {};
-        settingsRes.rows.forEach(r => settingsMap[r.key] = r.value);
-        
-        const token = settingsMap['telegram_token'];
-        const adminName = settingsMap['admin_nickname'] || 'OmniBot';
-
-        if (!token) return res.status(400).json({ success: false, error: "Telegram Token not found!" });
-
-        const contacts = await pool.query("SELECT chat_id, platform FROM contacts WHERE status = 'active'");
-        let count = 0;
-
-        for (const contact of contacts.rows) {
-            try {
-                if (contact.platform === 'Telegram') {
-                    if (file) {
-                        const form = new FormData();
-                        form.append('chat_id', contact.chat_id);
-                        form.append('photo', file.buffer, { filename: 'broadcast_image.jpg' });
-                        if (text) form.append('caption', text);
-                        await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, form, { headers: form.getHeaders() });
-                    } else if (text) {
-                        await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, { chat_id: contact.chat_id, text: text });
-                    }
-                }
-
-                const msgRes = await pool.query("INSERT INTO messages (sender, text, platform, chat_id, sender_type, file_url, file_type, is_read) VALUES ($1, $2, $3, $4, $5, $6, $7, false) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time",
-                    [adminName, text || "Sent an image", contact.platform, contact.chat_id, 'bot', base64File, file ? 'image' : null]);
-
-                io.emit('new_message', msgRes.rows[0]);
-
-                count++;
-                await new Promise(resolve => setTimeout(resolve, 200));
-            } catch (e) { console.error(`Failed to send to ${contact.chat_id}:`, e.message); }
-        }
-
-        res.json({ success: true, count: count });
-    } catch (err) {
-        console.error("Broadcast Error:", err.message);
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
+// --- Telegram Webhook ---
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
-    if (!update.message) return res.sendStatus(200);
+    // အရေးကြီးသည်- Bot ကိုယ်တိုင် ပြန်ပို့တဲ့စာဆိုရင် ဘာမှမလုပ်ဘဲ ကျော်မယ် (Loop မဖြစ်အောင်)
+    if (!update.message || update.message.from.is_bot) return res.sendStatus(200);
 
     const chatId = update.message.chat.id.toString();
     const sender = `${update.message.from.first_name || ""} ${update.message.from.last_name || ""}`.trim() || "Unknown";
@@ -348,6 +243,7 @@ app.post('/webhook/telegram', async (req, res) => {
     let fileUrl = null, fileType = null;
 
     try {
+        // Block check
         const contactCheck = await pool.query('SELECT status FROM contacts WHERE chat_id = $1', [chatId]);
         if (contactCheck.rows[0]?.status === 'blocked') return res.sendStatus(200);
 
@@ -371,14 +267,6 @@ app.post('/webhook/telegram', async (req, res) => {
 
 // --- Socket.io Logic ---
 io.on('connection', (socket) => {
-    socket.on('mark_as_read', async (data) => {
-        try {
-            const { chatId } = data;
-            await pool.query("UPDATE messages SET is_read = true WHERE chat_id = $1 AND sender_type = 'user'", [chatId]);
-            io.emit('messages_read', { chatId, role: 'user' });
-        } catch (e) { console.error("Socket Read Error"); }
-    });
-
     socket.on('send_reply', async (data) => {
         try {
             const contactRes = await pool.query('SELECT platform FROM contacts WHERE chat_id = $1', [data.chatId]);
