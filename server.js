@@ -27,15 +27,22 @@ const pool = new Pool({
 // ၁။ Database Tables Initialization
 const initDb = async () => {
     try {
+        // မင်းရဲ့ Table Column နာမည်တွေနဲ့ ကိုက်အောင် ကုဒ်ကို ပြင်ထားပါတယ်
         await pool.query(`CREATE TABLE IF NOT EXISTS contacts (chat_id TEXT PRIMARY KEY, first_name TEXT, profile_pic TEXT, platform TEXT, status TEXT DEFAULT 'active', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-        await pool.query(`CREATE TABLE IF NOT EXISTS messages (id SERIAL PRIMARY KEY, sender TEXT, text TEXT, platform TEXT, chat_id TEXT, sender_type TEXT, is_read BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS messages (id SERIAL PRIMARY KEY, sender_name TEXT, message_text TEXT, platform TEXT, chat_id TEXT, receiver_name TEXT, is_read BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`);
+        
+        // Telegram Token ကို settings table ထဲ သိမ်းထားခြင်း
+        if (process.env.TELEGRAM_BOT_TOKEN) {
+            await pool.query("INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", ['telegram_token', process.env.TELEGRAM_BOT_TOKEN]);
+        }
+        
         console.log("✅ Supabase Database Ready.");
     } catch (err) { console.error("❌ DB Init Error:", err.message); }
 };
 initDb();
 
-// ၂။ Unified Message Logic (Supabase ထဲ သိမ်းမည့်အပိုင်း)
+// ၂။ Unified Message Logic (မင်းရဲ့ Supabase Column နာမည်တွေဖြစ်တဲ့ sender_name, message_text တို့ကို သုံးထားပါတယ်)
 async function handleIncomingMessage(payload) {
     const { sender, text, platform, chatId, profilePic } = payload;
     try {
@@ -47,19 +54,19 @@ async function handleIncomingMessage(payload) {
             [chatId, sender, profilePic, platform]
         );
 
-        // Save Message
+        // Save Message (receiver_name ကို 'Admin' လို့ သတ်မှတ်ထားပါတယ်)
         const msgRes = await pool.query(
-            "INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5) RETURNING *, TO_CHAR(created_at, 'HH12:MI AM') as time",
-            [sender, text, platform, chatId, 'user']
+            "INSERT INTO messages (sender_name, message_text, platform, chat_id, receiver_name) VALUES ($1, $2, $3, $4, $5) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time",
+            [sender, text, platform, chatId, 'Admin']
         );
 
+        // UI ကို ချက်ချင်းပို့မယ်
         io.emit('new_message', msgRes.rows[0]);
-    } catch (err) { console.error("Database Save Error:", err.message); }
+    } catch (err) { console.error("❌ Database Save Error:", err.message); }
 }
 
 // --- WEBHOOKS ---
 
-// (က) Telegram Webhook
 app.post('/webhook/telegram', async (req, res) => {
     const update = req.body;
     if (!update.message || update.message.from.is_bot) return res.sendStatus(200);
@@ -68,29 +75,23 @@ app.post('/webhook/telegram', async (req, res) => {
     const sender = update.message.from.first_name || "Telegram User";
     const text = update.message.text || "Sent an attachment";
     
-    await handleIncomingMessage({ sender, text, platform: 'Telegram', chatId, profilePic: '' });
+    await handleIncomingMessage({ sender, text, platform: 'telegram', chatId, profilePic: '' });
     res.sendStatus(200);
 });
 
-// (ခ) Viber Webhook
 app.post('/webhook/viber', async (req, res) => {
     const update = req.body;
     if (update.event === 'message') {
         const chatId = update.sender.id;
         const sender = update.sender.name;
         const text = update.message.text;
-        
-        await handleIncomingMessage({ sender, text, platform: 'Viber', chatId, profilePic: update.sender.avatar });
+        await handleIncomingMessage({ sender, text, platform: 'viber', chatId, profilePic: update.sender.avatar });
     }
     res.sendStatus(200);
 });
 
-// (ဂ) Messenger Webhook
 app.get('/webhook/messenger', (req, res) => {
-    const mode = req.query['hub.mode'];
-    const token = req.query['hub.verify_token'];
-    const challenge = req.query['hub.challenge'];
-    if (mode && token === process.env.FB_VERIFY_TOKEN) res.status(200).send(challenge);
+    if (req.query['hub.verify_token'] === process.env.FB_VERIFY_TOKEN) res.status(200).send(req.query['hub.challenge']);
     else res.sendStatus(403);
 });
 
@@ -102,7 +103,7 @@ app.post('/webhook/messenger', async (req, res) => {
             if (webhook_event.message && !webhook_event.message.is_echo) {
                 const chatId = webhook_event.sender.id;
                 const text = webhook_event.message.text;
-                await handleIncomingMessage({ sender: "FB User", text, platform: 'Messenger', chatId, profilePic: '' });
+                await handleIncomingMessage({ sender: "FB User", text, platform: 'messenger', chatId, profilePic: '' });
             }
         });
         res.status(200).send('EVENT_RECEIVED');
@@ -111,31 +112,30 @@ app.post('/webhook/messenger', async (req, res) => {
 
 // --- API Routes ---
 app.get('/api/messages', async (req, res) => {
-    const result = await pool.query("SELECT *, TO_CHAR(created_at, 'HH12:MI AM') as time FROM messages ORDER BY id ASC");
-    res.json(result.rows);
+    try {
+        const result = await pool.query("SELECT *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time FROM messages ORDER BY id ASC");
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get('/api/contacts', async (req, res) => {
-    const result = await pool.query('SELECT * FROM contacts ORDER BY created_at DESC');
-    res.json(result.rows);
-});
-
-// --- Socket.io: စာပြန်ပို့တဲ့အပိုင်း ---
+// --- Socket.io: Dashboard ကနေ စာပြန်ပို့တဲ့အပိုင်း ---
 io.on('connection', (socket) => {
     socket.on('send_reply', async (data) => {
         const { chatId, text, platform } = data;
         try {
-            // Platform အလိုက် API လှမ်းခေါ်ခြင်း (Telegram သာ နမူနာပြထားသည်)
-            if (platform === 'Telegram') {
-                const tokenRes = await pool.query("SELECT value FROM settings WHERE key = 'telegram_token'");
-                await axios.post(`https://api.telegram.org/bot${tokenRes.rows[0].value}/sendMessage`, { chat_id: chatId, text: text });
+            // ၁။ Platform အလိုက် API လှမ်းခေါ်ခြင်း
+            if (platform === 'telegram') {
+                await axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, { chat_id: chatId, text: text });
             }
-            // Database ထဲ သိမ်းခြင်း
-            await pool.query("INSERT INTO messages (sender, text, platform, chat_id, sender_type) VALUES ($1, $2, $3, $4, $5)", 
-                ['Admin', text, platform, chatId, 'bot']);
+
+            // ၂။ Database ထဲ သိမ်းခြင်း (platform ကို 'admin' လို့ သိမ်းပါမယ်)
+            const replyRes = await pool.query(
+                "INSERT INTO messages (sender_name, message_text, platform, chat_id, receiver_name) VALUES ($1, $2, $3, $4, $5) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time", 
+                ['Admin', text, 'admin', chatId, 'User']
+            );
             
-            io.emit('new_message', { sender: 'Admin', text, chat_id: chatId, sender_type: 'bot' });
-        } catch (e) { console.error("Reply Error"); }
+            io.emit('new_message', replyRes.rows[0]);
+        } catch (e) { console.error("❌ Reply Error:", e.message); }
     });
 });
 
