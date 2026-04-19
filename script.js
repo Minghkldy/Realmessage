@@ -1,5 +1,4 @@
 // --- SUPABASE CONFIGURATION ---
-// index.html မှာ ကြေညာထားပြီးသားဖြစ်လို့ ဒီမှာ window.supabase ကို ပြန်သုံးပါမယ်
 const supabase = window.supabase; 
 
 // --- AUTH LOGIC (Bypassed) ---
@@ -32,7 +31,7 @@ function showAppUI(userData) {
 }
 
 // --- MESSAGING & UI LOGIC ---
-const socket = io();
+const socket = (typeof io !== 'undefined') ? io() : { on: () => {}, emit: () => {} }; // socket.io မရှိရင် error မတက်အောင် safe check ထည့်ထားပါတယ်
 let currentChatId = "";
 let allMessages = [];
 let unreadCounts = {};
@@ -136,6 +135,7 @@ function closeImagePreview() {
 
 async function loadContacts() {
     try {
+        if (!supabase) return;
         const { data, error } = await supabase
             .from('contacts')
             .select('*'); 
@@ -184,7 +184,8 @@ function renderContacts(contacts) {
 function selectContact(contact) {
     currentChatId = contact.chat_id;
     unreadCounts[currentChatId] = 0; 
-    document.getElementById('chat-header-name').innerText = contact.nickname || contact.first_name;
+    const headerName = document.getElementById('chat-header-name');
+    if (headerName) headerName.innerText = contact.nickname || contact.first_name;
     
     const editNicknameEl = document.getElementById('edit-nickname');
     if (editNicknameEl) editNicknameEl.value = contact.nickname || contact.first_name;
@@ -214,7 +215,8 @@ async function updateNickname() {
             const contact = cachedContacts.find(c => c.chat_id === currentChatId);
             if (contact) contact.nickname = newNickname;
             renderContacts(cachedContacts); 
-            document.getElementById('chat-header-name').innerText = newNickname;
+            const headerName = document.getElementById('chat-header-name');
+            if (headerName) headerName.innerText = newNickname;
         }
     } catch (err) { console.error(err); }
 }
@@ -230,6 +232,7 @@ function updateGlobalBadge() {
 
 async function loadHistory() {
     try {
+        if (!supabase) return;
         const { data, error } = await supabase
             .from('messages')
             .select('*')
@@ -310,20 +313,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     await loadHistory(); 
 });
 
-socket.on('new_message', (data) => {
-    const senderId = data.chat_id || data.chatId;
-    if (currentChatId === senderId) {
-        if (data.sender_type !== 'bot') {
+if (socket && socket.on) {
+    socket.on('new_message', (data) => {
+        const senderId = data.chat_id || data.chatId;
+        if (currentChatId === senderId) {
+            if (data.sender_type !== 'bot') {
+                allMessages.push(data);
+                appendMessage(data, false);
+            }
+            socket.emit('mark_as_read', { chatId: currentChatId });
+        } else {
             allMessages.push(data);
-            appendMessage(data, false);
+            unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
+            renderContacts(cachedContacts);
         }
-        socket.emit('mark_as_read', { chatId: currentChatId });
-    } else {
-        allMessages.push(data);
-        unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-        renderContacts(cachedContacts);
-    }
-});
+    });
+}
 
 async function handleForgotPassword() { return; }
 
@@ -342,3 +347,4 @@ window.toggleLeftSidebar = toggleLeftSidebar;
 window.toggleRightPanel = toggleRightPanel;
 window.toggleDropdown = toggleDropdown;
 window.closeImagePreview = closeImagePreview;
+window.filterContacts = filterContacts; // HTML က ခေါ်သုံးနိုင်ဖို့ ထပ်ထည့်ပေးထားပါတယ်
