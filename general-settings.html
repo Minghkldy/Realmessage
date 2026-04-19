@@ -8,20 +8,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background-color: #050505; color: white; font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        body { background-color: #050505; color: white; font-family: 'Inter', sans-serif; }
         .glass-card {
             background: rgba(255, 255, 255, 0.03);
             backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
         }
-        .ios-switch:checked ~ .dot { transform: translateX(100%); background-color: #3b82f6; }
-        input, textarea { transition: all 0.3s ease; }
-        input:focus, textarea:focus { border-color: #3b82f6 !important; box-shadow: 0 0 10px rgba(59, 130, 246, 0.2); }
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #050505; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        /* Custom Switch */
+        .ios-switch:checked ~ .dot-bg { background-color: #3b82f6; }
+        .ios-switch:checked ~ .dot { transform: translateX(100%); }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -31,7 +27,6 @@
         </h1>
 
         <div class="space-y-6">
-            
             <div class="glass-card p-6">
                 <h2 class="text-lg font-semibold mb-4 text-blue-400"><i class="fas fa-globe mr-2"></i> Site Information</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -51,27 +46,23 @@
                 <div class="flex items-center space-x-6">
                     <div class="relative">
                         <img id="avatar_preview" src="https://ui-avatars.com/api/?name=Admin&background=random" class="w-20 h-20 rounded-full border-2 border-green-500/50 object-cover">
-                        <label for="avatar_input" class="absolute bottom-0 right-0 bg-green-500 p-1.5 rounded-full cursor-pointer hover:bg-green-600 transition">
-                            <i class="fas fa-camera text-xs"></i>
-                        </label>
-                        <input type="file" id="avatar_input" class="hidden" accept="image/*">
                     </div>
                     <div class="flex-1">
-                        <label class="block text-sm text-gray-400 mb-2">Admin Email</label>
-                        <input type="email" id="admin_email" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none text-gray-400" placeholder="admin@example.com">
+                        <label class="block text-sm text-gray-400 mb-2">Admin Email (Login Email)</label>
+                        <input type="email" id="admin_email" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none text-gray-400" readonly>
                     </div>
                 </div>
             </div>
 
             <div class="glass-card p-6">
-                <h2 class="text-lg font-semibold mb-4 text-orange-400"><i class="fas fa-robot mr-2"></i> Automation & AI</h2>
+                <h2 class="text-lg font-semibold mb-4 text-orange-400"><i class="fas fa-robot mr-2"></i> Automation</h2>
                 <div class="space-y-4">
                     <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg">
                         <span>Enable Auto-Reply Message</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="enable_autoreply" class="sr-only ios-switch">
-                            <div class="w-11 h-6 bg-gray-700 rounded-full dot-bg"></div>
-                            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                            <div class="w-11 h-6 bg-gray-700 rounded-full dot-bg transition-colors"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform"></div>
                         </label>
                     </div>
                     <div>
@@ -81,121 +72,90 @@
                 </div>
             </div>
 
-            <div class="glass-card p-6 border-red-500/20">
-                <h2 class="text-lg font-semibold mb-4 text-red-400"><i class="fas fa-shield-alt mr-2"></i> Security (Offline)</h2>
-                <p class="text-xs text-gray-500 mb-4">* Login စနစ်ပိတ်ထားသဖြင့် Password ပြင်ဆင်၍မရနိုင်ပါ။</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-50 pointer-events-none">
-                    <div class="md:col-span-2">
-                        <label class="block text-sm text-gray-400 mb-2">Current Password</label>
-                        <input type="password" id="old_password_input" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none mb-4" placeholder="Enter current password" disabled>
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-2">New Password</label>
-                        <input type="password" id="new_password_input" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none" placeholder="New password" disabled>
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-2">Confirm Password</label>
-                        <input type="password" id="confirm_password_input" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none" placeholder="Confirm new password" disabled>
-                    </div>
-                </div>
-            </div>
-
-            <button onclick="saveSettings()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95">
+            <button onclick="saveSettings()" id="saveBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95">
                 <i class="fas fa-save mr-2"></i> SAVE ALL SETTINGS
             </button>
         </div>
     </div>
 
     <script>
+        // Parent Window က Supabase Connection ကို ယူသုံးမယ်
+        const supabase = window.parent.supabase;
+
         function updateAvatarPreview(name) {
             const preview = document.getElementById('avatar_preview');
-            if (name.trim() !== "" && !document.getElementById('avatar_input').files.length) {
-                const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
-                preview.src = avatarUrl;
+            if (name.trim() !== "") {
+                preview.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
             }
         }
 
-        document.getElementById('avatar_input').onchange = function (evt) {
-            const [file] = this.files;
-            if (file) {
-                document.getElementById('avatar_preview').src = URL.createObjectURL(file);
-            }
-        }
-
-        async function saveSettings() {
-            const formData = new FormData();
-            const nickname = document.getElementById('admin_nickname').value;
-            formData.append('site_name', document.getElementById('site_name').value);
-            formData.append('admin_nickname', nickname);
-            formData.append('admin_email', document.getElementById('admin_email').value);
-            formData.append('enable_autoreply', document.getElementById('enable_autoreply').checked);
-            formData.append('autoreply_text', document.getElementById('autoreply_text').value);
-
-            const avatarInput = document.getElementById('avatar_input');
-            let finalAvatarUrl = "";
-
-            if (avatarInput.files.length > 0) {
-                formData.append('avatar', avatarInput.files[0]);
-            } else {
-                finalAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random&color=fff`;
-                formData.append('admin_avatar', finalAvatarUrl);
-            }
-            
+        // Database ထဲက လက်ရှိ Settings တွေ ဆွဲထုတ်မယ်
+        async function loadSettings() {
             try {
-                const response = await fetch('/api/settings/bulk', {
-                    method: 'POST',
-                    body: formData 
-                });
+                const { data, error } = await supabase
+                    .from('settings')
+                    .select('*')
+                    .single(); // Settings က တစ်ကြောင်းပဲ ရှိရမယ်
 
-                if (response.ok) {
-                    const result = await response.json();
-                    const updatedAvatar = result.admin_avatar || finalAvatarUrl;
-                    
-                    localStorage.setItem('admin_avatar', updatedAvatar);
-                    localStorage.setItem('admin_nickname', nickname);
-
-                    if (window.parent) {
-                        const event = new CustomEvent('profileUpdate', { 
-                            detail: { avatar: updatedAvatar, nickname: nickname } 
-                        });
-                        window.parent.dispatchEvent(event);
-                    }
-
-                    alert("✅ Settings အားလုံးကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။");
-                    
-                } else {
-                    alert("❌ သိမ်းဆည်းရာတွင် အမှားအယွင်းရှိခဲ့သည်။");
+                if (data) {
+                    document.getElementById('site_name').value = data.site_name || "";
+                    document.getElementById('admin_nickname').value = data.admin_nickname || "";
+                    document.getElementById('admin_email').value = data.admin_email || "Not Set";
+                    document.getElementById('enable_autoreply').checked = data.enable_autoreply;
+                    document.getElementById('autoreply_text').value = data.autoreply_text || "";
+                    updateAvatarPreview(data.admin_nickname);
                 }
             } catch (err) {
-                console.error("Save Error:", err);
-                alert("❌ Server နှင့် ချိတ်ဆက်၍မရပါ။");
+                console.error("Load Error:", err);
             }
         }
 
-        window.onload = async () => {
+        // Settings တွေ သိမ်းမယ်
+        async function saveSettings() {
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> SAVING...';
+
+            const nickname = document.getElementById('admin_nickname').value;
+            const updateData = {
+                site_name: document.getElementById('site_name').value,
+                admin_nickname: nickname,
+                enable_autoreply: document.getElementById('enable_autoreply').checked,
+                autoreply_text: document.getElementById('autoreply_text').value,
+                updated_at: new Date()
+            };
+
             try {
-                // Settings များကို API မှ တိုက်ရိုက် Load လုပ်ခြင်း
-                const res = await fetch('/api/settings');
-                if (res.ok) {
-                    const data = await res.json();
-                    
-                    if (data.site_name) document.getElementById('site_name').value = data.site_name;
-                    if (data.admin_email) document.getElementById('admin_email').value = data.admin_email;
-                    if (data.admin_nickname) {
-                        document.getElementById('admin_nickname').value = data.admin_nickname;
-                        const currentAvatar = data.admin_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.admin_nickname)}&background=random&color=fff`;
-                        document.getElementById('avatar_preview').src = currentAvatar;
-                    }
-                    if (data.autoreply_text) document.getElementById('autoreply_text').value = data.autoreply_text;
-                    
-                    if(document.getElementById('enable_autoreply')) {
-                        document.getElementById('enable_autoreply').checked = (data.enable_autoreply === "true" || data.enable_autoreply === true);
-                    }
+                // လက်ရှိ row ကိုပဲ Update လုပ်မယ် (ID = 1 လို့ ယူဆထားပါတယ်)
+                const { error } = await supabase
+                    .from('settings')
+                    .update(updateData)
+                    .eq('id', 1);
+
+                if (error) throw error;
+
+                // Sidebar က Profile တွေပါ ချက်ချင်းပြောင်းသွားအောင် LocalStorage နဲ့ Event သုံးမယ်
+                const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(nickname)}&background=random&color=fff`;
+                localStorage.setItem('admin_nickname', nickname);
+                localStorage.setItem('admin_avatar', avatarUrl);
+
+                if (window.parent) {
+                    const event = new CustomEvent('profileUpdate', { 
+                        detail: { nickname, avatar: avatarUrl } 
+                    });
+                    window.parent.dispatchEvent(event);
                 }
-            } catch (e) { 
-                console.error("Load Settings Error:", e); 
+
+                alert("✅ Settings အားလုံးကို သိမ်းဆည်းပြီးပါပြီ။");
+            } catch (err) {
+                alert("❌ Error: " + err.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i> SAVE ALL SETTINGS';
             }
-        };
+        }
+
+        window.onload = loadSettings;
     </script>
 </body>
 </html>
