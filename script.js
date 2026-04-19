@@ -3,7 +3,6 @@
 const supabase = window.supabase; 
 
 // --- AUTH LOGIC (Bypassed) ---
-// Login/SignUp စနစ်ကို ဖြုတ်လိုက်သော်လည်း Error မတက်စေရန် Function များကို dummy အဖြစ်ထားရှိပေးထားပါသည်
 async function handleLogin() { return; }
 async function handleSignUp() { return; }
 
@@ -12,7 +11,7 @@ async function handleLogout() {
     sessionStorage.clear();
     cachedContacts = [];
     allMessages = [];
-    window.location.reload(); // Login ဝင်စရာမလိုတော့သဖြင့် reload သာလုပ်ပါသည်
+    window.location.reload(); 
 }
 
 function showAppUI(userData) {
@@ -80,37 +79,42 @@ function toggleDropdown() {
     if (arrow) arrow.classList.toggle('rotate-90');
 }
 
+// --- NAVIGATION FIXED PORTION ---
 function switchToInbox() {
     document.getElementById('main-dashboard-content')?.classList.remove('hidden');
     document.getElementById('bot-settings-area')?.classList.add('hidden');
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
-    document.getElementById('inbox-nav')?.classList.add('active-nav');
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/5'));
+    document.getElementById('inbox-nav')?.classList.add('active-nav', 'bg-white/5');
     filterContacts('all');
 }
 
 function loadBotSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
-    document.getElementById('bot-config-nav')?.classList.add('active-nav');
-    document.getElementById('settings-frame').src = "bot-config.html";
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/5'));
+    document.getElementById('bot-config-nav')?.classList.add('active-nav', 'bg-white/5');
+    const frame = document.getElementById('settings-frame');
+    if (frame) frame.src = "bot-config.html";
 }
 
 function loadBroadcastSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
-    document.getElementById('broadcast-nav')?.classList.add('active-nav');
-    document.getElementById('settings-frame').src = "broadcast.html";
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/5'));
+    document.getElementById('broadcast-nav')?.classList.add('active-nav', 'bg-white/5');
+    const frame = document.getElementById('settings-frame');
+    if (frame) frame.src = "broadcast.html";
 }
 
 function loadGeneralSettings() {
     document.getElementById('main-dashboard-content')?.classList.add('hidden');
     document.getElementById('bot-settings-area')?.classList.remove('hidden');
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
-    document.getElementById('sidebar-settings')?.classList.add('active-nav');
-    document.getElementById('settings-frame').src = "general-settings.html";
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/5'));
+    document.getElementById('sidebar-settings')?.classList.add('active-nav', 'bg-white/5');
+    const frame = document.getElementById('settings-frame');
+    if (frame) frame.src = "general-settings.html";
 }
+// --- END OF NAVIGATION FIXED PORTION ---
 
 function showImagePreview(url) {
     const modal = document.getElementById('imagePreviewModal');
@@ -132,7 +136,6 @@ function closeImagePreview() {
 
 async function loadContacts() {
     try {
-        // User ID မလိုတော့သဖြင့် တိုက်ရိုက်ဆွဲပါမည်
         const { data, error } = await supabase
             .from('contacts')
             .select('*'); 
@@ -227,7 +230,6 @@ function updateGlobalBadge() {
 
 async function loadHistory() {
     try {
-        // user_id check ဖြုတ်ပြီး history ကို တိုက်ရိုက်ဆွဲပါမည်
         const { data, error } = await supabase
             .from('messages')
             .select('*')
@@ -302,7 +304,6 @@ async function sendMessage() {
 
 // --- INITIALIZATION (Bypassing Auth Gate) ---
 window.addEventListener('DOMContentLoaded', async () => { 
-    // Auth session ကို မစစ်တော့ဘဲ UI ကို တိုက်ရိုက်ပြပါမည်
     showAppUI({ nickname: "Admin" });
     loadSystemSettings(); 
     await loadContacts(); 
