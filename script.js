@@ -1,63 +1,24 @@
 // --- SUPABASE CONFIGURATION ---
-const supabase = window.supabase; 
+// window.supabase က index.html ကနေ လာပါလိမ့်မယ်
+let supabase = window.supabase; 
 
 // --- VARIABLES ---
 let currentChatId = "";
 let allMessages = [];
-let unreadCounts = {};
 let cachedContacts = []; 
-const socket = (typeof io !== 'undefined') ? io() : { on: () => {}, emit: () => {} };
 
 // --- UI & NAVIGATION ---
 function showAppUI(userData) {
     const mainApp = document.getElementById('main-app');
     if (mainApp) {
-        mainApp.classList.remove('opacity-0', 'pointer-events-none');
         mainApp.style.opacity = '1';
+        mainApp.classList.remove('pointer-events-none');
     }
-    const nameEl = document.getElementById('top-admin-name');
-    if (nameEl) nameEl.innerText = userData?.nickname || "Admin";
-}
-
-function switchToInbox() {
-    document.getElementById('main-dashboard-content')?.classList.remove('hidden');
-    document.getElementById('bot-settings-area')?.classList.add('hidden');
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav', 'bg-white/5'));
-    document.getElementById('inbox-nav')?.classList.add('active-nav', 'bg-white/5');
-}
-
-function loadBotSettings() {
-    document.getElementById('main-dashboard-content')?.classList.add('hidden');
-    document.getElementById('bot-settings-area')?.classList.remove('hidden');
-    const frame = document.getElementById('settings-frame');
-    if (frame) frame.src = "bot-config.html";
-}
-
-function loadBroadcastSettings() {
-    document.getElementById('main-dashboard-content')?.classList.add('hidden');
-    document.getElementById('bot-settings-area')?.classList.remove('hidden');
-    const frame = document.getElementById('settings-frame');
-    if (frame) frame.src = "broadcast.html";
-}
-
-// --- SIDEBAR & PANELS ---
-function toggleLeftSidebar() { 
-    document.getElementById('left-sidebar')?.classList.toggle('-translate-x-full');
-}
-
-function toggleRightPanel() { 
-    document.getElementById('right-panel')?.classList.toggle('hidden');
-}
-
-function toggleDropdown() {
-    const dropdown = document.getElementById('messenger-dropdown');
-    const arrow = document.getElementById('arrow-icon');
-    dropdown?.classList.toggle('hidden');
-    arrow?.classList.toggle('rotate-90');
 }
 
 // --- DATA LOADING ---
 async function loadContacts() {
+    if (!supabase) supabase = window.supabase;
     try {
         const { data, error } = await supabase
             .from('messages')
@@ -66,14 +27,14 @@ async function loadContacts() {
 
         if (error) throw error;
 
-        // Unique Contacts Logic
         const unique = {};
         data.forEach(m => {
-            if (!unique[m.sender_name]) {
+            // Admin ပို့တဲ့စာတွေကို Contact list ထဲမှာ နာမည်မပေါ်အောင် ဖယ်ထုတ်ထားမယ်
+            if (m.sender_name !== 'Admin' && !unique[m.sender_name]) {
                 unique[m.sender_name] = {
                     chat_id: m.sender_name,
                     nickname: m.sender_name,
-                    platform: m.platform || 'System',
+                    platform: m.platform || 'Messenger',
                     last_msg: m.message_text
                 };
             }
@@ -113,22 +74,21 @@ async function selectContact(contact) {
     document.getElementById('chat-status').innerText = 'Active Now';
     document.getElementById('header-avatar-text').innerText = contact.nickname.charAt(0).toUpperCase();
     
-    // Right Panel Update
-    document.getElementById('side-avatar-text').innerText = contact.nickname.charAt(0).toUpperCase();
-    document.getElementById('side-name').innerText = contact.nickname;
-    document.getElementById('side-platform').innerText = `Platform: ${contact.platform}`;
+    // Side Panel (if exists)
+    const sideName = document.getElementById('side-name');
+    if (sideName) sideName.innerText = contact.nickname;
 
     renderContacts(cachedContacts);
     await loadHistory();
 }
 
 async function loadHistory() {
-    if (!currentChatId) return;
+    if (!currentChatId || !supabase) return;
     try {
         const { data, error } = await supabase
             .from('messages')
             .select('*')
-            .or(`sender_name.eq.${currentChatId},receiver_name.eq.${currentChatId}`)
+            .or(`sender_name.eq."${currentChatId}",receiver_name.eq."${currentChatId}"`)
             .order('created_at', { ascending: true });
 
         if (error) throw error;
@@ -143,13 +103,13 @@ function renderMessages() {
     win.innerHTML = "";
 
     allMessages.forEach(msg => {
-        const isMe = msg.platform === 'admin' || msg.sender_name === 'Admin';
+        const isMe = msg.sender_name === 'Admin';
         const msgHtml = `
-            <div class="flex ${isMe ? 'justify-end' : 'justify-start'} w-full animate-in fade-in slide-in-from-bottom-2">
+            <div class="flex ${isMe ? 'justify-end' : 'justify-start'} w-full">
                 <div class="max-w-[75%] p-4 rounded-3xl text-sm ${
                     isMe ? 'bg-accent-blue text-white rounded-tr-none' : 'bg-ios-gray text-gray-100 rounded-tl-none border border-border-gray'
                 }">
-                    <p>${msg.message_text || msg.text}</p>
+                    <p>${msg.message_text}</p>
                     <span class="text-[9px] opacity-50 mt-1 block">
                         ${new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </span>
@@ -165,53 +125,35 @@ async function sendMessage() {
     const input = document.getElementById('user-input');
     const text = input?.value.trim();
     
-    if (text && currentChatId) {
+    if (text && currentChatId && supabase) {
         const { error } = await supabase
             .from('messages')
             .insert([{
                 sender_name: 'Admin',
                 receiver_name: currentChatId,
                 message_text: text,
-                platform: 'admin',
-                created_at: new Date()
+                platform: 'admin'
             }]);
 
         if (!error) {
             input.value = "";
-            await loadHistory();
+            // Realtime က auto update လုပ်ပေးပါလိမ့်မယ်
         } else {
             console.error("Send Error:", error);
         }
     }
 }
 
-function handleKeyPress(e) {
-    if (e.key === 'Enter') sendMessage();
-}
-
 // --- INITIALIZATION ---
-window.addEventListener('DOMContentLoaded', async () => { 
-    showAppUI({ nickname: "Admin" });
+window.addEventListener('load', async () => { 
+    showAppUI();
     await loadContacts();
     
-    // Realtime Listener
-    supabase
-        .channel('public:messages')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-            if (payload.new.sender_name === currentChatId || payload.new.receiver_name === currentChatId) {
-                loadHistory();
-            }
-            loadContacts();
-        })
-        .subscribe();
+    // Enter Key စစ်ဖို့ listener ထည့်မယ်
+    document.getElementById('user-input')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
 });
 
-// Global Assignments for HTML
-window.switchToInbox = switchToInbox;
-window.loadBotSettings = loadBotSettings;
-window.loadBroadcastSettings = loadBroadcastSettings;
+// Global functions for HTML
 window.sendMessage = sendMessage;
-window.toggleLeftSidebar = toggleLeftSidebar;
-window.toggleRightPanel = toggleRightPanel;
-window.toggleDropdown = toggleDropdown;
-window.handleKeyPress = handleKeyPress;
