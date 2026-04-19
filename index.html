@@ -8,39 +8,40 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        // Supabase Config & Initialization
-        const SUPABASE_URL = 'https://otmzadpotobeyowsblpz.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_dWshc23rPI0opSLiOCzjTw_fGqOVF7W';
 
-        if (!window.supabase_instance) {
-            window.supabase = window.supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY);
-            window.supabase_instance = true;
-        }
-        const supabase = window.supabase;
+<script>
+    // Config: ဒီနေရာမှာ URL နဲ့ Key ကို သေချာစစ်ဆေးပြီးသားပါ
+    const SUPABASE_URL = 'https://otmzadpotobeyowsblpz.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_dwshc23rPi0opSLi0CzjTw_FGqOVF7W';
 
-        // Realtime Subscription
-        function initRealtime() {
-            if (typeof supabase === 'undefined') return;
+    // Supabase Client ကို အမှန်ကန်ဆုံး တည်ဆောက်နည်း
+    // window.supabasejs က library ရဲ့ နာမည်ရင်းဖြစ်ပါတယ်
+    const { createClient } = window.supabasejs;
+    window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            const channel = supabase
-                .channel('realtime_messages')
-                .on(
-                    'postgres_changes',
-                    { event: 'INSERT', schema: 'public', table: 'messages' },
-                    (payload) => {
-                        console.log('New Message Arrived:', payload.new);
-                        // စာအသစ်ဝင်လာရင် Contact List နဲ့ History ကို Refresh လုပ်မယ်
-                        if (typeof loadContacts === 'function') loadContacts();
-                        if (typeof loadHistory === 'function') loadHistory();
-                        
-                        const sound = document.getElementById('notif-sound');
-                        if (sound) sound.play().catch(e => console.log('Audio play blocked'));
-                    }
-                )
-                .subscribe();
-        }
+    // အလွယ်ခေါ်သုံးလို့ရအောင် variable ပြန်သတ်မှတ်ခြင်း
+    const supabase = window.supabase;
 
+    // Realtime ကို အသက်သွင်းခြင်း
+    function initRealtime() {
+        if (!supabase) return;
+
+        const channel = supabase
+            .channel('realtime_messages')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'messages' },
+                (payload) => {
+                    console.log('New Message Arrived:', payload.new);
+                    if (typeof loadContacts === 'function') loadContacts();
+                    if (typeof loadHistory === 'function') loadHistory();
+                    
+                    const sound = document.getElementById('notif-sound');
+                    if (sound) sound.play().catch(e => console.log('Audio play blocked'));
+                }
+            )
+            .subscribe();
+    }
         // Navigation Functions
         function switchToInbox() {
             document.getElementById('main-dashboard-content').classList.remove('hidden');
