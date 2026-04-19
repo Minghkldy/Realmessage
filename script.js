@@ -2,111 +2,17 @@
 // index.html မှာ ကြေညာထားပြီးသားဖြစ်လို့ ဒီမှာ window.supabase ကို ပြန်သုံးပါမယ်
 const supabase = window.supabase; 
 
-// --- AUTH LOGIC ---
-async function handleLogin() {
-    const email = document.getElementById('login-email')?.value;
-    const password = document.getElementById('login-password')?.value;
-
-    if (!email || !password) {
-        alert("Email နှင့် Password ဖြည့်ပါ။");
-        return;
-    }
-
-    // Processing status ပြရန်
-    const loginBtn = document.getElementById('login-btn');
-    if (loginBtn) {
-        loginBtn.innerText = "PROCESSING...";
-        loginBtn.disabled = true;
-    }
-
-    try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password,
-        });
-
-        if (error) {
-            alert("Email သို့မဟုတ် Password မှားယွင်းနေပါသည်။ " + error.message);
-        } else {
-            // Session သိမ်းဆည်းခြင်း
-            localStorage.setItem('userSession', JSON.stringify(data.user));
-            showAppUI(data.user);
-            await loadContacts();
-            await loadHistory();
-            alert("Login အောင်မြင်ပါသည်။");
-        }
-    } catch (err) {
-        console.error("Login Error:", err);
-    } finally {
-        if (loginBtn) {
-            loginBtn.innerText = "SIGN IN";
-            loginBtn.disabled = false;
-        }
-    }
-}
-async function handleSignUp() {
-    const nickname = document.getElementById('reg-nickname')?.value;
-    const email = document.getElementById('reg-email')?.value;
-    const password = document.getElementById('reg-password')?.value;
-    const birthday = document.getElementById('reg-birthday')?.value;
-
-    if (!email || !password) {
-        alert("Email နှင့် Password ဖြည့်ရန်လိုအပ်ပါသည်။");
-        return;
-    }
-
-    if (!email.endsWith('@gmail.com')) {
-        alert("Gmail အကောင့်ကိုသာ အသုံးပြုပေးပါ။");
-        return;
-    }
-
-    const { data, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-            data: { 
-                nickname: nickname, 
-                birthday: birthday 
-            }
-        }
-    });
-
-    if (authError) {
-        alert("Auth Error: " + authError.message);
-        return;
-    }
-
-    if (data?.user) {
-        const { error: dbError } = await supabase
-            .from('users')
-            .upsert([{ 
-                id: data.user.id, 
-                nickname: nickname, 
-                email: email, 
-                birthday: birthday 
-            }], { onConflict: 'id' });
-
-        if (dbError) {
-            console.error("Database sync issue:", dbError.message);
-        }
-    }
-
-    alert("အကောင့်ဖွင့်ခြင်း အောင်မြင်ပါသည်။ Login ပြန်ဝင်ပေးပါ။");
-    if (typeof toggleAuth === "function") toggleAuth();
-}
+// --- AUTH LOGIC (Bypassed) ---
+// Login/SignUp စနစ်ကို ဖြုတ်လိုက်သော်လည်း Error မတက်စေရန် Function များကို dummy အဖြစ်ထားရှိပေးထားပါသည်
+async function handleLogin() { return; }
+async function handleSignUp() { return; }
 
 async function handleLogout() {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-        alert("Logout လုပ်ရတာ အဆင်မပြေပါဘူး: " + error.message);
-    } else {
-        localStorage.clear(); 
-        sessionStorage.clear();
-        cachedContacts = [];
-        allMessages = [];
-        window.location.replace('index.html');
-    }
+    localStorage.clear(); 
+    sessionStorage.clear();
+    cachedContacts = [];
+    allMessages = [];
+    window.location.reload(); // Login ဝင်စရာမလိုတော့သဖြင့် reload သာလုပ်ပါသည်
 }
 
 function showAppUI(userData) {
@@ -122,7 +28,7 @@ function showAppUI(userData) {
     
     const nameEl = document.getElementById('top-admin-name');
     if (nameEl) {
-        nameEl.innerText = userData.user_metadata?.nickname || userData.nickname || "Admin";
+        nameEl.innerText = userData?.user_metadata?.nickname || userData?.nickname || "Admin";
     }
 }
 
@@ -226,13 +132,10 @@ function closeImagePreview() {
 
 async function loadContacts() {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
+        // User ID မလိုတော့သဖြင့် တိုက်ရိုက်ဆွဲပါမည်
         const { data, error } = await supabase
             .from('contacts')
-            .select('*')
-            .eq('user_id', user.id); 
+            .select('*'); 
 
         if (error) throw error;
         cachedContacts = data || [];
@@ -324,13 +227,10 @@ function updateGlobalBadge() {
 
 async function loadHistory() {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
+        // user_id check ဖြုတ်ပြီး history ကို တိုက်ရိုက်ဆွဲပါမည်
         const { data, error } = await supabase
             .from('messages')
             .select('*')
-            .eq('user_id', user.id)
             .order('created_at', { ascending: true });
 
         if (error) throw error;
@@ -383,9 +283,6 @@ async function sendMessage() {
     const input = document.getElementById('user-input');
     const text = input?.value.trim();
     if(text && currentChatId) {
-        const { data: { user } } = await supabase.auth.getUser(); 
-        if(!user) return;
-
         const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
         const msgData = {
@@ -393,31 +290,23 @@ async function sendMessage() {
             text: text,
             sender_type: 'bot',
             time: timeNow,
-            is_read: false,
-            user_id: user.id 
+            is_read: false
         };
         
-        socket.emit('send_reply', { chatId: currentChatId, text: text, userId: user.id });
+        socket.emit('send_reply', { chatId: currentChatId, text: text });
         allMessages.push(msgData);
         appendMessage(msgData, true);
         if (input) input.value = ""; 
     }
 }
 
-// --- INITIALIZATION ---
+// --- INITIALIZATION (Bypassing Auth Gate) ---
 window.addEventListener('DOMContentLoaded', async () => { 
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session) {
-        showAppUI(session.user);
-        loadSystemSettings(); 
-        await loadContacts(); 
-        await loadHistory(); 
-    } else {
-        localStorage.clear(); 
-        const authGate = document.getElementById('auth-gate');
-        if (authGate) authGate.style.display = 'flex';
-    }
+    // Auth session ကို မစစ်တော့ဘဲ UI ကို တိုက်ရိုက်ပြပါမည်
+    showAppUI({ nickname: "Admin" });
+    loadSystemSettings(); 
+    await loadContacts(); 
+    await loadHistory(); 
 });
 
 socket.on('new_message', (data) => {
@@ -435,17 +324,7 @@ socket.on('new_message', (data) => {
     }
 });
 
-async function handleForgotPassword() {
-    const email = document.getElementById('reset-email')?.value.trim();
-    if (!email) return alert("Email ရိုက်ထည့်ပါ");
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://realmessage-live.onrender.com/reset-password.html',
-    });
-
-    if (error) alert("Error: " + error.message);
-    else alert("Reset Link ပို့ပေးလိုက်ပါပြီ။");
-}
+async function handleForgotPassword() { return; }
 
 // --- GLOBAL SCOPE ASSIGNMENTS ---
 window.switchToInbox = switchToInbox;
