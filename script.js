@@ -1,5 +1,4 @@
 // --- SUPABASE CONFIGURATION ---
-// အခြားနေရာမှာ supabase ကြေညာထားတာရှိရင် error မတက်အောင် window object ကနေပဲ တိုက်ရိုက်ယူသုံးပါမယ်
 var supabase = window.supabase;
 
 // --- VARIABLES ---
@@ -18,7 +17,6 @@ function showAppUI() {
 
 // --- DATA LOADING ---
 async function loadContacts() {
-    // ပထမဆုံးအကြိမ် ခေါ်တဲ့အခါ supabase မရှိသေးရင် window ထဲကနေ ပြန်ဆွဲထုတ်မယ်
     if (!supabase) supabase = window.supabase;
     
     try {
@@ -31,7 +29,6 @@ async function loadContacts() {
 
         const unique = {};
         data.forEach(m => {
-            // Admin ပို့တဲ့စာတွေကို Contact list ထဲမှာ နာမည်မပေါ်အောင် ဖယ်ထုတ်ထားမယ်
             if (m.sender_name !== 'Admin' && !unique[m.sender_name]) {
                 unique[m.sender_name] = {
                     chat_id: m.sender_name,
@@ -114,7 +111,7 @@ function renderMessages() {
                 <div class="max-w-[75%] p-4 rounded-3xl text-sm ${
                     isMe ? 'bg-accent-blue text-white rounded-tr-none' : 'bg-gray-800 text-gray-100 rounded-tl-none border border-gray-700'
                 }">
-                    <p>${msg.message_text || ''}</p>
+                    <p style="white-space: pre-wrap; word-break: break-word;">${msg.message_text || ''}</p>
                     <span class="text-[9px] opacity-50 mt-1 block">
                         ${new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </span>
@@ -126,11 +123,25 @@ function renderMessages() {
     win.scrollTop = win.scrollHeight;
 }
 
+// --- SEND MESSAGE ---
 async function sendMessage() {
     const input = document.getElementById('user-input');
     const text = input?.value.trim();
     
     if (text && currentChatId && supabase) {
+        // Refresh မစောင့်ဘဲ UI မှာ ချက်ချင်းပေါ်လာအောင် အတုပြုလုပ်ခြင်း
+        const tempMsg = {
+            sender_name: 'Admin',
+            receiver_name: currentChatId,
+            message_text: text,
+            created_at: new Date().toISOString()
+        };
+        
+        allMessages.push(tempMsg);
+        renderMessages();
+        input.value = ""; // Input ကို ချက်ချင်းရှင်းပစ်မယ်
+
+        // Database ထဲလှမ်းထည့်မယ်
         const { error } = await supabase
             .from('messages')
             .insert([{
@@ -140,40 +151,61 @@ async function sendMessage() {
                 platform: 'admin'
             }]);
 
-        if (!error) {
-            input.value = "";
-        } else {
+        if (error) {
             console.error("Send Error:", error);
+            // အကယ်၍ ပို့တာမအောင်မြင်ရင် message list ထဲက ပြန်ထုတ်မယ် (Option)
+            loadHistory(); 
         }
     }
 }
 
 // --- REAL-TIME SUBSCRIPTION ---
-// နာမည်ကို initRealtime လို့ ပြောင်းလိုက်ပါတယ် (Error မတက်အောင်လို့ပါ)
 function initRealtime() {
     if (!supabase) supabase = window.supabase;
     if (!supabase) return;
     
+    // ရှိပြီးသား channel တွေရှိရင် ဖျက်ပြီး အသစ်ပြန်ဖွင့်မယ် (Duplicate မဖြစ်အောင်)
+    supabase.removeAllChannels();
+
     supabase
-        .channel('schema-db-changes')
+        .channel('messages-realtime')
         .on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'messages' }, 
             (payload) => {
-                console.log('New message received!', payload);
+                console.log('New message in Realtime:', payload.new);
+                
+                // ၁။ Contact list ကို update လုပ်မယ် (စာအသစ်ပို့တဲ့လူ ထိပ်ဆုံးရောက်အောင်)
                 loadContacts();
-                if (currentChatId && (payload.new.sender_name === currentChatId || payload.new.receiver_name === currentChatId)) {
-                    loadHistory();
+
+                // ၂။ အကယ်၍ လက်ရှိ စကားပြောနေတဲ့လူဆီက စာဖြစ်ရင် ချက်ချင်းပြမယ်
+                const isRelevant = 
+                    (payload.new.sender_name === currentChatId && payload.new.receiver_name === 'Admin') ||
+                    (payload.new.sender_name === 'Admin' && payload.new.receiver_name === currentChatId);
+
+                if (currentChatId && isRelevant) {
+                    // စာသားက ကိုယ်ပို့လိုက်တဲ့ 'Admin' စာဖြစ်နေရင် renderMessages မှာ ပါပြီးသားဖြစ်လို့ ထပ်မထည့်တော့ဘူး
+                    const isAlreadyDisplayed = allMessages.some(m => 
+                        m.message_text === payload.new.message_text && 
+                        m.sender_name === payload.new.sender_name
+                    );
+
+                    if (!isAlreadyDisplayed) {
+                        allMessages.push(payload.new);
+                        renderMessages();
+                    }
                 }
             }
         )
-        .subscribe();
+        .subscribe((status) => {
+            console.log("Realtime status:", status);
+        });
 }
 
 // --- INITIALIZATION ---
 window.addEventListener('load', async () => { 
     showAppUI();
     await loadContacts();
-    initRealtime(); // ဒီမှာ နာမည်သစ်နဲ့ ခေါ်ထားပါတယ်
+    initRealtime();
     
     document.getElementById('user-input')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
