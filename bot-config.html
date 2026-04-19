@@ -234,15 +234,13 @@
 
         async function saveSingle(key) {
             const value = document.getElementById(key).value;
-            const data = {};
-            data[key] = value;
+            const formData = new FormData();
+            formData.append(key, value);
             
             try {
-                // server.js မှာ /api/settings/single မရှိလို့ /api/settings/bulk ကိုပဲသုံးပြီး သိမ်းပေးလိုက်ပါတယ်
                 const res = await fetch('/api/settings/bulk', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: formData
                 });
                 if (res.ok) {
                     showToast(`✅ ${key.replace(/_/g, ' ').toUpperCase()} saved!`);
@@ -257,10 +255,10 @@
         async function saveAllSettings() {
             const btn = document.getElementById('save-btn');
             const inputs = document.querySelectorAll('.setting-input');
-            const settingsData = {};
+            const formData = new FormData();
 
             inputs.forEach(input => {
-                settingsData[input.id] = input.value;
+                formData.append(input.id, input.value);
             });
 
             const originalBtnContent = btn.innerHTML;
@@ -270,8 +268,7 @@
             try {
                 const res = await fetch('/api/settings/bulk', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(settingsData)
+                    body: formData
                 });
 
                 if (res.ok) {
