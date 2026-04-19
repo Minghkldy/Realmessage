@@ -1,5 +1,7 @@
-// --- SUPABASE CONFIGURATION ---
-let supabase = window.supabase; 
+// အပေါ်ဆုံးက variable ကြေညာတဲ့နေရာမှာ ဒါနဲ့ အစားထိုးပါ
+if (typeof supabase === 'undefined') {
+    var supabase = window.supabase;
+}
 
 // --- VARIABLES ---
 let currentChatId = "";
