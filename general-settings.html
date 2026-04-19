@@ -58,7 +58,7 @@
                     </div>
                     <div class="flex-1">
                         <label class="block text-sm text-gray-400 mb-2">Admin Email</label>
-                        <input type="email" id="admin_email" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none text-gray-500 cursor-not-allowed" placeholder="admin@example.com" readonly>
+                        <input type="email" id="admin_email" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none text-gray-400" placeholder="admin@example.com">
                     </div>
                 </div>
             </div>
@@ -82,24 +82,22 @@
             </div>
 
             <div class="glass-card p-6 border-red-500/20">
-                <h2 class="text-lg font-semibold mb-4 text-red-400"><i class="fas fa-shield-alt mr-2"></i> Security</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <h2 class="text-lg font-semibold mb-4 text-red-400"><i class="fas fa-shield-alt mr-2"></i> Security (Offline)</h2>
+                <p class="text-xs text-gray-500 mb-4">* Login စနစ်ပိတ်ထားသဖြင့် Password ပြင်ဆင်၍မရနိုင်ပါ။</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-50 pointer-events-none">
                     <div class="md:col-span-2">
                         <label class="block text-sm text-gray-400 mb-2">Current Password</label>
-                        <input type="password" id="old_password_input" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none mb-4" placeholder="Enter current password">
+                        <input type="password" id="old_password_input" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none mb-4" placeholder="Enter current password" disabled>
                     </div>
                     <div>
                         <label class="block text-sm text-gray-400 mb-2">New Password</label>
-                        <input type="password" id="new_password_input" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none" placeholder="New password">
+                        <input type="password" id="new_password_input" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none" placeholder="New password" disabled>
                     </div>
                     <div>
                         <label class="block text-sm text-gray-400 mb-2">Confirm Password</label>
-                        <input type="password" id="confirm_password_input" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none" placeholder="Confirm new password">
+                        <input type="password" id="confirm_password_input" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg focus:outline-none" placeholder="Confirm new password" disabled>
                     </div>
                 </div>
-                <button onclick="handlePasswordUpdate()" class="mt-4 px-6 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/30 rounded-lg transition-all text-sm font-bold">
-                    UPDATE PASSWORD ONLY
-                </button>
             </div>
 
             <button onclick="saveSettings()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95">
@@ -109,12 +107,6 @@
     </div>
 
     <script>
-        // Supabase Initialization
-        // Supabase Initialization
-const SUB_URL = "https://vquzfxzahxesrfjctoef.supabase.co"; 
-const SUB_KEY = "sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIt";
-const _supabase = supabase.createClient(SUB_URL, SUB_KEY);
-
         function updateAvatarPreview(name) {
             const preview = document.getElementById('avatar_preview');
             if (name.trim() !== "" && !document.getElementById('avatar_input').files.length) {
@@ -130,29 +122,7 @@ const _supabase = supabase.createClient(SUB_URL, SUB_KEY);
             }
         }
 
-        async function handlePasswordUpdate() {
-            const oldPw = document.getElementById('old_password_input').value;
-            const newPw = document.getElementById('new_password_input').value;
-            const confirmPw = document.getElementById('confirm_password_input').value;
-
-            if (window.parent && typeof window.parent.updatePassword === 'function') {
-                await window.parent.updatePassword(oldPw, newPw, confirmPw);
-                document.getElementById('old_password_input').value = "";
-                document.getElementById('new_password_input').value = "";
-                document.getElementById('confirm_password_input').value = "";
-            } else {
-                alert("စနစ်အတွင်း အမှားအယွင်းရှိနေပါသည်။");
-            }
-        }
-
         async function saveSettings() {
-            const pass = document.getElementById('new_password_input').value;
-            const confirm = document.getElementById('confirm_password_input').value;
-            
-            if (pass && pass !== confirm) {
-                return alert("❌ Passwords do not match!");
-            }
-
             const formData = new FormData();
             const nickname = document.getElementById('admin_nickname').value;
             formData.append('site_name', document.getElementById('site_name').value);
@@ -160,10 +130,6 @@ const _supabase = supabase.createClient(SUB_URL, SUB_KEY);
             formData.append('admin_email', document.getElementById('admin_email').value);
             formData.append('enable_autoreply', document.getElementById('enable_autoreply').checked);
             formData.append('autoreply_text', document.getElementById('autoreply_text').value);
-
-            if (pass) {
-                await handlePasswordUpdate();
-            }
 
             const avatarInput = document.getElementById('avatar_input');
             let finalAvatarUrl = "";
@@ -198,7 +164,7 @@ const _supabase = supabase.createClient(SUB_URL, SUB_KEY);
                     alert("✅ Settings အားလုံးကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။");
                     
                 } else {
-                    alert("✅ Site settings saved (Password requires separate update if errored).");
+                    alert("❌ သိမ်းဆည်းရာတွင် အမှားအယွင်းရှိခဲ့သည်။");
                 }
             } catch (err) {
                 console.error("Save Error:", err);
@@ -208,18 +174,13 @@ const _supabase = supabase.createClient(SUB_URL, SUB_KEY);
 
         window.onload = async () => {
             try {
-                // ၁။ Supabase Auth ကနေ လက်ရှိ Login ဝင်ထားတဲ့ User Email ကို တိုက်ရိုက်ယူခြင်း
-                const { data: { user }, error: authError } = await _supabase.auth.getUser();
-                if (user) {
-                    document.getElementById('admin_email').value = user.email;
-                }
-
-                // ၂။ ကျန်ရှိသော Settings များ API မှ Load လုပ်ခြင်း
+                // Settings များကို API မှ တိုက်ရိုက် Load လုပ်ခြင်း
                 const res = await fetch('/api/settings');
                 if (res.ok) {
                     const data = await res.json();
                     
                     if (data.site_name) document.getElementById('site_name').value = data.site_name;
+                    if (data.admin_email) document.getElementById('admin_email').value = data.admin_email;
                     if (data.admin_nickname) {
                         document.getElementById('admin_nickname').value = data.admin_nickname;
                         const currentAvatar = data.admin_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.admin_nickname)}&background=random&color=fff`;
