@@ -8,22 +8,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <script src="script.js"></script>
     
     <script>
   // Supabase Config & Initialization
   const SUPABASE_URL = 'https://vquzfxzahxesrfjctoef.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIT'; // Key ကို သေချာပြန်စစ်ပါ (Image 8 ထဲမှာ t က t အကြီး ဖြစ်နေတတ်လို့ပါ)
+  const SUPABASE_KEY = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIT';
 
   if (!window.supabase_instance) {
       window.supabase = window.supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY);
       window.supabase_instance = true;
   }
   const supabase = window.supabase;
-        // Realtime function ကို window level မှာပဲ ထားပေးထားပါတယ်
+
         function initRealtime() {
-            // script.js ထဲက supabase variable ကို လှမ်းသုံးမှာပါ
             if (typeof supabase === 'undefined') return;
 
             const channel = supabase
@@ -65,10 +63,6 @@
         }
     </script>
     <style>
-        .auth-wrapper { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); }
-        .glass-auth { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .auth-input { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s ease; }
-        .auth-input:focus { border-color: #007AFF; background: rgba(255, 255, 255, 0.1); outline: none; }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
@@ -76,60 +70,7 @@
 </head>
 <body class="h-full flex overflow-hidden bg-pure-black text-gray-100 font-sans">
 
-    <div id="auth-gate" class="fixed inset-0 z-[10000] flex items-center justify-center auth-wrapper p-6">
-        <div class="w-full max-w-md glass-auth p-10 rounded-[2.5rem] shadow-2xl animate-in fade-in zoom-in duration-500">
-            <div class="text-center mb-10">
-                <div class="w-16 h-16 bg-accent-blue rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(0,122,255,0.4)]">
-                    <span class="text-white text-2xl font-black italic">ON</span>
-                </div>
-                <h2 id="auth-title" class="text-3xl font-black italic tracking-tighter uppercase mb-2">Welcome Back</h2>
-                <p id="auth-subtitle" class="text-xs text-gray-500 font-bold uppercase tracking-widest">Access your command center</p>
-            </div>
-
-            <div id="login-section" class="space-y-4">
-                <input type="email" id="login-email" placeholder="Gmail Address" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
-                <input type="password" id="login-password" placeholder="Password" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
-                <div class="text-right px-2">
-                    <button onclick="showForgotModal()" class="text-[10px] text-gray-500 hover:text-accent-blue transition font-bold uppercase tracking-widest">Forgot Password?</button>
-                </div>
-                <button onclick="handleLogin()" id="login-btn" class="w-full bg-accent-blue py-4 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-accent-blue/25">Sign In</button>
-                <p class="text-center text-[11px] text-gray-500 font-bold uppercase mt-6">
-                    Don't have an account? <span onclick="toggleAuth()" class="text-accent-blue cursor-pointer hover:underline">Sign Up</span>
-                </p>
-            </div>
-
-            <div id="signup-section" class="hidden space-y-4">
-                <input type="text" id="reg-nickname" placeholder="Full Name / Nickname" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
-                <input type="email" id="reg-email" placeholder="Gmail Address" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
-                <input type="password" id="reg-password" placeholder="Password" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
-                <div class="space-y-1">
-                    <label class="text-[10px] text-gray-500 font-black uppercase ml-2">Birthday</label>
-                    <input type="date" id="reg-birthday" class="auth-input w-full p-4 rounded-2xl text-white text-sm">
-                </div>
-                <button onclick="handleSignUp()" id="signup-btn" class="w-full bg-accent-blue py-4 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-accent-blue/25">Create Account</button>
-                <p class="text-center text-[11px] text-gray-500 font-bold uppercase mt-6">
-                    Already have an account? <span onclick="toggleAuth()" class="text-accent-blue cursor-pointer hover:underline">Log In</span>
-                </p>
-            </div>
-        </div>
-
-        <div id="forgot-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[10001] animate-in fade-in duration-300">
-            <div class="w-full max-w-sm glass-auth p-8 rounded-[2.5rem] shadow-2xl mx-4 border border-white/10">
-                <div class="w-16 h-16 bg-accent-blue/10 rounded-2xl flex items-center justify-center mb-6 mx-auto border border-accent-blue/20">
-                    <i class="fas fa-key text-accent-blue text-2xl"></i>
-                </div>
-                <h2 class="text-xl font-black text-white mb-2 text-center uppercase italic tracking-tighter">Reset Password</h2>
-                <p class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-6 text-center leading-relaxed px-4">သင့်အကောင့် Gmail ကို ရိုက်ထည့်ပါ။ Link ပို့ပေးပါမည်။</p>
-                <input type="email" id="reset-email" placeholder="Gmail Address" class="auth-input w-full p-4 rounded-2xl text-white mb-6 outline-none text-sm">
-                <div class="flex gap-3">
-                    <button onclick="closeForgotModal()" class="flex-1 py-4 rounded-2xl bg-white/5 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition">Cancel</button>
-                    <button onclick="handleForgotPassword()" class="flex-1 py-4 rounded-2xl bg-accent-blue text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-accent-blue/20">Send Link</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="main-app" class="h-full w-full flex overflow-hidden opacity-0 transition-opacity duration-700 pointer-events-none">
+    <div id="main-app" class="h-full w-full flex overflow-hidden transition-opacity duration-700">
         
         <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
@@ -189,10 +130,6 @@
                 <div onclick="loadGeneralSettings()" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition" id="sidebar-settings">
                     <i class="fas fa-cog text-lg w-8"></i>
                     <span class="nav-text font-medium ml-2">Settings</span>
-                </div>
-                <div onclick="handleLogout()" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-all duration-300">
-                    <i class="fas fa-sign-out-alt text-lg w-8"></i>
-                    <span class="nav-text font-medium ml-2">Logout</span>
                 </div>
             </div>
         </div>
@@ -310,103 +247,13 @@
     </div>
 
     <script>
-        function toggleAuth() {
-            const loginSection = document.getElementById('login-section');
-            const signupSection = document.getElementById('signup-section');
-            const title = document.getElementById('auth-title');
-            const isLoginVisible = !loginSection.classList.contains('hidden');
-            loginSection.classList.toggle('hidden', isLoginVisible);
-            signupSection.classList.toggle('hidden', !isLoginVisible);
-            title.innerText = isLoginVisible ? "Create Account" : "Welcome Back";
-        }
-
-        async function handleLogin() {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const btn = document.getElementById('login-btn');
-            if(!email || !password) return alert("Please fill all fields");
-            btn.innerText = "Processing...";
-            btn.disabled = true;
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-                alert(error.message);
-                btn.innerText = "Sign In";
-                btn.disabled = false;
+        document.addEventListener('DOMContentLoaded', () => {
+            // App ကို တိုက်ရိုက် run ပါမယ်
+            initRealtime();
+            if (typeof switchToInbox === 'function') {
+                switchToInbox();
             }
-        }
-
-        async function handleSignUp() {
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
-            const nickname = document.getElementById('reg-nickname').value;
-            const birthday = document.getElementById('reg-birthday').value;
-            const btn = document.getElementById('signup-btn');
-            if(!email || !password || !nickname) return alert("Please fill required fields");
-            btn.innerText = "Creating...";
-            btn.disabled = true;
-            const { error } = await supabase.auth.signUp({
-                email, password, options: { data: { nickname, birthday } }
-            });
-            if (error) {
-                alert(error.message);
-                btn.innerText = "Create Account";
-                btn.disabled = false;
-            } else {
-                alert("Registration Successful! Please check your email for verification.");
-                toggleAuth();
-            }
-        }
-
-        async function handleForgotPassword() {
-            const email = document.getElementById('reset-email').value;
-            if(!email) return alert("Please enter your email");
-            const { error } = await supabase.auth.resetPasswordForEmail(email);
-            if (error) alert(error.message);
-            else { alert("Password reset link sent!"); closeForgotModal(); }
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            // script.js က supabase တည်ဆောက်ပြီးတာကို ခဏစောင့်မယ်
-            setTimeout(async () => {
-                if (typeof supabase !== 'undefined') {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    updateUI(session);
-                    supabase.auth.onAuthStateChange((_event, session) => {
-                        updateUI(session);
-                    });
-                }
-            }, 100);
         });
-
-        function updateUI(session) {
-            const authGate = document.getElementById('auth-gate');
-            const mainApp = document.getElementById('main-app');
-            if (session) {
-                authGate.classList.add('hidden');
-                mainApp.classList.remove('opacity-0', 'pointer-events-none');
-                const user = session.user;
-                const adminName = user.user_metadata?.nickname || user.email.split('@')[0];
-                document.getElementById('top-admin-name').innerText = adminName;
-                document.getElementById('top-admin-avatar').src = `https://ui-avatars.com/api/?name=${adminName}&background=007AFF&color=fff`;
-                
-                initRealtime();
-                
-                if (typeof switchToInbox === 'function') switchToInbox();
-            } else {
-                authGate.classList.remove('hidden');
-                mainApp.classList.add('opacity-0', 'pointer-events-none');
-            }
-        }
-
-        async function handleLogout() {
-            if (confirm("Logout လုပ်မှာ သေချာပါသလား?")) {
-                const { error } = await supabase.auth.signOut();
-                if (error) alert("Error: " + error.message);
-            }
-        }
-
-        window.showForgotModal = () => document.getElementById('forgot-modal').classList.remove('hidden');
-        window.closeForgotModal = () => document.getElementById('forgot-modal').classList.add('hidden');
     </script>
 </body>
 </html>
