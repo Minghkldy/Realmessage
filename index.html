@@ -9,16 +9,17 @@
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-  // Supabase Config & Initialization
-  const SUPABASE_URL = 'https://vquzfxzahxesrfjctoef.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIT';
+        // Supabase Config & Initialization
+        const SUPABASE_URL = 'https://vquzfxzahxesrfjctoef.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_Pj8DiYgASNuPsRPh5opbjw_P5W1OtIT';
 
-  if (!window.supabase_instance) {
-      window.supabase = window.supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY);
-      window.supabase_instance = true;
-  }
-  const supabase = window.supabase;
+        if (!window.supabase_instance) {
+            window.supabase = window.supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY);
+            window.supabase_instance = true;
+        }
+        const supabase = window.supabase;
 
+        // Realtime Subscription
         function initRealtime() {
             if (typeof supabase === 'undefined') return;
 
@@ -29,6 +30,7 @@
                     { event: 'INSERT', schema: 'public', table: 'messages' },
                     (payload) => {
                         console.log('New Message Arrived:', payload.new);
+                        // စာအသစ်ဝင်လာရင် Contact List နဲ့ History ကို Refresh လုပ်မယ်
                         if (typeof loadContacts === 'function') loadContacts();
                         if (typeof loadHistory === 'function') loadHistory();
                         
@@ -36,9 +38,7 @@
                         if (sound) sound.play().catch(e => console.log('Audio play blocked'));
                     }
                 )
-                .subscribe((status) => {
-                    console.log("Realtime status:", status);
-                });
+                .subscribe();
         }
 
         // Navigation Functions
@@ -100,17 +100,10 @@
 
         function toggleLeftSidebar() {
             const sidebar = document.getElementById('left-sidebar');
-            if(sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-            }
+            sidebar.classList.toggle('-translate-x-full');
         }
     </script>
     
-    <script src="/socket.io/socket.io.js"></script>
-    <link rel="stylesheet" href="style.css">
-
     <script>
         tailwind.config = {
             theme: {
@@ -132,157 +125,121 @@
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         .active-nav { color: #007AFF !important; border-left: 3px solid #007AFF; border-radius: 0 16px 16px 0 !important; }
         @media (max-width: 1024px) {
-            #left-sidebar { position: fixed; height: 100%; top: 0; left: 0; transform: translateX(-100%); }
-            .-translate-x-full { transform: translateX(-100%); }
-            #left-sidebar:not(.-translate-x-full) { transform: translateX(0); }
+            #left-sidebar { position: fixed; height: 100%; top: 0; left: 0; }
         }
     </style>
 </head>
 <body class="h-full flex overflow-hidden bg-pure-black text-gray-100 font-sans">
 
-    <div id="main-app" class="h-full w-full flex overflow-hidden transition-opacity duration-700">
+    <div id="main-app" class="h-full w-full flex overflow-hidden">
         
         <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
-        <div id="imagePreviewModal" onclick="closeImagePreview()" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/95 backdrop-blur-xl cursor-zoom-out">
-            <img id="previewImg" src="" class="max-w-[92%] max-h-[92%] rounded-2xl shadow-2xl">
-        </div>
-
-        <div id="left-sidebar" class="w-72 flex-shrink-0 flex flex-col border-r border-border-gray py-8 bg-dark-gray/50 backdrop-blur-2xl z-30 transition-all duration-300 shadow-2xl -translate-x-full lg:translate-x-0">
+        <div id="left-sidebar" class="w-72 flex-shrink-0 flex flex-col border-r border-border-gray py-8 bg-dark-gray/50 backdrop-blur-2xl z-30 transition-all duration-300 -translate-x-full lg:translate-x-0">
             <div class="px-8 mb-12 cursor-pointer flex items-center group" onclick="switchToInbox()">
-                <div class="custom-logo w-10 h-10 bg-accent-blue rounded-[12px] flex items-center justify-center group-hover:scale-105 transition-all duration-300">
-                    <span class="text-white text-lg font-extrabold tracking-tighter">ON</span>
+                <div class="w-10 h-10 bg-accent-blue rounded-[12px] flex items-center justify-center">
+                    <span class="text-white text-lg font-extrabold">ON</span>
                 </div>
-                <span class="nav-text ml-4 text-xl font-black tracking-tighter text-white uppercase italic">OmniBot</span>
+                <span class="ml-4 text-xl font-black italic uppercase tracking-tighter">OmniBot</span>
             </div>
             
             <nav class="flex flex-col w-full flex-1 px-4 space-y-2">
-                <div class="w-full">
-                    <div class="nav-item flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all hover:bg-white/5" id="inbox-nav" onclick="switchToInbox()">
-                        <div class="flex items-center">
-                            <i class="fas fa-message text-lg w-8"></i>
-                            <span class="nav-text font-medium ml-2">Inbox</span>
-                        </div>
-                        <i id="arrow-icon" class="fas fa-chevron-right text-[10px] opacity-40 transition-transform duration-300" onclick="event.stopPropagation(); toggleDropdown()"></i>
+                <div class="nav-item flex items-center justify-between p-4 rounded-2xl cursor-pointer hover:bg-white/5 active-nav" id="inbox-nav" onclick="switchToInbox()">
+                    <div class="flex items-center">
+                        <i class="fas fa-message w-8"></i>
+                        <span class="font-medium ml-2">Inbox</span>
                     </div>
-                    
-                    <div id="messenger-dropdown" class="hidden mt-2 ml-4 pl-4 border-l border-border-gray space-y-1">
-                        <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('messenger')">
-                            <i class="fab fa-facebook-messenger text-[#0084FF]"></i> Messenger
-                        </div>
-                        <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('instagram')">
-                            <i class="fab fa-instagram text-[#E4405F]"></i> Instagram
-                        </div>
-                        <div class="dropdown-item flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition text-sm text-gray-400 hover:text-white" onclick="filterContacts('telegram')">
-                            <i class="fab fa-telegram text-[#26A5E4]"></i> Telegram
-                        </div>
-                    </div>
+                    <i id="arrow-icon" class="fas fa-chevron-right text-[10px] opacity-40 transition-transform" onclick="event.stopPropagation(); toggleDropdown()"></i>
+                </div>
+                
+                <div id="messenger-dropdown" class="hidden ml-4 pl-4 border-l border-border-gray space-y-1">
+                    <div class="p-3 rounded-xl hover:bg-white/5 cursor-pointer text-sm text-gray-400">Messenger</div>
+                    <div class="p-3 rounded-xl hover:bg-white/5 cursor-pointer text-sm text-gray-400">Telegram</div>
                 </div>
 
-                <div id="bot-config-nav" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition" onclick="loadBotSettings()">
-                    <i class="fas fa-sliders-h text-lg w-8"></i>
-                    <span class="nav-text font-medium ml-2">Bot Config</span>
+                <div id="bot-config-nav" class="p-4 rounded-2xl cursor-pointer hover:bg-white/5 flex items-center" onclick="loadBotSettings()">
+                    <i class="fas fa-sliders-h w-8"></i>
+                    <span class="font-medium ml-2">Bot Config</span>
                 </div>
 
-                <div id="broadcast-nav" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition" onclick="loadBroadcastSettings()">
-                    <i class="fas fa-paper-plane text-lg w-8"></i>
-                    <span class="nav-text font-medium ml-2">Bulk Messaging</span>
+                <div id="broadcast-nav" class="p-4 rounded-2xl cursor-pointer hover:bg-white/5 flex items-center" onclick="loadBroadcastSettings()">
+                    <i class="fas fa-paper-plane w-8"></i>
+                    <span class="font-medium ml-2">Bulk Messaging</span>
                 </div>
             </nav>
 
-            <div class="mt-auto px-4 space-y-2">
-                <div onclick="loadGeneralSettings()" class="nav-item flex items-center p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition" id="sidebar-settings">
-                    <i class="fas fa-cog text-lg w-8"></i>
-                    <span class="nav-text font-medium ml-2">Settings</span>
+            <div class="mt-auto px-4">
+                <div onclick="loadGeneralSettings()" class="p-4 rounded-2xl cursor-pointer hover:bg-white/5 flex items-center" id="sidebar-settings">
+                    <i class="fas fa-cog w-8"></i>
+                    <span class="font-medium ml-2">Settings</span>
                 </div>
             </div>
         </div>
 
         <div class="flex-1 flex flex-col min-w-0">
             <div class="h-20 border-b border-border-gray flex items-center px-8 justify-between bg-dark-gray/30 backdrop-blur-xl z-10">
-                <div class="flex items-center gap-4">
-                    <button onclick="toggleLeftSidebar()" class="lg:hidden w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition">
-                        <i class="fas fa-bars text-gray-400"></i>
-                    </button>
-                    <h1 class="text-xl font-black tracking-tighter text-white uppercase italic">OmniBot</h1>
-                </div>
-                
-                <div class="flex items-center space-x-4 px-4 py-2 rounded-2xl hover:bg-white/5 transition cursor-pointer group">
+                <button onclick="toggleLeftSidebar()" class="lg:hidden w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                    <i class="fas fa-bars text-gray-400"></i>
+                </button>
+                <div class="flex items-center space-x-4">
                     <div class="text-right hidden md:block">
-                        <p id="top-admin-name" class="text-sm font-bold text-white tracking-tight">Admin</p>
-                        <p class="text-[10px] text-accent-blue font-black uppercase tracking-widest">Master</p>
+                        <p class="text-sm font-bold">Admin</p>
+                        <p class="text-[10px] text-accent-blue font-black uppercase">Master</p>
                     </div>
-                    <div class="relative">
-                        <img id="top-admin-avatar" src="https://ui-avatars.com/api/?name=Admin&background=007AFF&color=fff" class="w-10 h-10 rounded-2xl border-2 border-border-gray object-cover">
-                        <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-4 border-pure-black rounded-full"></div>
-                    </div>
+                    <img src="https://ui-avatars.com/api/?name=Admin&background=007AFF&color=fff" class="w-10 h-10 rounded-2xl border-2 border-border-gray">
                 </div>
             </div>
 
             <div id="main-dashboard-content" class="flex flex-1 overflow-hidden">
-                <div id="chat-list-container" class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black hidden md:flex">
-                    <div class="p-8 pb-4 flex justify-between items-end">
-                        <div>
-                            <h2 class="text-2xl font-black italic tracking-tighter uppercase">Inbox</h2>
-                            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Recent Messages</p>
+                <div class="w-80 flex-shrink-0 flex flex-col border-r border-border-gray bg-pure-black hidden md:flex">
+                    <div class="p-8 pb-4">
+                        <h2 class="text-2xl font-black italic uppercase">Inbox</h2>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Recent Messages</p>
+                    </div>
+                    <div id="contacts-container" class="flex-1 overflow-y-auto px-4 py-2 space-y-2">
                         </div>
-                    </div>
-                    <div id="contact-list" class="flex-1 overflow-y-auto px-4 py-2 space-y-2">
-                        <div id="contacts-container"></div>
-                    </div>
                 </div>
 
                 <div class="flex-1 flex flex-col bg-pure-black relative min-w-0">
                     <div class="h-20 border-b border-border-gray flex items-center px-8 justify-between bg-dark-gray/20">
-                        <div class="flex items-center gap-4 overflow-hidden">
-                            <div id="header-avatar-container" class="relative flex-shrink-0">
-                                <div id="header-avatar-text" class="w-11 h-11 rounded-2xl bg-accent-blue flex items-center justify-center font-black text-sm text-white">?</div>
-                            </div>
-                            <div class="truncate">
-                                <h3 id="chat-header-name" class="text-base font-bold truncate tracking-tight">Select a conversation</h3>
-                                <div class="flex items-center gap-1.5 mt-0.5">
-                                    <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                                    <p id="chat-status" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">System Active</p>
-                                </div>
+                        <div class="flex items-center gap-4">
+                            <div id="header-avatar-text" class="w-11 h-11 rounded-2xl bg-accent-blue flex items-center justify-center font-black">?</div>
+                            <div>
+                                <h3 id="chat-header-name" class="font-bold">Select a conversation</h3>
+                                <p id="chat-status" class="text-[10px] text-gray-500 uppercase font-bold">Waiting...</p>
                             </div>
                         </div>
-                        <button onclick="toggleRightPanel()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:text-accent-blue transition">
-                            <i class="fas fa-info-circle text-lg"></i>
+                        <button onclick="toggleRightPanel()" class="w-10 h-10 rounded-full bg-white/5 hover:text-accent-blue transition">
+                            <i class="fas fa-info-circle"></i>
                         </button>
                     </div>
 
-                    <div id="chat-window" class="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 flex flex-col bg-gradient-to-br from-accent-blue/5 to-transparent"></div>
+                    <div id="chat-window" class="flex-1 overflow-y-auto p-6 md:p-10 space-y-6 flex flex-col bg-gradient-to-br from-accent-blue/5 to-transparent">
+                        </div>
 
                     <div class="p-6 md:p-8">
-                        <div class="flex items-center gap-4 bg-ios-gray/80 backdrop-blur-xl border border-border-gray rounded-3xl px-6 py-4 focus-within:border-accent-blue/50 transition-all duration-300">
-                            <input type="file" id="file-input" class="hidden" onchange="uploadFile(this)">
-                            <button class="w-10 h-10 rounded-xl bg-white/5 text-gray-400 hover:text-white transition" onclick="document.getElementById('file-input').click()">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <input type="text" id="user-input" onkeypress="handleKeyPress(event)" placeholder="Type a message..." class="bg-transparent flex-1 outline-none text-sm text-white">
-                            <button onclick="sendMessage()" class="w-11 h-11 rounded-2xl bg-accent-blue text-white shadow-lg hover:scale-105 active:scale-95 transition-all">
+                        <div class="flex items-center gap-4 bg-ios-gray/80 backdrop-blur-xl border border-border-gray rounded-3xl px-6 py-3">
+                            <input type="text" id="user-input" placeholder="Type a message..." class="bg-transparent flex-1 outline-none text-sm text-white">
+                            <button onclick="sendMessage()" class="w-11 h-11 rounded-2xl bg-accent-blue text-white shadow-lg hover:scale-105 transition-all">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div id="right-panel" class="hidden w-80 border-l border-border-gray bg-dark-gray/50 backdrop-blur-3xl flex flex-col p-8 space-y-10 overflow-y-auto z-10">
-                    <div class="text-center space-y-5 pt-4">
-                        <div id="side-avatar-text" class="w-28 h-28 bg-accent-blue rounded-[2.5rem] mx-auto flex items-center justify-center text-4xl font-black shadow-2xl shadow-accent-blue/20">?</div>
-                        <div>
-                            <input type="text" id="edit-nickname" class="bg-transparent text-center font-black text-2xl outline-none border-b-2 border-transparent focus:border-accent-blue w-full pb-1 transition" placeholder="Nickname">
-                            <p id="side-platform" class="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mt-3">Platform: -</p>
-                        </div>
+                <div id="right-panel" class="hidden w-80 border-l border-border-gray bg-dark-gray/50 backdrop-blur-3xl flex flex-col p-8 space-y-10">
+                    <div class="text-center space-y-5">
+                        <div id="side-avatar-text" class="w-24 h-24 bg-accent-blue rounded-[2rem] mx-auto flex items-center justify-center text-4xl font-black shadow-xl">?</div>
+                        <h4 id="side-name" class="font-black text-xl italic uppercase">Profile Name</h4>
                     </div>
                     <div class="space-y-4">
-                        <label class="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-2 px-1">Internal Notes</label>
-                        <textarea id="contact-note" class="w-full h-40 bg-ios-gray/50 border border-border-gray rounded-2xl p-5 text-sm outline-none focus:border-accent-blue/50 resize-none text-gray-300 transition-all" placeholder="Write private details here..."></textarea>
+                        <label class="text-[10px] text-gray-400 font-black uppercase">Internal Notes</label>
+                        <textarea id="contact-note" class="w-full h-40 bg-ios-gray/50 border border-border-gray rounded-2xl p-5 text-sm outline-none resize-none" placeholder="Private notes..."></textarea>
                     </div>
                 </div>
             </div>
 
-            <div id="bot-settings-area" class="hidden flex-1 flex flex-col bg-pure-black overflow-hidden">
+            <div id="bot-settings-area" class="hidden flex-1 flex flex-col bg-pure-black">
                 <iframe src="about:blank" id="settings-frame" class="w-full h-full border-none"></iframe>
             </div>
         </div>
@@ -292,7 +249,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             initRealtime();
-            switchToInbox(); // Default စဖွင့်ရင် Inbox ပေါ်နေအောင်
+            switchToInbox();
         });
     </script>
 </body>
