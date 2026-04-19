@@ -9,49 +9,52 @@
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script>
-    // Config: ဒီနေရာမှာ URL နဲ့ Key ကို သေချာစစ်ဆေးပြီးသားပါ
-    const SUPABASE_URL = 'https://otmzadpotobeyowsblpz.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_dwshc23rPi0opSLi0CzjTw_FGqOVF7W';
+    <script>
+        // Supabase Config
+        const SUPABASE_URL = 'https://otmzadpotobeyowsblpz.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_dwshc23rPi0opSLi0CzjTw_FGqOVF7W';
 
-    // Supabase Client ကို အမှန်ကန်ဆုံး တည်ဆောက်နည်း
-    // window.supabasejs က library ရဲ့ နာမည်ရင်းဖြစ်ပါတယ်
-    const { createClient } = window.supabasejs;
-    window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+        // 1. Supabase Client ကို အမှန်ကန်ဆုံး တည်ဆောက်နည်း (Fixed)
+        const { createClient } = window.supabase;
+        window.supabaseInstance = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // အလွယ်ခေါ်သုံးလို့ရအောင် variable ပြန်သတ်မှတ်ခြင်း
-    const supabase = window.supabase;
+        // အလွယ်ခေါ်သုံးလို့ရအောင် variable ပြန်သတ်မှတ်ခြင်း
+        const supabase = window.supabaseInstance;
 
-    // Realtime ကို အသက်သွင်းခြင်း
-    function initRealtime() {
-        if (!supabase) return;
+        // 2. Realtime Initialization
+        function initRealtime() {
+            if (!supabase) return;
 
-        const channel = supabase
-            .channel('realtime_messages')
-            .on(
-                'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'messages' },
-                (payload) => {
-                    console.log('New Message Arrived:', payload.new);
-                    if (typeof loadContacts === 'function') loadContacts();
-                    if (typeof loadHistory === 'function') loadHistory();
-                    
-                    const sound = document.getElementById('notif-sound');
-                    if (sound) sound.play().catch(e => console.log('Audio play blocked'));
-                }
-            )
-            .subscribe();
-    }
+            const channel = supabase
+                .channel('realtime_messages')
+                .on(
+                    'postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'messages' },
+                    (payload) => {
+                        console.log('New Message Arrived:', payload.new);
+                        // script.js ထဲက function တွေကို ခေါ်ယူခြင်း
+                        if (typeof loadContacts === 'function') loadContacts();
+                        if (typeof loadHistory === 'function') {
+                            // လက်ရှိ chat ဖွင့်ထားတဲ့ user ရဲ့ message ဖြစ်မှ update လုပ်မယ်
+                            const activeContactId = window.currentContactId; 
+                            if(activeContactId) loadHistory(activeContactId);
+                        }
+                        
+                        const sound = document.getElementById('notif-sound');
+                        if (sound) sound.play().catch(e => console.log('Audio play blocked'));
+                    }
+                )
+                .subscribe();
+        }
+
         // Navigation Functions
         function switchToInbox() {
             document.getElementById('main-dashboard-content').classList.remove('hidden');
             document.getElementById('bot-settings-area').classList.add('hidden');
             
             // Active UI state
+            resetNavStyles();
             document.getElementById('inbox-nav').classList.add('active-nav', 'bg-white/5');
-            document.getElementById('bot-config-nav').classList.remove('active-nav', 'bg-white/5');
-            document.getElementById('broadcast-nav').classList.remove('active-nav', 'bg-white/5');
-            document.getElementById('sidebar-settings').classList.remove('active-nav', 'bg-white/5');
         }
 
         function loadBotSettings() {
@@ -59,10 +62,8 @@
             document.getElementById('bot-settings-area').classList.remove('hidden');
             document.getElementById('settings-frame').src = "bot-config.html";
 
+            resetNavStyles();
             document.getElementById('bot-config-nav').classList.add('active-nav', 'bg-white/5');
-            document.getElementById('inbox-nav').classList.remove('active-nav', 'bg-white/5');
-            document.getElementById('broadcast-nav').classList.remove('active-nav', 'bg-white/5');
-            document.getElementById('sidebar-settings').classList.remove('active-nav', 'bg-white/5');
         }
 
         function loadBroadcastSettings() {
@@ -70,10 +71,8 @@
             document.getElementById('bot-settings-area').classList.remove('hidden');
             document.getElementById('settings-frame').src = "broadcast.html";
 
+            resetNavStyles();
             document.getElementById('broadcast-nav').classList.add('active-nav', 'bg-white/5');
-            document.getElementById('inbox-nav').classList.remove('active-nav', 'bg-white/5');
-            document.getElementById('bot-config-nav').classList.remove('active-nav', 'bg-white/5');
-            document.getElementById('sidebar-settings').classList.remove('active-nav', 'bg-white/5');
         }
 
         function loadGeneralSettings() {
@@ -81,10 +80,16 @@
             document.getElementById('bot-settings-area').classList.remove('hidden');
             document.getElementById('settings-frame').src = "general-settings.html";
 
+            resetNavStyles();
             document.getElementById('sidebar-settings').classList.add('active-nav', 'bg-white/5');
-            document.getElementById('inbox-nav').classList.remove('active-nav', 'bg-white/5');
-            document.getElementById('bot-config-nav').classList.remove('active-nav', 'bg-white/5');
-            document.getElementById('broadcast-nav').classList.remove('active-nav', 'bg-white/5');
+        }
+
+        function resetNavStyles() {
+            const navs = ['inbox-nav', 'bot-config-nav', 'broadcast-nav', 'sidebar-settings'];
+            navs.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.classList.remove('active-nav', 'bg-white/5');
+            });
         }
 
         function toggleDropdown() {
@@ -219,12 +224,12 @@
                         </div>
 
                     <div class="p-6 md:p-8">
-                        <div class="flex items-center gap-4 bg-ios-gray/80 backdrop-blur-xl border border-border-gray rounded-3xl px-6 py-3">
+                        <form onsubmit="event.preventDefault(); sendMessage();" class="flex items-center gap-4 bg-ios-gray/80 backdrop-blur-xl border border-border-gray rounded-3xl px-6 py-3">
                             <input type="text" id="user-input" placeholder="Type a message..." class="bg-transparent flex-1 outline-none text-sm text-white">
-                            <button onclick="sendMessage()" class="w-11 h-11 rounded-2xl bg-accent-blue text-white shadow-lg hover:scale-105 transition-all">
+                            <button type="submit" class="w-11 h-11 rounded-2xl bg-accent-blue text-white shadow-lg hover:scale-105 transition-all">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
 
