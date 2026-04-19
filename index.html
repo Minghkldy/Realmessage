@@ -14,12 +14,12 @@
         const SUPABASE_URL = 'https://otmzadpotobeyowsblpz.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_dwshc23rPi0opSLi0CzjTw_FGqOVF7W';
 
-        // 1. Supabase Client ကို အမှန်ကန်ဆုံး တည်ဆောက်နည်း (Fixed)
-        const { createClient } = window.supabase;
-        window.supabaseInstance = createClient(SUPABASE_URL, SUPABASE_KEY);
+       // သေချာအောင် window.supabase ကို အရင်သတ်မှတ်ပါ
+const { createClient } = window.supabase; 
+window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // အလွယ်ခေါ်သုံးလို့ရအောင် variable ပြန်သတ်မှတ်ခြင်း
-        const supabase = window.supabaseInstance;
+// အခုလိုမျိုး console မှာ ထုတ်ကြည့်လို့ရအောင် window ထဲ ထည့်ထားရမှာပါ
+console.log("Supabase initialized:", window.supabase);
 
         // 2. Realtime Initialization
         function initRealtime() {
