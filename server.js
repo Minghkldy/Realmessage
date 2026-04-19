@@ -74,7 +74,7 @@ const initDb = async () => {
             )
         `);
         
-        console.log("✅ Database structure ready with Time & Read Status support.");
+        console.log("✅ Database structure ready.");
     } catch (err) {
         console.error("❌ DB Init Error:", err.message);
     }
@@ -135,7 +135,7 @@ async function handleIncomingMessage(payload) {
     } catch (err) { console.error("Unified Logic Error:", err.message); }
 }
 
-// --- Routes ---
+// --- Routes (No Login/Auth Required) ---
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/settings', (req, res) => res.sendFile(path.join(__dirname, 'general-settings.html')));
 app.get('/broadcast', (req, res) => res.sendFile(path.join(__dirname, 'broadcast.html')));
@@ -254,7 +254,6 @@ app.post('/api/settings/bulk', upload.single('avatar'), async (req, res) => {
     }
 });
 
-// --- FIXED UPLOAD ROUTE (Renamed to /api/admin/upload to match script.js) ---
 app.post('/api/admin/upload', upload.single('file'), async (req, res) => {
     const { chatId } = req.body;
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
