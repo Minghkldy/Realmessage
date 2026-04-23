@@ -18,8 +18,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             try {
                 // window.supabase ထဲက createClient ကို ခေါ်ယူခြင်း
-                const { createClient } = window.supabase;
-                supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+               const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 window.supabaseClient = supabaseClient;
                 
                 console.log("Supabase initialized successfully!");
