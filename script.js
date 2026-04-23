@@ -1,5 +1,6 @@
 // --- SUPABASE CONFIGURATION ---
-var supabase = window.supabase;
+// index.html က window.supabaseClient ကို တိုက်ရိုက်သုံးပါမယ်
+var supabase = window.supabaseClient;
 
 // --- VARIABLES ---
 let currentChatId = "";
@@ -17,7 +18,9 @@ function showAppUI() {
 
 // --- DATA LOADING ---
 async function loadContacts() {
-    if (!supabase) supabase = window.supabase;
+    // ပိုသေချာအောင် client ကို ပြန်စစ်ဆေးခြင်း
+    if (!supabase) supabase = window.supabaseClient;
+    if (!supabase) return;
     
     try {
         const { data, error } = await supabase
@@ -29,10 +32,12 @@ async function loadContacts() {
 
         const unique = {};
         data.forEach(m => {
-            if (m.sender_name !== 'Admin' && !unique[m.sender_name]) {
-                unique[m.sender_name] = {
-                    chat_id: m.sender_name,
-                    nickname: m.sender_name,
+            // sender_name မရှိခဲ့ရင် 'Unknown' လို့ ပြပေးမယ်
+            const name = m.sender_name || 'Unknown User';
+            if (name !== 'Admin' && !unique[name]) {
+                unique[name] = {
+                    chat_id: name,
+                    nickname: name,
                     platform: m.platform || 'Messenger',
                     last_msg: m.message_text
                 };
@@ -71,9 +76,13 @@ function renderContacts(contacts) {
 
 async function selectContact(contact) {
     currentChatId = contact.chat_id;
-    document.getElementById('chat-header-name').innerText = contact.nickname;
+    const headerName = document.getElementById('chat-header-name');
+    const headerAvatar = document.getElementById('header-avatar-text');
+    
+    if(headerName) headerName.innerText = contact.nickname;
+    if(headerAvatar) headerAvatar.innerText = contact.nickname.charAt(0).toUpperCase();
+    
     document.getElementById('chat-status').innerText = 'Active Now';
-    document.getElementById('header-avatar-text').innerText = contact.nickname.charAt(0).toUpperCase();
     
     const sideName = document.getElementById('side-name');
     if (sideName) sideName.innerText = contact.nickname;
@@ -88,6 +97,7 @@ async function loadHistory() {
         const { data, error } = await supabase
             .from('messages')
             .select('*')
+            // filter query ကို ပိုရှင်းအောင် ရေးထားပါတယ်
             .or(`sender_name.eq."${currentChatId}",receiver_name.eq."${currentChatId}"`)
             .order('created_at', { ascending: true });
 
@@ -109,7 +119,7 @@ function renderMessages() {
         const msgHtml = `
             <div class="flex ${isMe ? 'justify-end' : 'justify-start'} w-full mb-4">
                 <div class="max-w-[75%] p-4 rounded-3xl text-sm ${
-                    isMe ? 'bg-accent-blue text-white rounded-tr-none' : 'bg-gray-800 text-gray-100 rounded-tl-none border border-gray-700'
+                    isMe ? 'bg-accent-blue text-white rounded-tr-none' : 'bg-ios-gray text-gray-100 rounded-tl-none border border-border-gray'
                 }">
                     <p style="white-space: pre-wrap; word-break: break-word;">${msg.message_text || ''}</p>
                     <span class="text-[9px] opacity-50 mt-1 block">
@@ -129,7 +139,7 @@ async function sendMessage() {
     const text = input?.value.trim();
     
     if (text && currentChatId && supabase) {
-        // Refresh မစောင့်ဘဲ UI မှာ ချက်ချင်းပေါ်လာအောင် အတုပြုလုပ်ခြင်း
+        // UI မှာ ချက်ချင်းပေါ်လာအောင် အတုပြုလုပ်ခြင်း
         const tempMsg = {
             sender_name: 'Admin',
             receiver_name: currentChatId,
@@ -139,7 +149,7 @@ async function sendMessage() {
         
         allMessages.push(tempMsg);
         renderMessages();
-        input.value = ""; // Input ကို ချက်ချင်းရှင်းပစ်မယ်
+        input.value = ""; 
 
         // Database ထဲလှမ်းထည့်မယ်
         const { error } = await supabase
@@ -153,18 +163,17 @@ async function sendMessage() {
 
         if (error) {
             console.error("Send Error:", error);
-            // အကယ်၍ ပို့တာမအောင်မြင်ရင် message list ထဲက ပြန်ထုတ်မယ် (Option)
-            loadHistory(); 
+            // Error ဖြစ်ရင် log ထဲပြန်စစ်ဖို့ loadHistory ခေါ်မယ်
+            await loadHistory(); 
         }
     }
 }
 
 // --- REAL-TIME SUBSCRIPTION ---
 function initRealtime() {
-    if (!supabase) supabase = window.supabase;
+    if (!supabase) supabase = window.supabaseClient;
     if (!supabase) return;
     
-    // ရှိပြီးသား channel တွေရှိရင် ဖျက်ပြီး အသစ်ပြန်ဖွင့်မယ် (Duplicate မဖြစ်အောင်)
     supabase.removeAllChannels();
 
     supabase
@@ -172,43 +181,42 @@ function initRealtime() {
         .on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'messages' }, 
             (payload) => {
-                console.log('New message in Realtime:', payload.new);
+                console.log('New message received:', payload.new);
                 
-                // ၁။ Contact list ကို update လုပ်မယ် (စာအသစ်ပို့တဲ့လူ ထိပ်ဆုံးရောက်အောင်)
+                // ၁။ Contact list ကို update လုပ်မယ်
                 loadContacts();
 
-                // ၂။ အကယ်၍ လက်ရှိ စကားပြောနေတဲ့လူဆီက စာဖြစ်ရင် ချက်ချင်းပြမယ်
-                const isRelevant = 
-                    (payload.new.sender_name === currentChatId && payload.new.receiver_name === 'Admin') ||
-                    (payload.new.sender_name === 'Admin' && payload.new.receiver_name === currentChatId);
+                // ၂။ အကယ်၍ လက်ရှိ chat window ထဲကလူဖြစ်ရင်
+                const isFromPartner = payload.new.sender_name === currentChatId;
+                const isToPartner = payload.new.receiver_name === currentChatId;
 
-                if (currentChatId && isRelevant) {
-                    // စာသားက ကိုယ်ပို့လိုက်တဲ့ 'Admin' စာဖြစ်နေရင် renderMessages မှာ ပါပြီးသားဖြစ်လို့ ထပ်မထည့်တော့ဘူး
-                    const isAlreadyDisplayed = allMessages.some(m => 
-                        m.message_text === payload.new.message_text && 
-                        m.sender_name === payload.new.sender_name
-                    );
-
-                    if (!isAlreadyDisplayed) {
+                if (currentChatId && (isFromPartner || (payload.new.sender_name === 'Admin' && isToPartner))) {
+                    // ကိုယ်တိုင်ပို့ထားတဲ့စာ (Optimistic UI) နဲ့ Duplicate မဖြစ်အောင် စစ်မယ်
+                    const exists = allMessages.some(m => m.id === payload.new.id);
+                    if (!exists) {
                         allMessages.push(payload.new);
                         renderMessages();
                     }
                 }
             }
         )
-        .subscribe((status) => {
-            console.log("Realtime status:", status);
-        });
+        .subscribe();
 }
 
 // --- INITIALIZATION ---
 window.addEventListener('load', async () => { 
     showAppUI();
-    await loadContacts();
-    initRealtime();
+    // Supabase client အဆင်သင့်ဖြစ်အောင် ခဏစောင့်မယ်
+    setTimeout(async () => {
+        await loadContacts();
+        initRealtime();
+    }, 500);
     
     document.getElementById('user-input')?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendMessage();
+        }
     });
 });
 
