@@ -12,18 +12,30 @@
         const SUPABASE_URL = 'https://otmzadpotobeyowsblpz.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_dWshc23rPI0opSLiOCzjTw_fGqOVF7W';
 
-        // Supabase Initialization (တစ်ကြိမ်သာ ကြေညာသည်)
-        const { createClient } = window.supabase;
-        window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+        // ပြင်ဆင်ချက် - Variable name ကို ပြောင်းလဲထားပါသည် (Error မတက်စေရန်)
+        let supabaseClient;
 
-        console.log("Supabase initialized:", window.supabaseClient);
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // window.supabase ထဲက createClient ကို သုံးမည်
+                const { createClient } = window.supabase;
+                supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+                window.supabaseClient = supabaseClient;
+                console.log("Supabase initialized successfully!");
+                
+                // Realtime စတင်ခေါ်ယူခြင်း
+                initRealtime();
+                switchToInbox();
+            } catch (error) {
+                console.error("Supabase Init Error:", error);
+            }
+        });
 
         // Realtime Initialization
         function initRealtime() {
-            const client = window.supabaseClient;
-            if (!client) return;
+            if (!window.supabaseClient) return;
 
-            const channel = client
+            const channel = window.supabaseClient
                 .channel('realtime_messages')
                 .on(
                     'postgres_changes',
@@ -205,7 +217,7 @@
                     <div id="chat-window" class="flex-1 overflow-y-auto p-6 md:p-10 space-y-6 flex flex-col bg-gradient-to-br from-accent-blue/5 to-transparent"></div>
 
                     <div class="p-6 md:p-8">
-                        <form onsubmit="event.preventDefault(); sendMessage();" class="flex items-center gap-4 bg-ios-gray/80 backdrop-blur-xl border border-border-gray rounded-3xl px-6 py-3">
+                        <form onsubmit="event.preventDefault(); if(typeof sendMessage === 'function') sendMessage();" class="flex items-center gap-4 bg-ios-gray/80 backdrop-blur-xl border border-border-gray rounded-3xl px-6 py-3">
                             <input type="text" id="user-input" placeholder="Type a message..." class="bg-transparent flex-1 outline-none text-sm text-white">
                             <button type="submit" class="w-11 h-11 rounded-2xl bg-accent-blue text-white shadow-lg hover:scale-105 transition-all">
                                 <i class="fas fa-paper-plane"></i>
@@ -233,11 +245,5 @@
     </div>
 
     <script src="script.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            switchToInbox();
-            initRealtime(); // Realtime စတင်ခေါ်ယူခြင်း
-        });
-    </script>
 </body>
 </html>
