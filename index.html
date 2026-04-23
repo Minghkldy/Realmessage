@@ -12,18 +12,19 @@
         const SUPABASE_URL = 'https://otmzadpotobeyowsblpz.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_dWshc23rPI0opSLiOCzjTw_fGqOVF7W';
 
-        // ပြင်ဆင်ချက် - Variable name ကို ပြောင်းလဲထားပါသည် (Error မတက်စေရန်)
+        // Global variable အတွက် သတ်မှတ်ချက်
         let supabaseClient;
 
         document.addEventListener('DOMContentLoaded', () => {
             try {
-                // window.supabase ထဲက createClient ကို သုံးမည်
+                // window.supabase ထဲက createClient ကို ခေါ်ယူခြင်း
                 const { createClient } = window.supabase;
                 supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
                 window.supabaseClient = supabaseClient;
+                
                 console.log("Supabase initialized successfully!");
                 
-                // Realtime စတင်ခေါ်ယူခြင်း
+                // Dashboard functions များကို စတင်ခြင်း
                 initRealtime();
                 switchToInbox();
             } catch (error) {
@@ -31,7 +32,7 @@
             }
         });
 
-        // Realtime Initialization
+        // Realtime Updates အတွက် Function
         function initRealtime() {
             if (!window.supabaseClient) return;
 
@@ -42,6 +43,7 @@
                     { event: 'INSERT', schema: 'public', table: 'messages' },
                     (payload) => {
                         console.log('New Message Arrived:', payload.new);
+                        // script.js ထဲက function များကို ခေါ်ယူခြင်း
                         if (typeof loadContacts === 'function') loadContacts();
                         if (typeof loadHistory === 'function') {
                             const activeContactId = window.currentContactId; 
