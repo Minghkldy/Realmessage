@@ -11,7 +11,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8654499183:AAFiXXKMCUXsAl9vsUoR-HYJNy6HdCmKatw';
+// Token ကို process.env ထဲကပဲ အဓိက ယူစေချင်ပါတယ် (Security အတွက်)
+const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 app.use(bodyParser.json({ limit: '50mb' })); 
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
@@ -22,17 +23,46 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Database Initialization
+// Database Initialization - ဇယားတွေကို ပိုသေချာအောင် ပြင်ဆင်ထားပါတယ်
 const initDb = async () => {
-try {
-        await pool.query(`CREATE TABLE IF NOT EXISTS contacts (chat_id TEXT PRIMARY KEY, first_name TEXT, profile_pic TEXT, platform TEXT, status TEXT DEFAULT 'active', created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)`);
-        await pool.query(`CREATE TABLE IF NOT EXISTS messages (id SERIAL PRIMARY KEY, sender_name TEXT, message_text TEXT, platform TEXT, chat_id TEXT, receiver_name TEXT, is_read BOOLEAN DEFAULT false, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)`);
+    try {
+        // Contacts Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS contacts (
+                chat_id TEXT PRIMARY KEY, 
+                first_name TEXT, 
+                profile_pic TEXT, 
+                platform TEXT, 
+                status TEXT DEFAULT 'active', 
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Messages Table (sender_name နဲ့ receiver_name ကို သေချာအောင် ထည့်ထားပါတယ်)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS messages (
+                id SERIAL PRIMARY KEY, 
+                sender_name TEXT, 
+                message_text TEXT, 
+                platform TEXT, 
+                chat_id TEXT, 
+                receiver_name TEXT, 
+                is_read BOOLEAN DEFAULT false, 
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Settings Table
         await pool.query(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`);
         
-        await pool.query("INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", ['telegram_token', TELEGRAM_TOKEN]);
+        if (TELEGRAM_TOKEN) {
+            await pool.query("INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", ['telegram_token', TELEGRAM_TOKEN]);
+        }
         
-        console.log("✅ Supabase Database Ready.");
-    } catch (err) { console.error("❌ DB Init Error:", err.message); }
+        console.log("✅ Supabase Database Ready & Tables Verified.");
+    } catch (err) { 
+        console.error("❌ DB Init Error:", err.message); 
+    }
 };
 initDb();
 
@@ -40,20 +70,28 @@ initDb();
 async function handleIncomingMessage(payload) {
     const { sender, text, platform, chatId, profilePic } = payload;
     try {
+        // ၁။ Contact ကို အရင် သိမ်းမယ်/Update လုပ်မယ်
         await pool.query(`
             INSERT INTO contacts (chat_id, first_name, profile_pic, platform) 
             VALUES ($1, $2, $3, $4) 
-            ON CONFLICT (chat_id) DO UPDATE SET first_name = EXCLUDED.first_name, profile_pic = EXCLUDED.profile_pic, platform = EXCLUDED.platform`, 
+            ON CONFLICT (chat_id) DO UPDATE SET 
+            first_name = EXCLUDED.first_name, 
+            profile_pic = EXCLUDED.profile_pic, 
+            platform = EXCLUDED.platform`, 
             [chatId, sender, profilePic, platform]
         );
 
+        // ၂။ Message ကို သိမ်းမယ်
         const msgRes = await pool.query(
             "INSERT INTO messages (sender_name, message_text, platform, chat_id, receiver_name) VALUES ($1, $2, $3, $4, $5) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time",
             [sender, text, platform, chatId, 'Admin']
         );
 
+        // Socket.io ကနေ Dashboard ကို ချက်ချင်း အကြောင်းကြားမယ်
         io.emit('new_message', msgRes.rows[0]);
-    } catch (err) { console.error("❌ Database Save Error:", err.message); }
+    } catch (err) { 
+        console.error("❌ Database Save Error:", err.message); 
+    }
 }
 
 // Telegram Webhook
@@ -83,11 +121,14 @@ app.get('/api/contacts', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Socket.io: Dashboard Reply
+// Socket.io: Dashboard Reply (Admin ကနေ အသုံးပြုသူဆီ စာပြန်ခြင်း)
 io.on('connection', (socket) => {
+    console.log('Admin connected to socket');
+    
     socket.on('send_reply', async (data) => {
         const { chatId, text, platform } = data;
         try {
+            // Telegram သို့ စာပို့ခြင်း
             if (platform === 'telegram') {
                 await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
                     chat_id: chatId,
@@ -95,6 +136,7 @@ io.on('connection', (socket) => {
                 });
             }
 
+            // Database ထဲမှာ Admin ရဲ့ Reply ကို သိမ်းဆည်းခြင်း
             const replyRes = await pool.query(
                 "INSERT INTO messages (sender_name, message_text, platform, chat_id, receiver_name) VALUES ($1, $2, $3, $4, $5) RETURNING *, TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Yangon', 'HH12:MI AM') as time", 
                 ['Admin', text, 'admin', chatId, 'User']
