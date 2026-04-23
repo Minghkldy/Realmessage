@@ -24,7 +24,7 @@ const pool = new Pool({
 
 // Database Initialization
 const initDb = async () => {
-    try {
+try {
         await pool.query(`CREATE TABLE IF NOT EXISTS contacts (chat_id TEXT PRIMARY KEY, first_name TEXT, profile_pic TEXT, platform TEXT, status TEXT DEFAULT 'active', created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS messages (id SERIAL PRIMARY KEY, sender_name TEXT, message_text TEXT, platform TEXT, chat_id TEXT, receiver_name TEXT, is_read BOOLEAN DEFAULT false, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`);
