@@ -6,35 +6,32 @@
     <title>OmniBot - Ultimate Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        const SUPABASE_URL = 'https://otmzadpotobeyowsblpz.supabase.co'; // 'a' ပါတာ သေချာပါစေ
-        const SUPABASE_KEY = 'sb_publishable_dWshc23rPI0opSLiOCzjTw_fGqOVF7W'; // ခုနက copy ကူးလာတဲ့ Key ကို ဒီမှာထည့်ပါ
+        const SUPABASE_URL = 'https://otmzadpotobeyowsblpz.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_dWshc23rPI0opSLiOCzjTw_fGqOVF7W';
 
-       // သေချာအောင် window.supabase ကို အရင်သတ်မှတ်ပါ
-const { createClient } = window.supabase; 
-window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Supabase Initialization (တစ်ကြိမ်သာ ကြေညာသည်)
+        const { createClient } = window.supabase;
+        window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// အခုလိုမျိုး console မှာ ထုတ်ကြည့်လို့ရအောင် window ထဲ ထည့်ထားရမှာပါ
-console.log("Supabase initialized:", window.supabase);
+        console.log("Supabase initialized:", window.supabaseClient);
 
-        // 2. Realtime Initialization
+        // Realtime Initialization
         function initRealtime() {
-            if (!supabase) return;
+            const client = window.supabaseClient;
+            if (!client) return;
 
-            const channel = supabase
+            const channel = client
                 .channel('realtime_messages')
                 .on(
                     'postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'messages' },
                     (payload) => {
                         console.log('New Message Arrived:', payload.new);
-                        // script.js ထဲက function တွေကို ခေါ်ယူခြင်း
                         if (typeof loadContacts === 'function') loadContacts();
                         if (typeof loadHistory === 'function') {
-                            // လက်ရှိ chat ဖွင့်ထားတဲ့ user ရဲ့ message ဖြစ်မှ update လုပ်မယ်
                             const activeContactId = window.currentContactId; 
                             if(activeContactId) loadHistory(activeContactId);
                         }
@@ -50,8 +47,6 @@ console.log("Supabase initialized:", window.supabase);
         function switchToInbox() {
             document.getElementById('main-dashboard-content').classList.remove('hidden');
             document.getElementById('bot-settings-area').classList.add('hidden');
-            
-            // Active UI state
             resetNavStyles();
             document.getElementById('inbox-nav').classList.add('active-nav', 'bg-white/5');
         }
@@ -60,7 +55,6 @@ console.log("Supabase initialized:", window.supabase);
             document.getElementById('main-dashboard-content').classList.add('hidden');
             document.getElementById('bot-settings-area').classList.remove('hidden');
             document.getElementById('settings-frame').src = "bot-config.html";
-
             resetNavStyles();
             document.getElementById('bot-config-nav').classList.add('active-nav', 'bg-white/5');
         }
@@ -69,7 +63,6 @@ console.log("Supabase initialized:", window.supabase);
             document.getElementById('main-dashboard-content').classList.add('hidden');
             document.getElementById('bot-settings-area').classList.remove('hidden');
             document.getElementById('settings-frame').src = "broadcast.html";
-
             resetNavStyles();
             document.getElementById('broadcast-nav').classList.add('active-nav', 'bg-white/5');
         }
@@ -78,7 +71,6 @@ console.log("Supabase initialized:", window.supabase);
             document.getElementById('main-dashboard-content').classList.add('hidden');
             document.getElementById('bot-settings-area').classList.remove('hidden');
             document.getElementById('settings-frame').src = "general-settings.html";
-
             resetNavStyles();
             document.getElementById('sidebar-settings').classList.add('active-nav', 'bg-white/5');
         }
@@ -92,20 +84,16 @@ console.log("Supabase initialized:", window.supabase);
         }
 
         function toggleDropdown() {
-            const dropdown = document.getElementById('messenger-dropdown');
-            const arrow = document.getElementById('arrow-icon');
-            dropdown.classList.toggle('hidden');
-            arrow.classList.toggle('rotate-90');
+            document.getElementById('messenger-dropdown').classList.toggle('hidden');
+            document.getElementById('arrow-icon').classList.toggle('rotate-90');
         }
 
         function toggleRightPanel() {
-            const panel = document.getElementById('right-panel');
-            panel.classList.toggle('hidden');
+            document.getElementById('right-panel').classList.toggle('hidden');
         }
 
         function toggleLeftSidebar() {
-            const sidebar = document.getElementById('left-sidebar');
-            sidebar.classList.toggle('-translate-x-full');
+            document.getElementById('left-sidebar').classList.toggle('-translate-x-full');
         }
     </script>
     
@@ -129,15 +117,11 @@ console.log("Supabase initialized:", window.supabase);
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         .active-nav { color: #007AFF !important; border-left: 3px solid #007AFF; border-radius: 0 16px 16px 0 !important; }
-        @media (max-width: 1024px) {
-            #left-sidebar { position: fixed; height: 100%; top: 0; left: 0; }
-        }
+        @media (max-width: 1024px) { #left-sidebar { position: fixed; height: 100%; top: 0; left: 0; } }
     </style>
 </head>
 <body class="h-full flex overflow-hidden bg-pure-black text-gray-100 font-sans">
-
     <div id="main-app" class="h-full w-full flex overflow-hidden">
-        
         <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
 
         <div id="left-sidebar" class="w-72 flex-shrink-0 flex flex-col border-r border-border-gray py-8 bg-dark-gray/50 backdrop-blur-2xl z-30 transition-all duration-300 -translate-x-full lg:translate-x-0">
@@ -201,8 +185,7 @@ console.log("Supabase initialized:", window.supabase);
                         <h2 class="text-2xl font-black italic uppercase">Inbox</h2>
                         <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Recent Messages</p>
                     </div>
-                    <div id="contacts-container" class="flex-1 overflow-y-auto px-4 py-2 space-y-2">
-                        </div>
+                    <div id="contacts-container" class="flex-1 overflow-y-auto px-4 py-2 space-y-2"></div>
                 </div>
 
                 <div class="flex-1 flex flex-col bg-pure-black relative min-w-0">
@@ -219,8 +202,7 @@ console.log("Supabase initialized:", window.supabase);
                         </button>
                     </div>
 
-                    <div id="chat-window" class="flex-1 overflow-y-auto p-6 md:p-10 space-y-6 flex flex-col bg-gradient-to-br from-accent-blue/5 to-transparent">
-                        </div>
+                    <div id="chat-window" class="flex-1 overflow-y-auto p-6 md:p-10 space-y-6 flex flex-col bg-gradient-to-br from-accent-blue/5 to-transparent"></div>
 
                     <div class="p-6 md:p-8">
                         <form onsubmit="event.preventDefault(); sendMessage();" class="flex items-center gap-4 bg-ios-gray/80 backdrop-blur-xl border border-border-gray rounded-3xl px-6 py-3">
@@ -254,6 +236,7 @@ console.log("Supabase initialized:", window.supabase);
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             switchToInbox();
+            initRealtime(); // Realtime စတင်ခေါ်ယူခြင်း
         });
     </script>
 </body>
