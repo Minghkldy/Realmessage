@@ -10,24 +10,28 @@
 
     <script>
         const SUPABASE_URL = 'https://otmzadpotobeyowsblpz.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_dWshc23rPI0opSLiOCzjTw_fGqOVF7W';
+        const SUPABASE_KEY = 'sb_publishable_dwshc23rPI0opSLiOCzjTw_fGqOVF7W';
 
-        // Global variable အတွက် သတ်မှတ်ချက်
+        // Global variable
         let supabaseClient;
 
         document.addEventListener('DOMContentLoaded', () => {
             try {
-                // window.supabase ထဲက createClient ကို ခေါ်ယူခြင်း
-               const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                window.supabaseClient = supabaseClient;
-                
-                console.log("Supabase initialized successfully!");
-                
-                // Dashboard functions များကို စတင်ခြင်း
-                initRealtime();
-                switchToInbox();
+                // Supabase library ရှိမရှိ အရင်စစ်ဆေးပါသည်
+                if (window.supabase) {
+                    const { createClient } = window.supabase;
+                    // window.supabaseClient ထဲသို့ သိမ်းဆည်းခြင်း
+                    window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+                    console.log("✅ Supabase initialized successfully!");
+                    
+                    // Dashboard functions များကို စတင်ခြင်း
+                    if (typeof initRealtime === 'function') initRealtime();
+                    switchToInbox();
+                } else {
+                    console.error("❌ Supabase library not found!");
+                }
             } catch (error) {
-                console.error("Supabase Init Error:", error);
+                console.error("❌ Supabase Init Error:", error);
             }
         });
 
@@ -41,7 +45,7 @@
                     'postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'messages' },
                     (payload) => {
-                        console.log('New Message Arrived:', payload.new);
+                        console.log('📩 New Message Arrived:', payload.new);
                         // script.js ထဲက function များကို ခေါ်ယူခြင်း
                         if (typeof loadContacts === 'function') loadContacts();
                         if (typeof loadHistory === 'function') {
@@ -58,10 +62,13 @@
 
         // Navigation Functions
         function switchToInbox() {
-            document.getElementById('main-dashboard-content').classList.remove('hidden');
-            document.getElementById('bot-settings-area').classList.add('hidden');
+            const mainContent = document.getElementById('main-dashboard-content');
+            const settingsArea = document.getElementById('bot-settings-area');
+            if (mainContent) mainContent.classList.remove('hidden');
+            if (settingsArea) settingsArea.classList.add('hidden');
             resetNavStyles();
-            document.getElementById('inbox-nav').classList.add('active-nav', 'bg-white/5');
+            const inboxNav = document.getElementById('inbox-nav');
+            if (inboxNav) inboxNav.classList.add('active-nav', 'bg-white/5');
         }
 
         function loadBotSettings() {
@@ -146,7 +153,7 @@
             </div>
             
             <nav class="flex flex-col w-full flex-1 px-4 space-y-2">
-                <div class="nav-item flex items-center justify-between p-4 rounded-2xl cursor-pointer hover:bg-white/5 active-nav" id="inbox-nav" onclick="switchToInbox()">
+                <div class="nav-item flex items-center justify-between p-4 rounded-2xl cursor-pointer hover:bg-white/5" id="inbox-nav" onclick="switchToInbox()">
                     <div class="flex items-center">
                         <i class="fas fa-message w-8"></i>
                         <span class="font-medium ml-2">Inbox</span>
